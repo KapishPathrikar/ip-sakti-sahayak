@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# JavaScript
+frontend/node_modules/
+frontend/.next/
+
+# Local configuration and generated data
+.env
+.env.*
+!.env.example
+chroma_db/*
+!chroma_db/.gitkeep
