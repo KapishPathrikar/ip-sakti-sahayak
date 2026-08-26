@@ -1,0 +1,20 @@
+# Backend (Python) dependencies
+langchain
+langchain-community
+chromadb
+fastapi
+uvicorn
+pypdf
+sentence-transformers
+python-dotenv
+deep-translator
+
+# Frontend (Next.js) dependencies
+next
+react
+react-dom
+tailwindcss
+postcss
+autoprefixer
+eslint
+eslint-config-next
