@@ -33,6 +33,12 @@ try:
 except (ImportError, ValueError):
 	from faq_matcher import match_faq
 
+try:
+	from .web_search import needs_web_search, search_web, format_web_context_for_prompt
+except (ImportError, ValueError):
+	from web_search import needs_web_search, search_web, format_web_context_for_prompt
+
+
 
 import json
 import os
@@ -182,19 +188,37 @@ def answer_question(
 		if history_text:
 			history_section = f"\n=== PREVIOUS CONVERSATION HISTORY ===\n{history_text}\n"
 
+	# Check if live web search is needed for real-time links/updates
+	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
+	web_section = ""
+	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist):
+		print(f"[Web Search] Live web search triggered for: '{english_query}'")
+		web_results = search_web(english_query, max_results=2)
+		if web_results:
+			web_context_text = format_web_context_for_prompt(web_results)
+			web_section = f"\n=== LIVE OFFICIAL WEB SOURCES & LINKS ===\n{web_context_text}\n"
+			for item in web_results:
+				citations.append({
+					"source": f"Live Web: {item['title']} ({item['url']})",
+					"page": 1,
+					"confidence": "Live Web",
+				})
+
 	system_prompt = f"""You are IP Shakti Sahayak, an expert Indian Intellectual Property and Patent law assistant.
-Answer the user's question accurately, concisely, and strictly based on the provided legal reference context.
+Answer the user's question accurately, concisely, and strictly based on the provided legal reference context and live web sources.
 If the context does not provide sufficient information, clarify what is known and note the limitations.{history_section}
 === REFERENCE CONTEXT ===
 {context_text}
-
+{web_section}
 === USER QUESTION ===
 {english_query}
 
 === INSTRUCTIONS ===
 - Provide a clear, well-structured, and helpful explanation.
 - Reference relevant sections, rules, or guidelines where applicable.
+- If live web sources with URLs are available, include useful clickable markdown links e.g. [Portal Name](URL).
 - Answer directly and professionally."""
+
 
 	if detected_lang == "hinglish":
 		system_prompt += """
@@ -336,19 +360,37 @@ def answer_question_stream(
 		if history_text:
 			history_section = f"\n=== PREVIOUS CONVERSATION HISTORY ===\n{history_text}\n"
 
+	# Check if live web search is needed for real-time links/updates
+	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
+	web_section = ""
+	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist):
+		print(f"[Web Search Stream] Live web search triggered for: '{english_query}'")
+		web_results = search_web(english_query, max_results=2)
+		if web_results:
+			web_context_text = format_web_context_for_prompt(web_results)
+			web_section = f"\n=== LIVE OFFICIAL WEB SOURCES & LINKS ===\n{web_context_text}\n"
+			for item in web_results:
+				citations.append({
+					"source": f"Live Web: {item['title']} ({item['url']})",
+					"page": 1,
+					"confidence": "Live Web",
+				})
+
 	system_prompt = f"""You are IP Shakti Sahayak, an expert Indian Intellectual Property and Patent law assistant.
-Answer the user's question accurately, concisely, and strictly based on the provided legal reference context.
+Answer the user's question accurately, concisely, and strictly based on the provided legal reference context and live web sources.
 If the context does not provide sufficient information, clarify what is known and note the limitations.{history_section}
 === REFERENCE CONTEXT ===
 {context_text}
-
+{web_section}
 === USER QUESTION ===
 {english_query}
 
 === INSTRUCTIONS ===
 - Provide a clear, well-structured, and helpful explanation.
 - Reference relevant sections, rules, or guidelines where applicable.
+- If live web sources with URLs are available, include useful clickable markdown links e.g. [Portal Name](URL).
 - Answer directly and professionally."""
+
 
 	if detected_lang == "hinglish":
 		system_prompt += """

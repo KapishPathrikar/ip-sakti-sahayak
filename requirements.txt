@@ -9,6 +9,9 @@ sentence-transformers
 python-dotenv
 deep-translator
 httpx
+duckduckgo-search
+ddgs
+
 
 # Frontend (Next.js) dependencies
 next
