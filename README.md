@@ -91,21 +91,36 @@ npm run dev
 
 ---
 
-## 🧪 Testing & CLI Tools
+## 🧪 Interactive Chat & Testing Tools
 
-### Run Automated Unit Test Suite
+### 💬 Interactive Continuous Terminal Chat (Instant Responses, Zero Reload Delay)
+Run persistent chat mode where models load into memory once and stay hot for continuous conversations:
+
 ```powershell
-python -m unittest backend/tests/test_api.py
+python backend/rag/generate.py
 ```
+* Supports multi-turn memory context.
+* Supports English, Hindi (Devnagari), and conversational Hinglish.
+* Type `clear` to reset conversation context | Type `exit` to quit.
 
-### Live CLI Querying with Real-Time Streaming
+---
+
+### ⚡ Single-Query Streaming CLI
 ```powershell
-# Standard query
+# Standard legal question
 python backend/rag/generate.py "What are the rules for patent filing in India?"
 
 # Hinglish query
 python backend/rag/generate.py "Ayurvedic medicine ka patent kaise le?"
 
-# Direct FAQ cache hit (Instant)
+# Direct FAQ cache hit (Instant <0.01s)
 python backend/rag/generate.py "Can an Ayurvedic formulation be patented?"
 ```
+
+---
+
+### 🔬 Run Automated Unit Test Suite
+```powershell
+python -m unittest backend/tests/test_api.py
+```
+

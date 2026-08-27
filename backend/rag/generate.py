@@ -47,8 +47,6 @@ DEFAULT_OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
 
 
-import time
-
 def _call_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL) -> str | None:
 	"""Send prompt to local Ollama instance, with retries to handle model loading/boot-up times."""
 	url = f"{base_url.rstrip('/')}/api/generate"
@@ -404,14 +402,70 @@ def main() -> None:
 
 	parser = argparse.ArgumentParser(description=__doc__)
 
-	parser.add_argument("query", type=str, help="Question to ask")
+	parser.add_argument("query", type=str, nargs="?", default=None, help="Question to ask (optional, opens interactive mode if omitted)")
+	parser.add_argument("-i", "--interactive", action="store_true", help="Launch interactive multi-turn terminal chat")
 	parser.add_argument("--persist-dir", type=Path, default=Path("chroma_db"))
 	parser.add_argument("--limit", type=int, default=3)
 	parser.add_argument("--model", type=str, default=DEFAULT_OLLAMA_MODEL)
 	parser.add_argument("--json", action="store_true", help="Output raw JSON response")
 	args = parser.parse_args()
 
-	if args.json:
+	# If interactive flag is passed OR no query provided, enter persistent chat mode
+	if args.interactive or args.query is None:
+		print("\n" + "=" * 65)
+		print("🤖 IP SHAKTI SAHAYAK — INTERACTIVE CONVERSATION MODE")
+		print("=" * 65)
+		print("• Type your questions in English, Hindi (Devnagari), or Hinglish.")
+		print("• Models & embeddings stay loaded in memory for instant responses.")
+		print("• Type 'clear' to reset conversation memory | Type 'exit' to quit.\n" + "-" * 65)
+
+		session_id = f"cli-interactive-{int(time.time())}"
+
+		while True:
+			try:
+				user_input = input("\n👤 You: ").strip()
+			except (KeyboardInterrupt, EOFError):
+				print("\nExiting. Dhanyavaad!")
+				break
+
+			if not user_input:
+				continue
+			if user_input.lower() in {"exit", "quit", "q"}:
+				print("Exiting IP Shakti Sahayak. Have a great day!")
+				break
+			if user_input.lower() == "clear":
+				session_manager.clear_session(session_id)
+				print("[Session memory cleared. Starting fresh context.]")
+				continue
+
+			print("\n🤖 IP Shakti Sahayak:\n")
+			citations = []
+			for sse_event in answer_question_stream(
+				user_input,
+				persist_dir=args.persist_dir,
+				limit=args.limit,
+				model=args.model,
+				session_id=session_id,
+			):
+				if sse_event.startswith("data: "):
+					data = json.loads(sse_event[6:].strip())
+					if data.get("type") == "token":
+						sys.stdout.write(data.get("token", ""))
+						sys.stdout.flush()
+					elif data.get("type") == "done":
+						citations = data.get("citations", [])
+
+			print("\n\n" + "-" * 40)
+			if citations:
+				print("📚 Sources:")
+				for i, cite in enumerate(citations, 1):
+					conf = f" ({cite['confidence']})" if "confidence" in cite else ""
+					print(f"  [{i}] {cite['source']} (Page {cite['page']}){conf}")
+			else:
+				print("📚 Direct Verified Knowledge")
+			print("-" * 40)
+
+	elif args.json:
 		result = answer_question(args.query, persist_dir=args.persist_dir, limit=args.limit, model=args.model)
 		print(json.dumps(result, indent=2))
 	else:
@@ -438,6 +492,7 @@ def main() -> None:
 		else:
 			print("  No citations required for this query.")
 		print("-" * 60 + "\n")
+
 
 
 
