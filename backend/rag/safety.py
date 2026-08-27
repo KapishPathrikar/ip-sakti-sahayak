@@ -1,0 +1,95 @@
+"""Safety, guardrails, and input sanitization for the RAG pipeline."""
+
+from __future__ import annotations
+import re
+
+# Simple set of prompt injection keywords
+INJECTION_KEYWORDS = [
+    "ignore previous instructions",
+    "ignore all instructions",
+    "system override",
+    "you are now",
+    "acting as",
+    "bypass constraints",
+    "jailbreak",
+    "developer mode",
+]
+
+# Core keywords to detect if the query is relevant to Intellectual Property / Indian Law
+IP_KEYWORDS = [
+    "patent",
+    "trademark",
+    "copyright",
+    "design",
+    "biological diversity",
+    "ayush",
+    "ayurveda",
+    "drug",
+    "cosmetic",
+    "ipr",
+    "intellectual property",
+    "rule",
+    "act",
+    "law",
+    "gi tag",
+    "geographical indication",
+    "prior art",
+    "novelty",
+    "inventive step",
+    "filing",
+    "fee",
+    "infringement",
+    "licensing",
+    "traditional knowledge",
+    "tkdl",
+    "nba",
+    "national biodiversity authority",
+    "form 1",
+    "form 2",
+    "form 3",
+    "form 18",
+    "examiner",
+    "office action",
+]
+
+
+def is_safe_query(query: str) -> tuple[bool, str]:
+    """Validate query against prompt injections and off-topic requests.
+    
+    Returns (is_safe, error_reason).
+    """
+    clean_query = query.lower().strip()
+
+    # 1. Check for prompt injection keywords
+    for keyword in INJECTION_KEYWORDS:
+        if keyword in clean_query:
+            return False, "prompt_injection"
+
+    # 2. Check for general relevance (off-topic guardrail)
+    # We do a substring search on our list of IP keywords
+    has_ip_keyword = any(keyword in clean_query for keyword in IP_KEYWORDS)
+    if not has_ip_keyword:
+        return False, "off_topic"
+
+    return True, "safe"
+
+
+def get_safety_response(reason: str, lang: str = "en") -> str:
+    """Return a localized error response for unsafe inputs."""
+    responses = {
+        "en": {
+            "prompt_injection": "Request rejected due to unsafe content or instruction override attempt.",
+            "off_topic": "I am an Indian Intellectual Property assistant. I can only assist with patents, trademarks, copyrights, and related IP law queries.",
+        },
+        "hi": {
+            "prompt_injection": "असुरक्षित सामग्री या निर्देश ओवरराइड प्रयास के कारण अनुरोध अस्वीकार कर दिया गया।",
+            "off_topic": "मैं एक भारतीय बौद्धिक संपदा (IP) सहायक हूँ। मैं केवल पेटेंट, ट्रेडमार्क, कॉपीराइट और संबंधित आईपी कानूनों के प्रश्नों में सहायता कर सकता हूँ।",
+        },
+        "hinglish": {
+            "prompt_injection": "Request reject kar diya gaya hai kyunki yeh instruction override lag raha hai.",
+            "off_topic": "Main ek Indian Intellectual Property (IP) assistant hoon. Main sirf patents, trademarks, copyrights aur IP law se related questions ke answers de sakta hoon.",
+        },
+    }
+
+    lang_code = lang if lang in responses else "en"
+    return responses[lang_code].get(reason, responses["en"]["off_topic"])

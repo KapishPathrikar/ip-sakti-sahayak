@@ -16,7 +16,7 @@ IP Shakti Sahayak is an India-first, retrieval-augmented assistant for accessibl
 | Phase | Outcome | Key deliverables |
 | --- | --- | --- |
 | 0 — Foundation | An executable, safe development baseline | Documented scope and architecture; environment examples; CORS configuration; stable health contract; branded frontend shell and API status check. |
-| 1 — Knowledge pipeline | Repeatable, traceable ingestion | Source inventory and metadata schema; PDF/text extraction; chunking; embeddings and Chroma persistence; ingest CLI and validation report. |
+| 1 — Knowledge pipeline | Repeatable, traceable ingestion | Source inventory and provenance schema; PDF/text extraction; chunking; embeddings and Chroma persistence; ingest CLI and validation report. |
 | 2 — Retrieval and answer API | Grounded answers with citations | Query/retrieval service; answer endpoint; source citations and confidence/no-answer policy; automated retrieval tests. |
 | 3 — Conversational experience | Useful public-facing guided Q&amp;A | Chat UI; loading/error/empty states; citation viewer; topic suggestions; Hindi/regional-language input strategy. |
 | 4 — Safety and quality | Trustworthy IP information delivery | Legal-information disclaimer; prompt-injection and citation checks; evaluation set; feedback capture; observability and rate limiting. |
@@ -24,7 +24,11 @@ IP Shakti Sahayak is an India-first, retrieval-augmented assistant for accessibl
 
 ## Phase 0 status
 
-Complete. The frontend now identifies the product and checks API availability at runtime. The API exposes a versioned health response and limits browser access to configured origins. No RAG model, source corpus, or legal-answer behavior has been introduced yet.
+Complete. The frontend now identifies the product and checks API availability at runtime. The API exposes a versioned health response and limits browser access to configured origins.
+
+## Phase 1 status
+
+Complete. [The knowledge-pipeline guide](docs/knowledge-pipeline.md) defines source onboarding, provenance, and validation rules. The ingestion command supports `.txt`, `.md`, and text-based `.pdf` files; it produces deterministic chunks and persists their citation metadata in Chroma. The current corpus contains no source files, so an index should be built only after reviewed source material has been added.
 
 ## Run locally
 

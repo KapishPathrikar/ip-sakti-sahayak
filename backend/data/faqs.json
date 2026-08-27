@@ -1,0 +1,403 @@
+[
+  {
+    "id": "FAQ-001",
+    "question": "What is Intellectual Property?",
+    "alternative_questions": [
+      "What does intellectual property mean?",
+      "Define intellectual property",
+      "What is IP?"
+    ],
+    "category": "General IP",
+    "answer": "Intellectual Property (IP) refers to creations of the human mind, such as inventions, literary and artistic works, designs, symbols, names, and images used in commerce. In India, IP is legally protected through Patents, Trademarks, Copyrights, Geographical Indications, Industrial Designs, and Trade Secrets, granting creators exclusive rights to use and commercialize their innovations.",
+    "source": "Manual of Patent Office Practice and Procedure (2019) & WIPO Overview",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-002",
+    "question": "What types of IP are relevant to Ayurveda?",
+    "alternative_questions": [
+      "Which intellectual property rights apply to Ayurveda?",
+      "How is Ayurveda protected under IP law?",
+      "IP rights for Ayurvedic medicines and practices"
+    ],
+    "category": "Ayurveda & IP",
+    "answer": "Several IP rights protect Ayurvedic products and knowledge:\n1. **Patents:** For novel, non-obvious formulations, synergistic compositions, or extraction processes (subject to Section 3(p) and 3(e) of the Patents Act).\n2. **Trademarks:** For brand names, logos, product names, and clinic/pharmacy identities.\n3. **Geographical Indications (GI):** For regionally distinctive Ayurvedic herbs and products (e.g., Navara Rice, Malabar Pepper).\n4. **Copyright:** For books, modern research publications, instructional materials, and packaging artwork.\n5. **Trade Secrets:** For proprietary manufacturing steps or specialized processing techniques.",
+    "source": "Guidelines for Examination of Ayush Related Inventions, CGPDTM",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-003",
+    "question": "Can an Ayurvedic formulation be patented?",
+    "alternative_questions": [
+      "Is an Ayurvedic formulation patentable?",
+      "Can I get a patent for an Ayurvedic medicine?",
+      "Can I patent my Ayurvedic formulation?",
+      "Ayurvedic dawa ka patent ho sakta hai kya?"
+    ],
+    "category": "Patents",
+    "answer": "An Ayurvedic formulation can be patented in India ONLY if it meets strict legal criteria:\n1. **Novelty & Inventive Step:** It must not be directly documented in classical texts (Charaka Samhita, Sushruta Samhita, etc.) or TKDL.\n2. **Synergism (Section 3(e)):** It cannot be a mere admixture of known herbs. You must experimentally prove a synergistic therapeutic effect beyond the sum of individual components.\n3. **Non-Traditional Knowledge (Section 3(p)):** Inventions which are essentially traditional knowledge or an aggregation of known properties of traditional herbs are excluded from patentability.\n4. **National Biodiversity Authority (NBA) Approval:** Mandatory Section 6 approval is required if biological resources from India are used.",
+    "source": "Indian Patents Act 1970 (Section 3(e), 3(p)) & Ayush Guidelines Section 3.1",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-004",
+    "question": "Can traditional Ayurvedic knowledge be patented?",
+    "alternative_questions": [
+      "Is traditional knowledge patentable in India?",
+      "Can ancient Ayurvedic remedies be patented?",
+      "Can someone patent Charaka Samhita formulas?"
+    ],
+    "category": "Patents",
+    "answer": "No. Under Section 3(p) of the Indian Patents Act, 1970, any invention which in effect is traditional knowledge or is an aggregation or duplication of known properties of traditionally known components is **NOT an invention and cannot be patented**. Ancient formulas and classical remedies belong to the public domain.",
+    "source": "The Patents Act, 1970 (Section 3(p))",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-005",
+    "question": "What is TKDL?",
+    "alternative_questions": [
+      "What is Traditional Knowledge Digital Library?",
+      "Explain TKDL",
+      "How does TKDL work?"
+    ],
+    "category": "Ayurveda & IP",
+    "answer": "The **Traditional Knowledge Digital Library (TKDL)** is a pioneer Indian digital database established jointly by CSIR and the Ministry of AYUSH. It translates classical Indian medicinal texts (Ayurveda, Unani, Siddha, and Yoga) into five international languages (English, French, German, Japanese, Spanish) in international patent classification format. It serves as prior art to prevent the wrongful granting of patents (biopiracy) on Indian traditional knowledge in patent offices worldwide (EPO, USPTO, JPO, etc.).",
+    "source": "TKDL CSIR-AYUSH Official Repository & Manual of Patent Practice",
+    "source_url": "https://www.tkdl.res.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India / International",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-006",
+    "question": "What is prior art?",
+    "alternative_questions": [
+      "Define prior art in patent law",
+      "What counts as prior art?",
+      "Meaning of prior art"
+    ],
+    "category": "Patents",
+    "answer": "Prior art is any evidence or information that was made publicly available anywhere in the world before the filing date (or priority date) of a patent application. This includes published patents, scientific journals, books, websites, public demonstrations, classical scriptures (like Ayurvedic treatises), and databases like TKDL. If an invention is already disclosed in prior art, it lacks novelty and cannot be granted a patent.",
+    "source": "Manual of Patent Office Practice and Procedure - Chapter 03 & Section 2(1)(l)",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-007",
+    "question": "What are the requirements for a patent in India?",
+    "alternative_questions": [
+      "What are the patentability criteria in India?",
+      "What is needed to get a patent in India?",
+      "Patent eligibility conditions India"
+    ],
+    "category": "Patents",
+    "answer": "To obtain a patent in India, an invention must satisfy four core statutory requirements under the Patents Act, 1970:\n1. **Novelty:** The invention must be new and not published or used publicly anywhere in the world before the filing date.\n2. **Inventive Step (Non-obviousness):** It must feature technical advancement or economic significance that is non-obvious to a person skilled in the art.\n3. **Industrial Applicability:** It must be capable of being made or used in an industry.\n4. **Non-Excluded Subject Matter:** It must not fall under exclusions in Section 3 (e.g., natural substances, traditional knowledge, mere admixtures) or Section 4 (atomic energy).",
+    "source": "Indian Patents Act, 1970, Section 2(1)(j) and Section 3",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-008",
+    "question": "How long does a patent last in India?",
+    "alternative_questions": [
+      "What is the term of a patent in India?",
+      "For how many years is a patent valid in India?",
+      "Patent validity duration India"
+    ],
+    "category": "Patents",
+    "answer": "In India, the statutory term of every granted patent is **20 years** from the date of filing the application (or from the international filing date for PCT National Phase applications), subject to the payment of prescribed annual renewal/maintenance fees under Section 53 of the Patents Act, 1970.",
+    "source": "The Patents Act, 1970, Section 53",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-009",
+    "question": "What is a trademark?",
+    "alternative_questions": [
+      "What is the definition of a trademark?",
+      "Explain trademark protection in India",
+      "What does a trademark protect?"
+    ],
+    "category": "Trademarks",
+    "answer": "A Trademark is a distinctive visual sign, symbol, word, logo, name, slogan, or combination thereof capable of distinguishing the goods or services of one enterprise from those of others. In India, trademarks are governed by the Trade Marks Act, 1999, providing registered owners exclusive commercial rights and protection against brand counterfeiting and passing-off.",
+    "source": "The Trade Marks Act, 1999, Section 2(1)(zb)",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-010",
+    "question": "How do I trademark an Ayurvedic brand?",
+    "alternative_questions": [
+      "Steps to register trademark for Ayurvedic medicine",
+      "How to protect my Ayurvedic brand name?",
+      "Ayurvedic brand trademark registration procedure"
+    ],
+    "category": "Trademarks",
+    "answer": "To trademark an Ayurvedic brand in India:\n1. **Select a Distinctive Name:** Avoid generic or descriptive terms (e.g., 'Shuddha Neem' or 'Ayur Health'). Invented or arbitrary names have the strongest legal protection.\n2. **Conduct a Trademark Search:** Check the IP India Public Search database for conflicting marks in **Class 5** (pharmaceutical/herbal preparations) and **Class 3** (cosmetics/skincare).\n3. **File Application (Form TM-A):** Submit online via the IP India e-filing portal.\n4. **Examination & Publication:** The Trademark Registry examines the mark and publishes it in the Trade Marks Journal for a 4-month opposition period.\n5. **Registration:** If unopposed, a Certificate of Registration is issued, valid for **10 years** (renewable indefinitely).",
+    "source": "Trade Marks Rules 2017 & IP India Trade Marks Manual",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-011",
+    "question": "What is copyright?",
+    "alternative_questions": [
+      "Explain copyright law in India",
+      "What is protected under copyright?",
+      "How does copyright apply to Ayurvedic content?"
+    ],
+    "category": "Copyright",
+    "answer": "Copyright is an exclusive legal right granted to creators of original literary, dramatic, musical, artistic works, cinematographic films, and sound recordings under the Copyright Act, 1957. In the context of Ayurveda, copyright protects original textbooks, formulation monographs, research papers, marketing literature, instructional videos, and website content (protects the expression of the idea, not the underlying medicinal principle).",
+    "source": "The Copyright Act, 1957",
+    "source_url": "https://copyright.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-012",
+    "question": "What is a Geographical Indication?",
+    "alternative_questions": [
+      "What is GI tag?",
+      "Explain Geographical Indication",
+      "Meaning of GI in Indian IP"
+    ],
+    "category": "Geographical Indications",
+    "answer": "A Geographical Indication (GI) is an IP sign used on goods that have a specific geographical origin and possess qualities, reputation, or characteristics attributable to that location. In India, GIs are governed by the Geographical Indications of Goods (Registration and Protection) Act, 1999. Registration confers collective protection to local producers and prevents unauthorized exploitation.",
+    "source": "Geographical Indications of Goods Act, 1999",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-013",
+    "question": "Can an Ayurvedic product get a GI?",
+    "alternative_questions": [
+      "Can Ayurvedic herbs get a GI tag?",
+      "Is GI tag available for Ayurvedic preparations?",
+      "Examples of Ayurvedic GI tags in India"
+    ],
+    "category": "Geographical Indications",
+    "answer": "Yes. Ayurvedic herbs, medicinal plants, and traditional formulations whose therapeutic potency and characteristics are uniquely linked to a geographical area, climate, soil, or traditional regional preparation methods can obtain a GI tag.\n\n**Notable Examples in India:**\n- **Navara Rice (Kerala):** Used extensively in Panchakarma Ayurvedic treatments.\n- **Kashmir Saffron:** Celebrated for unique aroma and medicinal value in classical Ayurveda.\n- **Malabar Pepper:** Famous for traditional Ayurvedic formulations.\n- **Kotakkal Arya Vaidya Sala traditions & Nilambur Teak**.",
+    "source": "GI Registry of India & Ministry of AYUSH Documentation",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-014",
+    "question": "What is biopiracy?",
+    "alternative_questions": [
+      "Define biopiracy in Ayurveda",
+      "What does biopiracy mean?",
+      "Examples of biopiracy India"
+    ],
+    "category": "Enforcement & Biopiracy",
+    "answer": "Biopiracy is the unethical or unlawful commercial exploitation and patenting of indigenous biological resources and traditional knowledge without authorized permission from, or fair benefit-sharing with, the native communities that developed that knowledge. Landmark historical examples include foreign patent attempts on the wound-healing properties of **Turmeric (Haldi)**, the fungicidal properties of **Neem**, and **Basmati rice**—all of which were successfully challenged and revoked by India.",
+    "source": "Biological Diversity Act, 2002 & TKDL Case Studies",
+    "source_url": "https://www.tkdl.res.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India / International",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-015",
+    "question": "What is the role of the Ministry of AYUSH?",
+    "alternative_questions": [
+      "What does the AYUSH ministry do?",
+      "Functions of the Ministry of AYUSH",
+      "Role of AYUSH in IP and regulation"
+    ],
+    "category": "Ayurveda & Regulation",
+    "answer": "The Ministry of AYUSH (Ayurveda, Yoga & Naturopathy, Unani, Siddha, and Homoeopathy) is the apex Indian government authority responsible for:\n1. Formulating policy, education, and research standards for traditional healthcare systems.\n2. Regulating Ayurvedic drug manufacturing and quality through the Pharmacopoeia Commission for Indian Medicine (PCIM&H).\n3. Protecting Indian traditional knowledge globally via TKDL in collaboration with CSIR.\n4. Facilitating intellectual property guidelines and standardizing examination guidelines for Ayush-related inventions.",
+    "source": "Ministry of AYUSH Official Mandate & Allocation of Business Rules",
+    "source_url": "https://ayush.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-016",
+    "question": "What is the difference between classical and proprietary Ayurvedic medicine?",
+    "alternative_questions": [
+      "Classical vs proprietary Ayurvedic medicine",
+      "What is Patent or Proprietary Ayurvedic Medicine (P&P)?",
+      "Difference between Shastriya and Anubhuta Ayurvedic medicines"
+    ],
+    "category": "Ayurveda & Regulation",
+    "answer": "Under the Drugs and Cosmetics Act, 1940:\n1. **Classical (Shastriya) Ayurvedic Medicines:** Formulated strictly according to recipes specified in authoritative ancient Ayurvedic pharmacopoeias listed in the First Schedule of the Act (e.g., Chyawanprash, Triphala Churna). Cannot be patented as products, but individual brand names can be trademarked.\n2. **Patent or Proprietary (P&P) Ayurvedic Medicines (Section 3(h)):** Formulations containing ingredients mentioned in classical texts but created with modified ratios, novel combinations, or modern delivery vehicles (syrups, capsules, gels). These can be patented if they demonstrate novelty and synergism under Patent Act rules.",
+    "source": "Drugs and Cosmetics Act, 1940, Section 3(a) & 3(h)",
+    "source_url": "https://cdsco.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-017",
+    "question": "What approvals are required for Ayurvedic medicines?",
+    "alternative_questions": [
+      "How to get manufacturing license for Ayurvedic medicine in India?",
+      "Regulatory approvals for Ayurvedic products",
+      "AYUSH drug license requirements"
+    ],
+    "category": "Ayurveda & Regulation",
+    "answer": "To manufacture and sell Ayurvedic medicines in India, you require:\n1. **Ayush State Drug License (Form 25-D or 25-E):** Issued by the State Ayurvedic Drug Licensing Authority.\n2. **GMP Certification (Schedule T):** Compliance with Good Manufacturing Practices under the Drugs and Cosmetics Rules.\n3. **National Biodiversity Authority (NBA) Approval:** Mandatory Section 6 approval if accessing Indian bio-resources for commercial utilization.\n4. **Safety & Stability Studies:** Required for Patent & Proprietary (P&P) medicines before licensing.",
+    "source": "Drugs and Cosmetics Rules, 1945 (Schedule T) & Biological Diversity Act, 2002",
+    "source_url": "https://ayush.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-018",
+    "question": "Can an Indian patent protect my invention internationally?",
+    "alternative_questions": [
+      "Does an Indian patent work in other countries?",
+      "Is an Indian patent valid worldwide?",
+      "How to protect my Indian patent abroad?"
+    ],
+    "category": "International Patents",
+    "answer": "No. Patent rights are strictly **territorial**. An Indian patent granted by the Indian Patent Office protects your invention only within the territory of India. To obtain protection in other countries, you must file patent applications in each target jurisdiction, either directly under the Paris Convention within 12 months or globally via the **Patent Cooperation Treaty (PCT)**.",
+    "source": "Manual of Patent Office Practice and Procedure - Chapter 03 & WIPO Guidelines",
+    "source_url": "https://www.wipo.int",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "International",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-019",
+    "question": "What is a PCT application?",
+    "alternative_questions": [
+      "Explain Patent Cooperation Treaty (PCT)",
+      "How does international PCT patent filing work?",
+      "Benefits of PCT application"
+    ],
+    "category": "International Patents",
+    "answer": "The **Patent Cooperation Treaty (PCT)** is an international treaty administered by WIPO. It allows you to file a single 'international' patent application to simultaneously seek patent protection in over 155 contracting countries. Key benefits include:\n- **Extended Decision Time:** Gives you up to 30 or 31 months from your priority date before entering the costly national phase in individual countries.\n- **International Search Report (ISR):** Provides an early international assessment of your invention's patentability.",
+    "source": "WIPO PCT Applicant's Guide",
+    "source_url": "https://www.wipo.int/pct",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "International",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-020",
+    "question": "What is WIPO?",
+    "alternative_questions": [
+      "What does WIPO stand for?",
+      "Role of World Intellectual Property Organization",
+      "Explain WIPO"
+    ],
+    "category": "General IP",
+    "answer": "The **World Intellectual Property Organization (WIPO)** is the specialized United Nations agency dedicated to developing a balanced and accessible international IP system. WIPO administers key international IP treaties (such as the Paris Convention, PCT, Madrid System for trademarks, and Hague System for designs) and hosts the global IP reference and dispute resolution services.",
+    "source": "WIPO Official Overview",
+    "source_url": "https://www.wipo.int",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "International",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-021",
+    "question": "How do I check whether my invention is already patented?",
+    "alternative_questions": [
+      "How to check if an idea is already patented in India?",
+      "Where can I search for existing patents?",
+      "Checking existing patent databases"
+    ],
+    "category": "Patents & Prior Art",
+    "answer": "You can perform a patent search across free public patent databases:\n1. **InPASS (Indian Patent Advanced Search System):** The official CGPDTM portal (ipindiaservices.gov.in) for Indian patents.\n2. **Google Patents:** Comprehensive worldwide patent database covering USPTO, EPO, WIPO, and India.\n3. **Espacenet (EPO):** Over 140 million patent documents worldwide.\n4. **WIPO Patentscope:** For all international PCT applications.\n5. **TKDL:** For traditional Indian medicinal formulation references.",
+    "source": "IP India InPASS Guide & Manual of Patent Practice",
+    "source_url": "https://ipindiaservices.gov.in/publicsearch",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India / International",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-022",
+    "question": "How do I perform a prior-art search?",
+    "alternative_questions": [
+      "Step by step guide to prior art search",
+      "How to search prior art for Ayurvedic product?",
+      "Prior art search methodology"
+    ],
+    "category": "Patents & Prior Art",
+    "answer": "To perform a thorough prior-art search:\n1. **Define Core Keywords & Synonyms:** Identify scientific botanical names (e.g., *Curcuma longa*), traditional Sanskrit names, therapeutic indications, and active constituents.\n2. **Search Patent Databases:** Use Boolean operators (`AND`, `OR`, `NOT`) in InPASS, Google Patents, and Espacenet.\n3. **Search Scientific & Traditional Literature:** Review Google Scholar, PubMed, Ayush Research Portal, and TKDL.\n4. **Analyze IPC/CPC Classifications:** Search in classes **A61K 36/00** (medicinal preparations from plants) and **A61K 38/00**.\n5. **Document Results:** Analyze whether any single document or combination discloses all elements of your invention.",
+    "source": "Manual of Patent Office Practice and Procedure - Chapter 03 (Examination)",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-023",
+    "question": "Someone copied my Ayurvedic product. What can I do?",
+    "alternative_questions": [
+      "My Ayurvedic product was copied, what legal action can I take?",
+      "Remedies for patent or product infringement in Ayurveda",
+      "How to stop someone from copying my Ayurvedic formula?"
+    ],
+    "category": "Enforcement & Infringement",
+    "answer": "If your product is copied, your legal options depend on your IP rights:\n1. **If You Have a Granted Patent:** File a patent infringement suit in the District Court or High Court under Section 108 of the Patents Act to claim an injunction (order stopping sales) and damages/lost profits.\n2. **Send a Cease-and-Desist Notice:** A formal legal notice issued through an IP advocate demanding immediate cessation of copying.\n3. **If You Have No Patent:** If the formulation is unpatented classical knowledge, you cannot prevent copying of the formula itself, but you CAN prevent them from copying your brand name, packaging design, or claiming your clinical test data (Passing Off / Trade Dress violation).",
+    "source": "The Patents Act, 1970, Section 108 & Commercial Courts Act, 2015",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-024",
+    "question": "Someone is using my Ayurvedic brand name. What can I do?",
+    "alternative_questions": [
+      "Brand name infringement in Ayurveda",
+      "Someone copied my Ayurvedic brand logo",
+      "Legal remedy for trademark infringement India"
+    ],
+    "category": "Enforcement & Infringement",
+    "answer": "If another party is using your brand name or a deceptively similar mark:\n1. **If Trademark is Registered:** File a **Trademark Infringement suit** under Section 29 of the Trade Marks Act, 1999 in Commercial Court for an immediate interim injunction, seizure of counterfeit stock, and damages.\n2. **If Trademark is Unregistered (Common Law):** File a **Passing-Off action** under Section 27(2), proving prior commercial use, market goodwill, and consumer confusion.\n3. **Issue a Legal Cease-and-Desist Notice:** Demanding withdrawal of goods from shelves and online platforms (Amazon, Flipkart, 1mg, etc.).\n4. **File Takedown Notices:** Submit IP violation complaints to online marketplaces and domain registrars.",
+    "source": "The Trade Marks Act, 1999, Section 27, 29, 134",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  },
+  {
+    "id": "FAQ-025",
+    "question": "I developed a new Ayurvedic formulation. What should I do first?",
+    "alternative_questions": [
+      "First steps after inventing an Ayurvedic product",
+      "How to protect a newly invented Ayurvedic medicine?",
+      "Checklist for new Ayurvedic formulation"
+    ],
+    "category": "Ayurveda & IP",
+    "answer": "Follow this immediate step-by-step roadmap:\n1. **Maintain Strict Confidentiality:** Do NOT publish research, announce on social media, or sell the product before filing a patent or provisional application. Public disclosure destroys novelty.\n2. **Sign Non-Disclosure Agreements (NDAs):** With all co-workers, labs, and testing facilities.\n3. **Conduct a Comprehensive Prior-Art & TKDL Search:** Confirm your formulation is non-obvious and not described in classical texts.\n4. **Document Synergism with Laboratory Data:** Gather in-vitro, in-vivo, or clinical data proving enhanced therapeutic efficacy.\n5. **File a Provisional/Complete Patent Application:** Secure your priority date at the Indian Patent Office.\n6. **Apply for National Biodiversity Authority (NBA) Approval:** Before commercializing or finalizing patent grant.\n7. **File Trademark (Form TM-A):** For your brand and product name in Class 5.",
+    "source": "Guidelines for Examination of Ayush Related Inventions & Indian Patents Act",
+    "source_url": "https://ipindia.gov.in",
+    "last_verified": "2026-08-27",
+    "jurisdiction": "India",
+    "requires_rag": false
+  }
+]

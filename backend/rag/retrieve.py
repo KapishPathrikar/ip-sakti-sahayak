@@ -5,7 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .ingest import COLLECTION_NAME
+try:
+	from .ingest import COLLECTION_NAME, EMBEDDING_MODEL_NAME
+except (ImportError, ValueError):
+	import sys
+	from pathlib import Path
+	sys.path.insert(0, str(Path(__file__).resolve().parent))
+	from ingest import COLLECTION_NAME, EMBEDDING_MODEL_NAME
 
 DEFAULT_MAX_DISTANCE = 0.5
 
@@ -18,24 +24,46 @@ class RetrievedChunk:
 	distance: float
 
 
+_CLIENT_CACHE: dict[str, Any] = {}
+_COLLECTION_CACHE: dict[str, Any] = {}
+_EMBEDDING_FUNCTION: Any = None
+
+
+def _get_embedding_function() -> Any:
+	global _EMBEDDING_FUNCTION
+	if _EMBEDDING_FUNCTION is None:
+		from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+		_EMBEDDING_FUNCTION = SentenceTransformerEmbeddingFunction(model_name=EMBEDDING_MODEL_NAME)
+	return _EMBEDDING_FUNCTION
+
+
+
+def _get_collection(persist_dir: str | Path = "chroma_db") -> Any:
+	key = str(persist_dir)
+	if key not in _COLLECTION_CACHE:
+		import chromadb
+		client = chromadb.PersistentClient(path=key)
+		_CLIENT_CACHE[key] = client
+		_COLLECTION_CACHE[key] = client.get_collection(
+			COLLECTION_NAME,
+			embedding_function=_get_embedding_function(),
+		)
+	return _COLLECTION_CACHE[key]
+
+
 def retrieve(
 	query: str,
 	persist_dir: str | Path = "chroma_db",
 	limit: int = 5,
 	max_distance: float = DEFAULT_MAX_DISTANCE,
 ) -> list[RetrievedChunk]:
-	"""Return nearest chunks, preserving source and page provenance."""
+	"""Return nearest chunks, preserving source and page provenance (using cached vector client)."""
 	if not query.strip() or limit < 1 or max_distance < 0:
 		return []
-	import chromadb
-	from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
-	client = chromadb.PersistentClient(path=str(persist_dir))
-	collection = client.get_collection(
-		COLLECTION_NAME,
-		embedding_function=SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2"),
-	)
+	collection = _get_collection(persist_dir)
 	result = collection.query(query_texts=[query], n_results=limit)
+
 	documents = result.get("documents", [[]])[0]
 	metadatas = result.get("metadatas", [[]])[0]
 	distances = result.get("distances", [[]])[0]
@@ -50,3 +78,30 @@ def retrieve(
 		seen.add(key)
 		chunks.append(RetrievedChunk(text=document, source=source, page=page, distance=float(distance)))
 	return chunks
+
+
+def main() -> None:
+	import argparse
+	import json
+
+	parser = argparse.ArgumentParser(description=__doc__)
+	parser.add_argument("query", type=str, help="Search query")
+	parser.add_argument("--persist-dir", type=Path, default=Path("chroma_db"))
+	parser.add_argument("--limit", type=int, default=3)
+	parser.add_argument("--max-distance", type=float, default=1.5)
+	args = parser.parse_args()
+
+	results = retrieve(args.query, persist_dir=args.persist_dir, limit=args.limit, max_distance=args.max_distance)
+	if not results:
+		print("No relevant chunks found.")
+		return
+
+	print(f"\nFound {len(results)} relevant chunks:\n" + "=" * 50)
+	for i, chunk in enumerate(results, 1):
+		print(f"\n[{i}] Source: {chunk.source} (Page {chunk.page}) | Distance: {chunk.distance:.4f}")
+		print(f"{chunk.text}\n" + "-" * 50)
+
+
+if __name__ == "__main__":
+	main()
+

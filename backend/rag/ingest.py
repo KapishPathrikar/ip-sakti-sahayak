@@ -10,9 +10,10 @@ from pathlib import Path
 from typing import Any
 
 COLLECTION_NAME = "ip-shakti-sahayak"
+EMBEDDING_MODEL_NAME = "all-mpnet-base-v2"
 DEFAULT_CHUNK_SIZE = 900
 DEFAULT_CHUNK_OVERLAP = 150
-UPSERT_BATCH_SIZE = 2000
+UPSERT_BATCH_SIZE = 1000
 SECTION_PATTERN = re.compile(
 	r"(?im)^(?P<heading>(?:chapter|part|section|rule|article|annexure|appendix|schedule)\s+[\w./()-]+.*|\d+(?:\.\d+)*[.)]?\s+[A-Z][^\n]{2,120})$"
 )
@@ -91,14 +92,23 @@ def ingest_sources(
 	persist_dir: str | Path = "chroma_db",
 	chunk_size: int = DEFAULT_CHUNK_SIZE,
 	overlap: int = DEFAULT_CHUNK_OVERLAP,
+	reset: bool = True,
 ) -> dict[str, int]:
-	"""Extract, chunk, embed, and persist supported sources with provenance."""
+	"""Extract, chunk, embed with 768-dim all-mpnet-base-v2, and persist supported sources with provenance."""
 	import chromadb
 	from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
 	source_root = Path(source_dir)
 	client = chromadb.PersistentClient(path=str(persist_dir))
-	embedding_function = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+	embedding_function = SentenceTransformerEmbeddingFunction(model_name=EMBEDDING_MODEL_NAME)
+	
+	if reset:
+		try:
+			client.delete_collection(COLLECTION_NAME)
+			print(f"[Ingest] Reset collection '{COLLECTION_NAME}' for 768-dim upgrade.")
+		except Exception:
+			pass
+
 	collection = client.get_or_create_collection(COLLECTION_NAME, embedding_function=embedding_function)
 
 	documents: list[str] = []
