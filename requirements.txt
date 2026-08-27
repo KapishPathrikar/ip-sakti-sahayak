@@ -8,6 +8,7 @@ pypdf
 sentence-transformers
 python-dotenv
 deep-translator
+httpx
 
 # Frontend (Next.js) dependencies
 next

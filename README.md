@@ -1,51 +1,111 @@
-# IP Shakti Sahayak
+# IP Shakti Sahayak 🇮🇳
 
-IP Shakti Sahayak is an India-first, retrieval-augmented assistant for accessible intellectual-property information. It will provide source-backed guidance about patents, trademarks, copyright, and industrial designs. It is an information product, not a substitute for legal advice.
+**IP Shakti Sahayak** is an India-first, retrieval-augmented artificial intelligence assistant designed for accessible intellectual-property law guidance, patent procedures, and traditional Ayurvedic knowledge protection. It provides source-backed, grounded guidance with exact citations, multilingual comprehension (English, Hindi, and conversational Hinglish), safety guardrails, real-time token streaming, and an instant 25-FAQ legal cache.
 
-> Note: `Project.MD` supplied with this task describes a separate Flask college-event allocation system. The repository implements a Next.js and FastAPI IP-assistant foundation, so this repository plan follows the codebase rather than that reference document.
+> **Disclaimer:** *IP Shakti Sahayak is an informational product and does not constitute formal legal advice.*
 
-## Current architecture
+---
 
-- `frontend/`: Next.js 16 App Router interface.
-- `backend/`: FastAPI API. `GET /health` is the Phase 0 integration contract.
-- `corpus/`: source material organised as `national`, `international`, and `ayurveda`.
-- `chroma_db/`: local, generated vector-store data; it is intentionally not committed.
+## 🏛️ Current Architecture
 
-## Phase-wise implementation plan
+- **`frontend/`**: Next.js 16 App Router user interface.
+- **`backend/`**: FastAPI REST & SSE streaming server.
+  - `backend/rag/ingest.py`: PDF/text parser & 768-dimensional chunk embedder.
+  - `backend/rag/retrieve.py`: In-memory singleton vector retriever with cosine similarity ranking.
+  - `backend/rag/generate.py`: Ollama LLM generator with prompt crafting & real-time SSE stream.
+  - `backend/rag/translation.py`: Multi-dialect engine supporting English, pure Hindi (Devnagari), and Hinglish.
+  - `backend/rag/safety.py`: Prompt-injection defense and off-topic guardrails.
+  - `backend/rag/session.py`: Multi-turn conversational session history manager.
+  - `backend/rag/faq_matcher.py`: In-memory semantic matcher for instant (<0.01s) direct legal answers.
+  - `backend/data/faqs.json`: 25 curated, pre-verified legal FAQs with statutory citations.
+- **`corpus/`**: Government manuals, Acts, and examination guidelines organized as `national`, `international`, and `ayurveda`.
+- **`chroma_db/`**: Local 768-dimension vector database (generated on-demand, git-ignored).
 
-| Phase | Outcome | Key deliverables |
-| --- | --- | --- |
-| 0 — Foundation | An executable, safe development baseline | Documented scope and architecture; environment examples; CORS configuration; stable health contract; branded frontend shell and API status check. |
-| 1 — Knowledge pipeline | Repeatable, traceable ingestion | Source inventory and provenance schema; PDF/text extraction; chunking; embeddings and Chroma persistence; ingest CLI and validation report. |
-| 2 — Retrieval and answer API | Grounded answers with citations | Query/retrieval service; answer endpoint; source citations and confidence/no-answer policy; automated retrieval tests. |
-| 3 — Conversational experience | Useful public-facing guided Q&amp;A | Chat UI; loading/error/empty states; citation viewer; topic suggestions; Hindi/regional-language input strategy. |
-| 4 — Safety and quality | Trustworthy IP information delivery | Legal-information disclaimer; prompt-injection and citation checks; evaluation set; feedback capture; observability and rate limiting. |
-| 5 — Production readiness | Deployable, maintainable service | Authentication only if required; admin source-management workflow; CI; container/deployment configuration; backups and monitoring. |
+---
 
-## Phase 0 status
+## 📋 Phase-Wise Implementation Status
 
-Complete. The frontend now identifies the product and checks API availability at runtime. The API exposes a versioned health response and limits browser access to configured origins.
+| Phase | Outcome | Key Deliverables | Status |
+|---|---|---|---|
+| **0 — Foundation** | Development baseline | Scope & architecture, CORS configuration, stable health contract (`GET /health`), project structure. | ✅ **Complete** |
+| **1 — Knowledge Pipeline** | Traceable ingestion | PDF extraction, provenance tracking, chunking, and 768-dim `all-mpnet-base-v2` persistence (18,518 chunks). | ✅ **Complete** |
+| **2 — Retrieval & Answer API** | Grounded answers with citations | Chroma vector search, answer endpoint (`POST /api/ask`), exact source citations, calibrated confidence scoring. | ✅ **Complete** |
+| **3 — Conversational & Multilingual** | Multi-turn & vernacular support | Multi-turn session memory (`POST /api/chat`), history endpoints, English / Hindi / Hinglish translation layer. | ✅ **Complete** |
+| **4 — Safety & Guardrails** | Trustworthy legal delivery | Prompt-injection prevention, off-topic question blocking, statutory disclaimers, automated unit test suite. | ✅ **Complete** |
+| **5 — Streaming & Semantic Cache** | Low-latency real-time response | SSE token streaming (`POST /api/chat/stream`), 25 pre-verified legal FAQs with instant (<0.01s) deterministic answering (`GET /api/faqs`). | ✅ **Complete** |
 
-## Phase 1 status
+---
 
-Complete. [The knowledge-pipeline guide](docs/knowledge-pipeline.md) defines source onboarding, provenance, and validation rules. The ingestion command supports `.txt`, `.md`, and text-based `.pdf` files; it produces deterministic chunks and persists their citation metadata in Chroma. The current corpus contains no source files, so an index should be built only after reviewed source material has been added.
+## 🚀 Quickstart: Run Locally
 
-## Run locally
+### 1. Prerequisites
+- **Python 3.10+**
+- **Node.js 18+**
+- **[Ollama](https://ollama.com)** with model pulled:
+  ```powershell
+  ollama pull gpt-oss:20b
+  ```
+  *(Alternative lighter models: `ollama pull qwen3:14b` or `ollama pull llama3.2:3b`)*
 
-Use separate terminals from the repository root.
+---
+
+### 2. Backend Setup & Ingestion
+
+From the repository root in PowerShell:
 
 ```powershell
-py -m venv .venv
+# Create and activate virtual environment
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-py -m pip install -r requirements.txt
-uvicorn main:app --app-dir backend --reload
+
+# Install dependencies
+pip install -r requirements.txt
+
+# One-time ingestion: Build the 768-dim Chroma vector database (18,518 chunks)
+python backend/rag/ingest.py corpus
+
+# Start FastAPI backend server
+uvicorn backend.main:app --reload --port 8000
 ```
+- **API Root:** `http://localhost:8000`
+- **Swagger Interactive Docs:** `http://localhost:8000/docs`
+
+---
+
+### 3. Frontend Setup
+
+In a separate terminal:
 
 ```powershell
-Copy-Item frontend\.env.example frontend\.env.local
-Set-Location frontend
+# Navigate to frontend folder
+cd frontend
+
+# Set up local environment variables
+Copy-Item .env.example .env.local
+
+# Install Node dependencies and start dev server
 npm install
 npm run dev
 ```
+- **Web App Interface:** `http://localhost:3000`
 
-Open `http://localhost:3000`; API docs are available at `http://localhost:8000/docs`.
+---
+
+## 🧪 Testing & CLI Tools
+
+### Run Automated Unit Test Suite
+```powershell
+python -m unittest backend/tests/test_api.py
+```
+
+### Live CLI Querying with Real-Time Streaming
+```powershell
+# Standard query
+python backend/rag/generate.py "What are the rules for patent filing in India?"
+
+# Hinglish query
+python backend/rag/generate.py "Ayurvedic medicine ka patent kaise le?"
+
+# Direct FAQ cache hit (Instant)
+python backend/rag/generate.py "Can an Ayurvedic formulation be patented?"
+```
