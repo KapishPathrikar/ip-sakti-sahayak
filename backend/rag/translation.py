@@ -1,25 +1,49 @@
 """Language translation utilities for multilingual RAG support."""
 
 from __future__ import annotations
+import re
 from deep_translator import GoogleTranslator
 
 
+
+MARATHI_DEVNAGARI_MARKERS = {
+    "आहे", "नाही", "कसे", "करावे", "मिळेल", "मिळवायचे", "माहिती", "नियम",
+    "औषध", "नोंदणी", "हक्क", "करणे", "झाले", "होते", "असेल", "प्रक्रिया",
+    "अर्ज", "काय", "कोणते", "कधी", "कुठे", "यांचे", "साठी", "मध्ये", "झाला"
+}
+
+MARATHISH_LATIN_MARKERS = {
+    "kase", "kasa", "kahi", "aushadh", "milto", "milnar", "aahe", "nahi",
+    "kiti", "kadhi", "kay", "ahe", "karayche", "mahiti", "sathi", "madhye", "karave"
+}
+
+
 def detect_language(text: str) -> str:
-    """Detect if the query is English, Hindi (Devnagari), or Hinglish."""
-    # First check: If it has Devnagari characters, it's Devnagari Hindi
+    """Detect if the query is English ('en'), Hindi ('hi'), Marathi ('mr'), Hinglish ('hinglish'), or Marathish ('marathish')."""
+    lower_text = text.lower()
+    words = set(re.findall(r"\b\w+\b", lower_text))
+
+    # 1. Devnagari Script Check (Hindi vs Marathi)
     if any("\u0900" <= char <= "\u097f" for char in text):
+        # Check for characteristic Marathi words
+        if any(marker in text for marker in MARATHI_DEVNAGARI_MARKERS):
+            return "mr"
         return "hi"
 
-    # Second check: Translate to English and see if the text changes
+    # 2. Latin script Marathi (Marathish) check
+    if any(marker in words for marker in MARATHISH_LATIN_MARKERS):
+        return "marathish"
+
+    # 3. Hinglish / Translation Check
     try:
         translated = GoogleTranslator(source="auto", target="en").translate(text)
-        # If the text changes significantly and has no Devnagari, it's Hinglish
         if translated.lower().strip() != text.lower().strip():
             return "hinglish"
     except Exception:
         pass
 
     return "en"
+
 
 
 def translate_text(text: str, target_lang: str = "en", source_lang: str = "auto") -> str:

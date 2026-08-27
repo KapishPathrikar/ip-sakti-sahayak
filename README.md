@@ -13,12 +13,14 @@
   - `backend/rag/ingest.py`: PDF/text extractor & 768-dimensional vector chunker (`all-mpnet-base-v2`).
   - `backend/rag/retrieve.py`: In-memory singleton vector retriever with cosine similarity ranking (<90ms).
   - `backend/rag/generate.py`: Ollama LLM generator with prompt crafting, keep-alive, and real-time SSE streaming.
-  - `backend/rag/translation.py`: Multi-dialect engine supporting English, pure Hindi (Devnagari), and conversational Hinglish.
-  - `backend/rag/safety.py`: Prompt-injection defense and off-topic guardrails with multilingual safety disclaimers.
-  - `backend/rag/session.py`: Multi-turn conversational session history manager (`session_id`).
-  - `backend/rag/faq_matcher.py`: In-memory semantic matcher for instant (<0.01s) deterministic legal answers.
-  - `backend/data/faqs.json`: 25 curated, statutory-backed legal FAQs with exact section citations.
-  - `backend/rag/web_search.py`: Live web search augmentation for real-time government updates and clickable links.
+  - `backend/rag/translation.py`: Multi-dialect engine supporting English, pure Hindi (Devnagari), pure Marathi (Devnagari), Hinglish, and Marathish.
+- `backend/rag/safety.py`: Prompt-injection defense and off-topic guardrails with multilingual safety disclaimers (EN, HI, MR).
+- `backend/rag/session.py`: Multi-turn conversational session history manager (`session_id`).
+- `backend/rag/faq_matcher.py`: In-memory semantic matcher for instant (<0.01s) deterministic legal answers.
+- `backend/rag/data/faqs.json`: 25 curated, statutory-backed legal FAQs with exact section citations.
+- `backend/rag/web_search.py`: Live web search augmentation for real-time government updates and clickable links.
+- `backend/rag/generate.py`: Ollama LLM generator with prompt crafting, keep-alive, "Thinking..." indicators, and real-time SSE streaming.
+
 - **`corpus/`**: Official legal source manuals organized as `national`, `international`, and `ayurveda`.
 - **`chroma_db/`**: Local 768-dimension vector database (generated on-demand, git-ignored).
 

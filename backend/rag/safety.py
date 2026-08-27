@@ -50,6 +50,22 @@ IP_KEYWORDS = [
     "form 18",
     "examiner",
     "office action",
+    "पेटंट",
+    "पेटेंट",
+    "ट्रेडमार्क",
+    "कॉपीराइट",
+    "आयुर्वेद",
+    "औषध",
+    "दवा",
+    "नियम",
+    "कायदा",
+    "अधिनियम",
+    "अर्ज",
+    "नोंदणी",
+    "हक्क",
+    "अधिकार",
+    "शोध",
+    "ज्ञान",
 ]
 
 
@@ -85,9 +101,17 @@ def get_safety_response(reason: str, lang: str = "en") -> str:
             "prompt_injection": "असुरक्षित सामग्री या निर्देश ओवरराइड प्रयास के कारण अनुरोध अस्वीकार कर दिया गया।",
             "off_topic": "मैं एक भारतीय बौद्धिक संपदा (IP) सहायक हूँ। मैं केवल पेटेंट, ट्रेडमार्क, कॉपीराइट और संबंधित आईपी कानूनों के प्रश्नों में सहायता कर सकता हूँ।",
         },
+        "mr": {
+            "prompt_injection": "असुरक्षित मजकूर किंवा सूचना ओव्हरराइड करण्याच्या प्रयत्नामुळे विनंती नाकारली गेली आहे.",
+            "off_topic": "मी एक भारतीय बौद्धिक संपदा (IP) सहाय्यक आहे. मी फक्त पेटंट, ट्रेडमार्क, कॉपीराइट आणि संबंधित कायदेशीर नियमांच्या प्रश्नांची उत्तरे देऊ शकतो.",
+        },
         "hinglish": {
             "prompt_injection": "Request reject kar diya gaya hai kyunki yeh instruction override lag raha hai.",
             "off_topic": "Main ek Indian Intellectual Property (IP) assistant hoon. Main sirf patents, trademarks, copyrights aur IP law se related questions ke answers de sakta hoon.",
+        },
+        "marathish": {
+            "prompt_injection": "Request reject keli ahe karanki he instruction override diste ahe.",
+            "off_topic": "Mi ek Indian Intellectual Property (IP) sahayyak ahe. Mi fakt patents, trademarks, copyrights ani kaydeshir niyamanchya prashnanchi uttare deu shakto.",
         },
     }
 

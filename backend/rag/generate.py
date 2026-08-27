@@ -115,30 +115,30 @@ def answer_question(
 	# Detect language of the incoming query
 	detected_lang = detect_language(query)
 	
+	# Translate query to English for semantic search and prompt if it's Hindi, Marathi, Hinglish, or Marathish
+	english_query = query
+	if detected_lang != "en":
+		translation_source = "auto" if detected_lang in {"hinglish", "marathish"} else detected_lang
+		english_query = translate_text(query, target_lang="en", source_lang=translation_source)
+		print(f"[Translation] Detected '{detected_lang}' query. Translated to English: '{english_query}'")
+
 	# Perform safety validation (guardrails against off-topic/injection)
-	is_safe, reason = is_safe_query(query)
+	is_safe, reason = is_safe_query(english_query)
 	if not is_safe:
 		safety_response = get_safety_response(reason, lang=detected_lang)
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query)
 			session_manager.add_message(active_session_id, "assistant", safety_response)
 		return {"answer": safety_response, "citations": [], "grounded": False, "session_id": active_session_id}
-	
-	# Translate query to English for semantic search and prompt if it's Hindi or Hinglish
-	english_query = query
-	if detected_lang != "en":
-		# Treat Hinglish as auto/Hindi for translation to English
-		translation_source = "auto" if detected_lang == "hinglish" else detected_lang
-		english_query = translate_text(query, target_lang="en", source_lang=translation_source)
-		print(f"[Translation] Detected '{detected_lang}' query. Translated to English: '{english_query}'")
+
 
 	# Check FAQ Direct Answering Cache Layer first
 	matched_faq, faq_score = match_faq(english_query)
 	if matched_faq is not None:
 		print(f"[FAQ Cache] High-confidence match ({faq_score:.2f}): {matched_faq['id']} - {matched_faq['question']}")
 		ans_text = matched_faq["answer"]
-		if detected_lang == "hi":
-			ans_text = translate_text(ans_text, target_lang="hi", source_lang="en")
+		if detected_lang in {"hi", "mr"}:
+			ans_text = translate_text(ans_text, target_lang=detected_lang, source_lang="en")
 		citations = [{
 			"source": matched_faq["source"],
 			"page": 1,
@@ -157,7 +157,7 @@ def answer_question(
 
 	chunks = retrieve(english_query, persist_dir, limit)
 	if not chunks:
-		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang != "hinglish" else "hi", source_lang="en")
+		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query)
 			session_manager.add_message(active_session_id, "assistant", translated_no_answer)
@@ -219,10 +219,12 @@ If the context does not provide sufficient information, clarify what is known an
 - If live web sources with URLs are available, include useful clickable markdown links e.g. [Portal Name](URL).
 - Answer directly and professionally."""
 
-
 	if detected_lang == "hinglish":
 		system_prompt += """
 - CRITICAL: You must write the entire response in Hinglish (Hindi language written using English/Latin alphabet characters. E.g., 'Aapka patent file karne ke liye form submit karna hoga'). Do not use Devnagari characters."""
+	elif detected_lang == "marathish":
+		system_prompt += """
+- CRITICAL: You must write the entire response in Marathish / Romanized Marathi (Marathi language written using English/Latin alphabet characters. E.g., 'Aaplyala patent file karnyasaathi form submit karava lagel'). Do not use Devnagari characters."""
 
 	system_prompt += "\n\nHelpful Answer:"
 
@@ -234,9 +236,9 @@ If the context does not provide sufficient information, clarify what is known an
 			f"[{i}] {c.text}" for i, c in enumerate(chunks, start=1)
 		)
 
-	# Translate the final answer back to Devnagari Hindi ONLY if the original language was Devnagari Hindi
-	if detected_lang == "hi":
-		print(f"[Translation] Translating answer back to Devnagari: '{detected_lang}'...")
+	# Translate the final answer back to Devnagari Hindi or Marathi if needed
+	if detected_lang in {"hi", "mr"}:
+		print(f"[Translation] Translating answer back to Devnagari ({detected_lang})...")
 		llm_answer = translate_text(llm_answer, target_lang=detected_lang, source_lang="en")
 
 	if active_session_id:
@@ -249,6 +251,7 @@ If the context does not provide sufficient information, clarify what is known an
 		"grounded": True,
 		"session_id": active_session_id,
 	}
+
 
 
 def _stream_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL):
@@ -288,8 +291,18 @@ def answer_question_stream(
 	active_session_id = session_manager.get_or_create_session(session_id) if session_id is not None else None
 	detected_lang = detect_language(query)
 
+	# Emit initial thinking state
+	yield f"data: {json.dumps({'type': 'thinking', 'message': '🧠 Analyzing Indian IP statutes & legal corpus...'})}\n\n"
+
+
+	# Translate query to English if non-English
+	english_query = query
+	if detected_lang != "en":
+		translation_source = "auto" if detected_lang in {"hinglish", "marathish"} else detected_lang
+		english_query = translate_text(query, target_lang="en", source_lang=translation_source)
+
 	# Safety check
-	is_safe, reason = is_safe_query(query)
+	is_safe, reason = is_safe_query(english_query)
 	if not is_safe:
 		safety_response = get_safety_response(reason, lang=detected_lang)
 		if active_session_id:
@@ -299,19 +312,14 @@ def answer_question_stream(
 		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id})}\n\n"
 		return
 
-	# Translate query to English if non-English
-	english_query = query
-	if detected_lang != "en":
-		translation_source = "auto" if detected_lang == "hinglish" else detected_lang
-		english_query = translate_text(query, target_lang="en", source_lang=translation_source)
 
 	# Check FAQ Direct Answering Cache Layer first
 	matched_faq, faq_score = match_faq(english_query)
 	if matched_faq is not None:
 		print(f"[FAQ Cache Stream] High-confidence match ({faq_score:.2f}): {matched_faq['id']} - {matched_faq['question']}")
 		ans_text = matched_faq["answer"]
-		if detected_lang == "hi":
-			ans_text = translate_text(ans_text, target_lang="hi", source_lang="en")
+		if detected_lang in {"hi", "mr"}:
+			ans_text = translate_text(ans_text, target_lang=detected_lang, source_lang="en")
 		citations = [{
 			"source": matched_faq["source"],
 			"page": 1,
@@ -326,7 +334,7 @@ def answer_question_stream(
 
 	chunks = retrieve(english_query, persist_dir, limit)
 	if not chunks:
-		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang != "hinglish" else "hi", source_lang="en")
+		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query)
 			session_manager.add_message(active_session_id, "assistant", translated_no_answer)
@@ -340,8 +348,6 @@ def answer_question_stream(
 	for index, chunk in enumerate(chunks, start=1):
 		citation_key = (chunk.source, chunk.page)
 		if citation_key not in seen_citations:
-			# Calibrated confidence formula for 768-dim embeddings:
-			# Raw similarity >= 0.70 -> 95%+, 0.55 -> ~88%, 0.40 -> ~72%
 			raw_sim = max(0.0, 1.0 - chunk.distance)
 			calibrated = max(0, min(99, round((raw_sim ** 0.6) * 100)))
 			citations.append({
@@ -364,6 +370,7 @@ def answer_question_stream(
 	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
 	web_section = ""
 	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist):
+		yield f"data: {json.dumps({'type': 'thinking', 'message': '🌐 Searching official live government portals (ipindia.gov.in / ayush.gov.in)...'})}\n\n"
 		print(f"[Web Search Stream] Live web search triggered for: '{english_query}'")
 		web_results = search_web(english_query, max_results=2)
 		if web_results:
@@ -391,16 +398,18 @@ If the context does not provide sufficient information, clarify what is known an
 - If live web sources with URLs are available, include useful clickable markdown links e.g. [Portal Name](URL).
 - Answer directly and professionally."""
 
-
 	if detected_lang == "hinglish":
 		system_prompt += """
 - CRITICAL: You must write the entire response in Hinglish (Hindi language written using English/Latin alphabet characters. E.g., 'Aapka patent file karne ke liye form submit karna hoga'). Do not use Devnagari characters."""
+	elif detected_lang == "marathish":
+		system_prompt += """
+- CRITICAL: You must write the entire response in Marathish / Romanized Marathi (Marathi language written using English/Latin alphabet characters. E.g., 'Aaplyala patent file karnyasaathi form submit karava lagel'). Do not use Devnagari characters."""
 
 	system_prompt += "\n\nHelpful Answer:"
 
 	full_answer = []
 
-	if detected_lang in {"en", "hinglish"}:
+	if detected_lang in {"en", "hinglish", "marathish"}:
 		# Stream tokens live
 		try:
 			for token in _stream_ollama(system_prompt, model=model):
@@ -414,9 +423,10 @@ If the context does not provide sufficient information, clarify what is known an
 			full_answer = [fallback_ans]
 			yield f"data: {json.dumps({'type': 'token', 'token': fallback_ans})}\n\n"
 	else:
-		# For Devnagari Hindi, generate full English then translate and yield
+		# For Devnagari Hindi or Marathi, generate English then translate
+		yield f"data: {json.dumps({'type': 'thinking', 'message': f'🌐 Synthesizing and translating response to {detected_lang.upper()}...'})}\n\n"
 		llm_answer = _call_ollama(system_prompt, model=model) or ""
-		translated_answer = translate_text(llm_answer, target_lang="hi", source_lang="en")
+		translated_answer = translate_text(llm_answer, target_lang=detected_lang, source_lang="en")
 		full_answer = [translated_answer]
 		yield f"data: {json.dumps({'type': 'token', 'token': translated_answer})}\n\n"
 
@@ -427,6 +437,7 @@ If the context does not provide sufficient information, clarify what is known an
 		session_manager.add_message(active_session_id, "assistant", final_text)
 
 	yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id})}\n\n"
+
 
 
 
@@ -457,7 +468,7 @@ def main() -> None:
 		print("\n" + "=" * 65)
 		print("🤖 IP SHAKTI SAHAYAK — INTERACTIVE CONVERSATION MODE")
 		print("=" * 65)
-		print("• Type your questions in English, Hindi (Devnagari), or Hinglish.")
+		print("• Languages supported: English, Hindi, Marathi, Hinglish & Marathish.")
 		print("• Models & embeddings stay loaded in memory for instant responses.")
 		print("• Type 'clear' to reset conversation memory | Type 'exit' to quit.\n" + "-" * 65)
 
@@ -480,7 +491,6 @@ def main() -> None:
 				print("[Session memory cleared. Starting fresh context.]")
 				continue
 
-			print("\n🤖 IP Shakti Sahayak:\n")
 			citations = []
 			for sse_event in answer_question_stream(
 				user_input,
@@ -491,7 +501,9 @@ def main() -> None:
 			):
 				if sse_event.startswith("data: "):
 					data = json.loads(sse_event[6:].strip())
-					if data.get("type") == "token":
+					if data.get("type") == "thinking":
+						print(f"\n{data.get('message')}\n")
+					elif data.get("type") == "token":
 						sys.stdout.write(data.get("token", ""))
 						sys.stdout.flush()
 					elif data.get("type") == "done":
@@ -519,7 +531,9 @@ def main() -> None:
 		for sse_event in answer_question_stream(args.query, persist_dir=args.persist_dir, limit=args.limit, model=args.model):
 			if sse_event.startswith("data: "):
 				data = json.loads(sse_event[6:].strip())
-				if data.get("type") == "token":
+				if data.get("type") == "thinking":
+					print(f"{data.get('message')}\n")
+				elif data.get("type") == "token":
 					sys.stdout.write(data.get("token", ""))
 					sys.stdout.flush()
 				elif data.get("type") == "done":
@@ -534,6 +548,7 @@ def main() -> None:
 		else:
 			print("  No citations required for this query.")
 		print("-" * 60 + "\n")
+
 
 
 
