@@ -13,3 +13,4 @@ frontend/.next/
 !.env.example
 chroma_db/*
 !chroma_db/.gitkeep
+IP_SAKTI_Implementation_Plan.pdf
