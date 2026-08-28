@@ -14,12 +14,13 @@
   - `backend/rag/retrieve.py`: In-memory singleton vector retriever with cosine similarity ranking (<90ms).
   - `backend/rag/generate.py`: Ollama LLM generator with prompt crafting, keep-alive, and real-time SSE streaming.
   - `backend/rag/translation.py`: Multi-dialect engine supporting English, pure Hindi (Devnagari), pure Marathi (Devnagari), Hinglish, and Marathish.
-- `backend/rag/safety.py`: Prompt-injection defense and off-topic guardrails with multilingual safety disclaimers (EN, HI, MR).
-- `backend/rag/session.py`: Multi-turn conversational session history manager (`session_id`).
-- `backend/rag/faq_matcher.py`: In-memory semantic matcher for instant (<0.01s) deterministic legal answers.
-- `backend/rag/data/faqs.json`: 25 curated, statutory-backed legal FAQs with exact section citations.
-- `backend/rag/web_search.py`: Live web search augmentation for real-time government updates and clickable links.
-- `backend/rag/generate.py`: Ollama LLM generator with prompt crafting, keep-alive, "Thinking..." indicators, and real-time SSE streaming.
+  - `backend/rag/safety.py`: Prompt-injection defense and off-topic guardrails with multilingual safety disclaimers (EN, HI, MR).
+  - `backend/rag/rate_limiter.py`: Sliding-window rate limiter (5 req/min burst, 25 queries/24h quota, FAQ exemption).
+  - `backend/rag/session.py`: Multi-turn conversational session history manager (`session_id`).
+  - `backend/rag/faq_matcher.py`: In-memory semantic matcher for instant (<0.01s) deterministic legal answers.
+  - `backend/data/faqs.json`: 25 curated, statutory-backed legal FAQs with exact section citations.
+  - `backend/rag/web_search.py`: Live web search augmentation for real-time government updates and clickable links.
+  - `backend/rag/generate.py`: Ollama LLM generator with prompt crafting, keep-alive, "Thinking..." indicators, and real-time SSE streaming.
 
 - **`corpus/`**: Official legal source manuals organized as `national`, `international`, and `ayurveda`.
 - **`chroma_db/`**: Local 768-dimension vector database (generated on-demand, git-ignored).
@@ -33,9 +34,10 @@
 | **0 — Foundation** | Development baseline | Scope & architecture, CORS configuration, stable health contract (`GET /health`), clean project structure. | ✅ **Complete** |
 | **1 — Knowledge Pipeline** | Traceable ingestion | PDF extraction, provenance tracking, chunking, and 768-dim `all-mpnet-base-v2` persistence (18,518 chunks). | ✅ **Complete** |
 | **2 — Retrieval & Answer API** | Grounded answers with citations | Chroma vector search, answer endpoint (`POST /api/ask`), exact source citations, calibrated confidence scoring. | ✅ **Complete** |
-| **3 — Conversational & Multilingual** | Multi-turn & vernacular support | Multi-turn session memory (`POST /api/chat`), history endpoints, English / Hindi / Hinglish translation layer. | ✅ **Complete** |
-| **4 — Safety & Guardrails** | Trustworthy legal delivery | Prompt-injection prevention, off-topic question blocking, statutory disclaimers, automated unit test suite. | ✅ **Complete** |
+| **3 — Conversational & Multilingual** | Multi-turn & vernacular support | Multi-turn session memory (`POST /api/chat`), history endpoints, English / Hindi / Marathi / Hinglish translation layer. | ✅ **Complete** |
+| **4 — Safety & Guardrails** | Trustworthy legal delivery | Prompt-injection prevention, off-topic question blocking, statutory disclaimers, sliding-window rate limiting (25 queries/24h, 5 req/min burst, FAQ exemption), automated unit test suite. | ✅ **Complete** |
 | **5 — Streaming & Semantic Cache** | Low-latency real-time response | SSE token streaming (`POST /api/chat/stream`), 25 pre-verified legal FAQs with instant (<0.01s) deterministic answering (`GET /api/faqs`), and Live Web Search for clickable government links. | ✅ **Complete** |
+
 
 ---
 

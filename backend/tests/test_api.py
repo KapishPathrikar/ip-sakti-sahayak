@@ -81,6 +81,29 @@ class TestBackendAPI(unittest.TestCase):
         self.assertTrue(chat_data["grounded"])
         self.assertIn("Synergism", chat_data["answer"])
 
+    def test_rate_limiting_and_faq_exemption(self):
+        from backend.rag.rate_limiter import rate_limiter
+        rate_limiter.reset_client("testclient")
+
+        # 1. Fire 5 non-FAQ requests (allowed up to burst limit)
+        for i in range(5):
+            resp = self.client.post("/api/chat", json={"query": "Tell me a cake recipe", "session_id": f"burst-{i}"})
+            self.assertEqual(resp.status_code, 200)
+
+        # 2. 6th request should hit 429 Too Many Requests (burst limit)
+        resp_blocked = self.client.post("/api/chat", json={"query": "Tell me a cake recipe", "session_id": "burst-6"})
+        self.assertEqual(resp_blocked.status_code, 429)
+        self.assertIn("Burst limit exceeded", resp_blocked.json()["detail"]["message"])
+
+        # 3. An authoritative FAQ query should be EXEMPT and succeed even when burst limit is hit!
+        faq_resp = self.client.post("/api/chat", json={"query": "Can an Ayurvedic formulation be patented?", "session_id": "faq-exempt-test"})
+        self.assertEqual(faq_resp.status_code, 200)
+        self.assertTrue(faq_resp.json()["grounded"])
+
+        # Clean up
+        rate_limiter.reset_client("testclient")
+
+
 
 
 

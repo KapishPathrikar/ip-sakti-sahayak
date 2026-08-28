@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from typing import Any
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 try:
@@ -17,12 +17,15 @@ try:
     from rag.generate import answer_question, answer_question_stream, DEFAULT_OLLAMA_MODEL
     from rag.retrieve import retrieve
     from rag.session import session_manager
-    from rag.faq_matcher import load_faqs
+    from rag.faq_matcher import load_faqs, match_faq
+    from rag.rate_limiter import rate_limiter
 except (ImportError, ValueError):
     from backend.rag.generate import answer_question, answer_question_stream, DEFAULT_OLLAMA_MODEL
     from backend.rag.retrieve import retrieve
     from backend.rag.session import session_manager
-    from backend.rag.faq_matcher import load_faqs
+    from backend.rag.faq_matcher import load_faqs, match_faq
+    from backend.rag.rate_limiter import rate_limiter
+
 
 
 
@@ -108,9 +111,41 @@ def health_check() -> HealthResponse:
     return HealthResponse(status="ok", service="ip-shakti-sahayak", version=APP_VERSION)
 
 
+def _get_client_identifier(request: Request) -> str:
+    """Extract client IP address or forwarded client header."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
+def _check_rate_limit(request: Request, query: str) -> None:
+    """Validate rate limit with exemption for pre-verified FAQ matches."""
+    client_id = _get_client_identifier(request)
+    
+    # Check if this query matches an authoritative FAQ with high confidence (exempt from quota)
+    matched_faq, faq_score = match_faq(query)
+    is_faq = matched_faq is not None and faq_score >= 0.80
+
+    status = rate_limiter.check_and_record(client_id, is_faq_query=is_faq)
+    if not status.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "Rate limit exceeded",
+                "message": status.reason,
+                "retry_after_seconds": status.retry_after_seconds,
+                "daily_remaining": status.daily_remaining,
+                "burst_remaining": status.burst_remaining,
+            },
+            headers={"Retry-After": str(status.retry_after_seconds)},
+        )
+
+
 @app.post("/api/ask", response_model=AskResponse, tags=["rag"])
-def ask_question_endpoint(payload: AskRequest) -> AskResponse:
+def ask_question_endpoint(payload: AskRequest, request: Request) -> AskResponse:
     """Ask a standalone question about Indian IP laws and receive a grounded answer with citations."""
+    _check_rate_limit(request, payload.query)
     try:
         model_name = payload.model or DEFAULT_OLLAMA_MODEL
         result = answer_question(
@@ -123,13 +158,16 @@ def ask_question_endpoint(payload: AskRequest) -> AskResponse:
             citations=[Citation(**c) for c in result.get("citations", [])],
             grounded=result.get("grounded", False),
         )
+    except HTTPException:
+        raise
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(err)}")
 
 
 @app.post("/api/chat", response_model=ChatResponse, tags=["chat"])
-def chat_endpoint(payload: ChatRequest) -> ChatResponse:
+def chat_endpoint(payload: ChatRequest, request: Request) -> ChatResponse:
     """Multi-turn conversational chat with session memory and context continuity."""
+    _check_rate_limit(request, payload.query)
     try:
         model_name = payload.model or DEFAULT_OLLAMA_MODEL
         result = answer_question(
@@ -144,13 +182,16 @@ def chat_endpoint(payload: ChatRequest) -> ChatResponse:
             grounded=result.get("grounded", False),
             session_id=result.get("session_id") or "default",
         )
+    except HTTPException:
+        raise
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Chat generation failed: {str(err)}")
 
 
 @app.post("/api/chat/stream", tags=["chat"])
-def chat_stream_endpoint(payload: ChatRequest):
+def chat_stream_endpoint(payload: ChatRequest, request: Request):
     """Stream token-by-token answer via Server-Sent Events (SSE) for low-latency UI rendering."""
+    _check_rate_limit(request, payload.query)
     try:
         model_name = payload.model or DEFAULT_OLLAMA_MODEL
         generator = answer_question_stream(
@@ -160,8 +201,11 @@ def chat_stream_endpoint(payload: ChatRequest):
             session_id=payload.session_id,
         )
         return StreamingResponse(generator, media_type="text/event-stream")
+    except HTTPException:
+        raise
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Streaming failed: {str(err)}")
+
 
 
 

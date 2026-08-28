@@ -1,0 +1,106 @@
+"""Rate limiting utilities implementing sliding-window burst and daily quotas."""
+
+from __future__ import annotations
+
+import time
+from collections import defaultdict
+from typing import NamedTuple
+
+
+class RateLimitStatus(NamedTuple):
+	allowed: bool
+	reason: str | None = None
+	retry_after_seconds: int = 0
+	daily_remaining: int = 25
+	burst_remaining: int = 5
+
+
+class SlidingWindowRateLimiter:
+	"""
+	In-memory sliding window rate limiter.
+	- Burst limit: max_burst queries per burst_window_seconds (default: 5 queries / 60s)
+	- Daily quota: max_daily queries per daily_window_seconds (default: 25 queries / 86400s)
+	"""
+
+	def __init__(
+		self,
+		max_burst: int = 5,
+		burst_window_seconds: int = 60,
+		max_daily: int = 25,
+		daily_window_seconds: int = 86400,
+	):
+		self.max_burst = max_burst
+		self.burst_window_seconds = burst_window_seconds
+		self.max_daily = max_daily
+		self.daily_window_seconds = daily_window_seconds
+		# Store timestamps of requests per client key (IP / Session)
+		self._requests: dict[str, list[float]] = defaultdict(list)
+
+	def check_and_record(self, client_id: str, is_faq_query: bool = False) -> RateLimitStatus:
+		"""
+		Check if request is allowed and record it if allowed.
+		FAQ cache queries are exempt from quotas.
+		"""
+		now = time.time()
+		timestamps = self._requests[client_id]
+
+		# 1. Prune timestamps older than 24 hours
+		cutoff_daily = now - self.daily_window_seconds
+		valid_timestamps = [t for t in timestamps if t > cutoff_daily]
+		self._requests[client_id] = valid_timestamps
+
+		# If it's a pre-verified FAQ query, always allow with zero quota deduction
+		if is_faq_query:
+			return RateLimitStatus(
+				allowed=True,
+				daily_remaining=max(0, self.max_daily - len(valid_timestamps)),
+				burst_remaining=self.max_burst,
+			)
+
+		# 2. Check Burst Limit (last 60 seconds)
+		cutoff_burst = now - self.burst_window_seconds
+		burst_requests = [t for t in valid_timestamps if t > cutoff_burst]
+		if len(burst_requests) >= self.max_burst:
+			oldest_burst = min(burst_requests)
+			retry_after = max(1, int(self.burst_window_seconds - (now - oldest_burst)))
+			return RateLimitStatus(
+				allowed=False,
+				reason=f"Burst limit exceeded ({self.max_burst} requests/min). Please wait {retry_after}s.",
+				retry_after_seconds=retry_after,
+				daily_remaining=max(0, self.max_daily - len(valid_timestamps)),
+				burst_remaining=0,
+			)
+
+		# 3. Check Daily Quota (last 24 hours)
+		if len(valid_timestamps) >= self.max_daily:
+			oldest_daily = min(valid_timestamps)
+			retry_after = max(1, int(self.daily_window_seconds - (now - oldest_daily)))
+			hours = retry_after // 3600
+			minutes = (retry_after % 3600) // 60
+			return RateLimitStatus(
+				allowed=False,
+				reason=f"Daily limit reached ({self.max_daily} queries / 24h). Resets in {hours}h {minutes}m.",
+				retry_after_seconds=retry_after,
+				daily_remaining=0,
+				burst_remaining=max(0, self.max_burst - len(burst_requests)),
+			)
+
+		# 4. Request is permitted: record current timestamp
+		valid_timestamps.append(now)
+		daily_remaining = max(0, self.max_daily - len(valid_timestamps))
+		burst_remaining = max(0, self.max_burst - (len(burst_requests) + 1))
+
+		return RateLimitStatus(
+			allowed=True,
+			daily_remaining=daily_remaining,
+			burst_remaining=burst_remaining,
+		)
+
+	def reset_client(self, client_id: str) -> None:
+		"""Reset tracking for a specific client (useful for unit tests/admins)."""
+		if client_id in self._requests:
+			del self._requests[client_id]
+
+
+# Global singleton instance
+rate_limiter = SlidingWindowRateLimiter()
