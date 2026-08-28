@@ -19,9 +19,10 @@ except (ImportError, ValueError):
 	from translation import translate_text, detect_language
 
 try:
-	from .safety import is_safe_query, get_safety_response
+	from .safety import is_safe_query, is_injection_query, get_safety_response
 except (ImportError, ValueError):
-	from safety import is_safe_query, get_safety_response
+	from safety import is_safe_query, is_injection_query, get_safety_response
+
 
 try:
 	from .session import session_manager
@@ -127,17 +128,15 @@ def answer_question(
 		english_query = translate_text(query, target_lang="en", source_lang=translation_source)
 		print(f"[Translation] Detected '{detected_lang}' query. Translated to English: '{english_query}'")
 
-	# Perform safety validation (guardrails against off-topic/injection)
-	is_safe, reason = is_safe_query(english_query)
-	if not is_safe:
-		safety_response = get_safety_response(reason, lang=detected_lang)
+	# 1. Prompt injection defense
+	if is_injection_query(english_query):
+		safety_response = get_safety_response("prompt_injection", lang=detected_lang)
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
 			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
 		return {"answer": safety_response, "citations": [], "grounded": False, "session_id": active_session_id}
 
-
-	# Check FAQ Direct Answering Cache Layer first
+	# 2. Check FAQ Direct Answering Cache Layer
 	matched_faq, faq_score = match_faq(english_query)
 	if matched_faq is not None:
 		print(f"[FAQ Cache] High-confidence match ({faq_score:.2f}): {matched_faq['id']} - {matched_faq['question']}")
@@ -159,6 +158,16 @@ def answer_question(
 			"session_id": active_session_id,
 			"from_faq": True,
 		}
+
+	# 3. Off-topic relevance validation
+	is_safe, reason = is_safe_query(english_query)
+	if not is_safe:
+		safety_response = get_safety_response(reason, lang=detected_lang)
+		if active_session_id:
+			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
+		return {"answer": safety_response, "citations": [], "grounded": False, "session_id": active_session_id}
+
 
 	chunks = retrieve(english_query, persist_dir, limit)
 	if not chunks:
@@ -314,10 +323,9 @@ def answer_question_stream(
 		translation_source = "auto" if detected_lang in {"hinglish", "marathish"} else detected_lang
 		english_query = translate_text(query, target_lang="en", source_lang=translation_source)
 
-	# Safety check
-	is_safe, reason = is_safe_query(english_query)
-	if not is_safe:
-		safety_response = get_safety_response(reason, lang=detected_lang)
+	# 1. Prompt injection defense
+	if is_injection_query(english_query):
+		safety_response = get_safety_response("prompt_injection", lang=detected_lang)
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
 			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
@@ -325,8 +333,7 @@ def answer_question_stream(
 		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id})}\n\n"
 		return
 
-
-	# Check FAQ Direct Answering Cache Layer first
+	# 2. Check FAQ Direct Answering Cache Layer
 	matched_faq, faq_score = match_faq(english_query)
 	if matched_faq is not None:
 		print(f"[FAQ Cache Stream] High-confidence match ({faq_score:.2f}): {matched_faq['id']} - {matched_faq['question']}")
@@ -344,6 +351,18 @@ def answer_question_stream(
 		yield f"data: {json.dumps({'type': 'token', 'token': ans_text})}\n\n"
 		yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'from_faq': True})}\n\n"
 		return
+
+	# 3. Off-topic relevance validation
+	is_safe, reason = is_safe_query(english_query)
+	if not is_safe:
+		safety_response = get_safety_response(reason, lang=detected_lang)
+		if active_session_id:
+			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
+		yield f"data: {json.dumps({'type': 'token', 'token': safety_response})}\n\n"
+		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id})}\n\n"
+		return
+
 
 
 	chunks = retrieve(english_query, persist_dir, limit)

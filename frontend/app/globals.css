@@ -3,12 +3,46 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #10213f;
+  --ivory-bg: #F7F3E8;
+  --ivory-surface: #FFFEFA;
+  --ivory-card: #FAF6ED;
+  --ivory-border: #E5DCBF;
+  --herbal-green: #285943;
+  --herbal-green-hover: #1E4433;
+  --herbal-green-dark: #153124;
+  --sage: #8FAF8B;
+  --sage-light: #E9F1E8;
+  --sage-border: #C8DAC5;
+  --earth-brown: #7A5135;
+  --earth-brown-light: #F4ECE6;
+  --muted-gold: #C59A3D;
+  --gold-light: #FBF4E4;
+  --gold-border: #E8D2A3;
+  --text-main: #182C22;
+  --text-muted: #56685E;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--ivory-bg);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+/* Custom Scrollbar for IP-SAKTI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ivory-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sage);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--herbal-green);
 }

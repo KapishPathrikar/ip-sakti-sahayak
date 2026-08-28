@@ -6,7 +6,6 @@ import FeeCalculatorWidget from "../components/FeeCalculatorWidget";
 import PatentabilityWizardWidget from "../components/PatentabilityWizardWidget";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 
-
 interface Citation {
   source: string;
   page: number;
@@ -30,15 +29,25 @@ interface FAQ {
   source: string;
 }
 
+interface SavedSession {
+  session_id: string;
+  id?: string;
+  title: string | null;
+  message_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 const QUICK_SUGGESTIONS = [
-  "Can an Ayurvedic formulation be patented in India?",
-  "What are the official patent filing fees for startups?",
-  "What is the Traditional Knowledge Digital Library (TKDL)?",
-  "Explain Section 3(e) synergism requirement for drugs",
-  "When is National Biodiversity Authority (NBA) approval mandatory?",
-  "What is the official website link to apply for an Indian patent online?",
+  "🌿 Can an Ayurvedic formulation be patented in India?",
+  "⚖️ What are the patent filing fees for startups with 80% rebate?",
+  "📜 What is the Traditional Knowledge Digital Library (TKDL)?",
+  "🧪 Explain Section 3(e) synergism requirement for herbal drugs",
+  "🌱 When is National Biodiversity Authority (NBA) approval mandatory?",
+  "🌐 Official portal link to apply for an Indian patent online",
 ];
 
 export default function Home() {
@@ -51,8 +60,10 @@ export default function Home() {
 
   // Tool dropdown & modals state
   const [isToolsOpen, setIsToolsOpen] = useState(false);
-  const [activeModal, setActiveModal] = useState<"calculator" | "wizard" | "faqs" | null>(null);
+  const [activeModal, setActiveModal] = useState<"calculator" | "wizard" | "faqs" | "history" | null>(null);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [mySessions, setMySessions] = useState<SavedSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   // Auth & Service state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -64,7 +75,6 @@ export default function Home() {
   const toolsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check saved token
     const token = localStorage.getItem("ip_shakti_token");
     const userStr = localStorage.getItem("ip_shakti_user");
     if (token) setAuthToken(token);
@@ -74,7 +84,6 @@ export default function Home() {
       } catch {}
     }
 
-    // Health check & load FAQs
     async function init() {
       try {
         const res = await fetch(`${apiBaseUrl}/health`);
@@ -98,7 +107,6 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, thinkingState]);
 
-  // Close tools dropdown on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target as Node)) {
@@ -108,6 +116,51 @@ export default function Home() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  async function loadMySessions() {
+    if (!authToken) {
+      setIsAuthOpen(true);
+      return;
+    }
+    setLoadingSessions(true);
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/chat/my-sessions`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMySessions(data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load sessions", err);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }
+
+  async function resumeSession(pastSessionId: string) {
+    setActiveModal(null);
+    setThinkingState("Loading previous consultation...");
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/chat/history/${pastSessionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSessionId(pastSessionId);
+        const formattedMessages: Message[] = (data.history || []).map((m: any, idx: number) => ({
+          id: `hist-${idx}-${Date.now()}`,
+          role: m.role,
+          content: m.content,
+          citations: m.citations,
+          confidence: m.confidence,
+        }));
+        setMessages(formattedMessages);
+      }
+    } catch (err) {
+      console.error("Failed to resume session", err);
+    } finally {
+      setThinkingState(null);
+    }
+  }
 
   async function sendMessage(textToSend?: string) {
     const text = textToSend || input.trim();
@@ -124,7 +177,7 @@ export default function Home() {
     ]);
 
     setIsStreaming(true);
-    setThinkingState("🧠 Analyzing Indian IP statutes & legal corpus...");
+    setThinkingState("🌿 Consulting Indian IP statutes, TKDL & Ayush guidelines...");
     let partialText = "";
 
     try {
@@ -145,7 +198,7 @@ export default function Home() {
       if (!response.ok) {
         if (response.status === 429) {
           const errData = await response.json();
-          throw new Error(errData.detail?.message || "Rate limit exceeded.");
+          throw new Error(errData.detail?.message || "Rate limit reached. Please wait.");
         }
         throw new Error("Failed to connect to streaming API.");
       }
@@ -160,7 +213,6 @@ export default function Home() {
         ...prev,
         { id: assistantMsgId, role: "assistant", content: "" },
       ]);
-
 
       while (true) {
         const { done, value } = await reader.read();
@@ -217,8 +269,6 @@ export default function Home() {
       setIsStreaming(false);
       setThinkingState(null);
     }
-
-
   }
 
   async function handleFeedback(messageId: string, rating: number) {
@@ -239,8 +289,9 @@ export default function Home() {
     } catch {}
   }
 
-  function handleExportPDF() {
-    window.open(`${apiBaseUrl}/api/chat/export/${sessionId}`, "_blank");
+  function handleExportPDF(exportSessId?: string) {
+    const target = exportSessId || sessionId;
+    window.open(`${apiBaseUrl}/api/chat/export/${target}`, "_blank");
   }
 
   function handleResetChat() {
@@ -253,55 +304,67 @@ export default function Home() {
     localStorage.removeItem("ip_shakti_user");
     setAuthToken(null);
     setCurrentUser(null);
+    setMySessions([]);
   }
 
   const isChatEmpty = messages.length === 0;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#0e1217] text-slate-100 font-sans">
+    <main className="flex min-h-screen flex-col bg-[#F7F3E8] text-[#182C22] font-sans antialiased">
       {/* Top Navbar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#131922]/80 backdrop-blur">
+      <header className="flex items-center justify-between px-6 py-3.5 border-b border-[#E5DCBF] bg-[#FFFEFA]/95 backdrop-blur-md sticky top-0 z-40 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-sm font-black text-white shadow-md">
-            IP
+          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-[#285943] to-[#1E4433] text-white font-bold text-sm shadow-sm">
+            🌿
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold tracking-tight text-white">IP Shakti Sahayak</span>
-              <span className="rounded bg-blue-900/60 px-1.5 py-0.5 text-[10px] font-bold text-blue-300">
-                AI 2.0
+              <span className="font-extrabold tracking-tight text-[#285943] text-base">
+                IP-SAKTI
+              </span>
+              <span className="rounded-full bg-[#FAF4E4] border border-[#E8D2A3] px-2 py-0.5 text-[10px] font-bold text-[#C59A3D]">
+                Legal AI
               </span>
             </div>
-            <span className="text-[11px] text-slate-400">
-              India-First Legal Intelligence &amp; TKDL Assistant
+            <span className="text-[11px] font-medium text-[#7A5135]">
+              Ancient Knowledge → Modern Intelligence
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-[#56685E]">
             <span
               className={`size-2 rounded-full ${
                 serviceOnline === true
-                  ? "bg-emerald-400"
+                  ? "bg-[#285943]"
                   : serviceOnline === false
-                    ? "bg-red-400"
-                    : "bg-amber-400"
+                    ? "bg-red-500"
+                    : "bg-[#C59A3D]"
               }`}
             />
-            <span className="hidden sm:inline">
-              {serviceOnline ? "Online" : "Connecting"}
+            <span className="hidden sm:inline font-medium">
+              {serviceOnline ? "Database Online" : "Connecting"}
             </span>
           </div>
 
           {currentUser ? (
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300 border border-slate-700">
-                👤 {currentUser.email}
-              </span>
+              <button
+                onClick={() => {
+                  void loadMySessions();
+                  setActiveModal("history");
+                }}
+                className="flex items-center gap-1.5 rounded-full bg-[#E9F1E8] border border-[#C8DAC5] px-3.5 py-1.5 text-xs font-semibold text-[#285943] hover:bg-[#D9E5D7] transition cursor-pointer"
+                title="View Saved Consultations"
+              >
+                <span>🕒 History</span>
+                <span className="opacity-60">·</span>
+                <span className="font-bold">{currentUser.email.split("@")[0]}</span>
+              </button>
               <button
                 onClick={handleLogout}
-                className="text-xs text-red-400 hover:text-red-300"
+                className="text-xs font-semibold text-[#7A5135] hover:text-red-700 hover:underline cursor-pointer"
               >
                 Logout
               </button>
@@ -309,9 +372,9 @@ export default function Home() {
           ) : (
             <button
               onClick={() => setIsAuthOpen(true)}
-              className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500"
+              className="rounded-xl bg-[#285943] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#1E4433] cursor-pointer"
             >
-              Sign In
+              Sign In / History
             </button>
           )}
         </div>
@@ -319,31 +382,37 @@ export default function Home() {
 
       {/* Main Container */}
       <div className="flex flex-1 flex-col items-center justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full">
-        {/* CENTER HERO (When chat is empty, Gemini Style) */}
+        {/* CENTER HERO (When chat is empty) */}
         {isChatEmpty ? (
-          <div className="flex flex-1 flex-col items-center justify-center text-center my-auto py-10">
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-300 to-amber-300 bg-clip-text text-transparent">
-              Hello, how can I assist your IP today?
+          <div className="flex flex-1 flex-col items-center justify-center text-center my-auto py-12 max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#E9F1E8] border border-[#C8DAC5] px-3.5 py-1 text-xs font-bold text-[#285943]">
+              <span>🏛️</span>
+              <span>Indian Patent, Trademark &amp; TKDL Legal Advisory</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-[#285943]">
+              How may I guide your invention today?
             </h1>
-            <p className="mt-3 max-w-lg text-sm text-slate-400">
-              Ask about Indian patent prosecution, trademark filing, traditional Ayurvedic formulations, or verify fees with citations.
+
+            <p className="mt-3.5 text-sm sm:text-base text-[#7A5135] font-medium leading-relaxed">
+              Explore patent eligibility under Section 3, verify TKDL prior art, compute 80% statutory rebates, or assess NBA approvals with authoritative citations.
             </p>
           </div>
         ) : (
           /* CONVERSATION STREAM VIEW */
           <div className="flex-1 w-full space-y-4 overflow-y-auto py-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-xs text-slate-400">
-              <span>Consultation ID: {sessionId}</span>
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#E5DCBF] text-xs text-[#7A5135]">
+              <span className="font-semibold">Consultation Reference: {sessionId}</span>
               <div className="flex gap-2">
                 <button
-                  onClick={handleExportPDF}
-                  className="rounded bg-slate-800 px-2.5 py-1 text-slate-300 hover:bg-slate-700"
+                  onClick={() => handleExportPDF()}
+                  className="rounded-lg bg-[#FFFEFA] border border-[#E5DCBF] px-3 py-1 text-[#285943] font-semibold hover:bg-[#FAF6ED] shadow-2xs cursor-pointer"
                 >
                   📄 Export PDF
                 </button>
                 <button
                   onClick={handleResetChat}
-                  className="rounded bg-slate-800 px-2.5 py-1 text-slate-300 hover:bg-slate-700"
+                  className="rounded-lg bg-[#FFFEFA] border border-[#E5DCBF] px-3 py-1 text-[#7A5135] font-semibold hover:bg-[#FAF6ED] shadow-2xs cursor-pointer"
                 >
                   🔄 New Consultation
                 </button>
@@ -358,23 +427,29 @@ export default function Home() {
                   className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
                 >
                   <div
-                    className={`max-w-[90%] sm:max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    className={`max-w-[90%] sm:max-w-[82%] rounded-2xl px-5 py-3.5 text-sm shadow-xs ${
                       isUser
-                        ? "bg-blue-600 text-white rounded-br-sm"
-                        : "bg-[#1a2230] text-slate-200 rounded-bl-sm border border-slate-800"
+                        ? "bg-[#285943] text-white rounded-br-xs font-medium"
+                        : "bg-[#FFFEFA] text-[#182C22] rounded-bl-xs border border-[#E5DCBF]"
                     }`}
                   >
                     <MarkdownRenderer content={msg.content} isUser={isUser} />
 
-
                     {msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-3 border-t border-slate-700/60 pt-2 text-xs text-emerald-400">
-                        <span className="font-semibold">Statutory Citations:</span>
-                        <ul className="mt-1 list-inside list-disc space-y-0.5 text-[11px] text-emerald-300/80">
+                      <div className="mt-3.5 border-t border-[#E5DCBF] pt-2.5 text-xs">
+                        <div className="flex items-center gap-1 font-bold text-[#285943]">
+                          <span>📚</span>
+                          <span>Official Statutory Citations:</span>
+                        </div>
+                        <ul className="mt-1.5 list-inside list-disc space-y-1 text-[11px] text-[#56685E]">
                           {msg.citations.map((c, i) => (
                             <li key={i}>
-                              {c.source} (Page {c.page})
-                              {c.confidence ? ` · ${c.confidence}` : ""}
+                              <span className="font-medium text-[#182C22]">{c.source}</span> (Page {c.page})
+                              {c.confidence && (
+                                <span className="ml-1.5 rounded-sm bg-[#FAF4E4] border border-[#E8D2A3] px-1.5 py-0.2 text-[10px] font-bold text-[#C59A3D]">
+                                  {c.confidence}
+                                </span>
+                              )}
                             </li>
                           ))}
                         </ul>
@@ -383,20 +458,20 @@ export default function Home() {
                   </div>
 
                   {!isUser && msg.content && (
-                    <div className="mt-1 flex items-center gap-2 px-1 text-xs text-slate-500">
-                      <span>Helpful?</span>
+                    <div className="mt-1.5 flex items-center gap-2 px-1 text-xs text-[#7A5135]">
+                      <span>Was this statutory guidance accurate?</span>
                       <button
                         onClick={() => handleFeedback(msg.id, 1)}
-                        className={`hover:text-emerald-400 ${
-                          feedbackGiven[msg.id] === 1 ? "text-emerald-400 font-bold" : ""
+                        className={`hover:text-[#285943] transition cursor-pointer ${
+                          feedbackGiven[msg.id] === 1 ? "text-[#285943] font-bold" : ""
                         }`}
                       >
                         👍
                       </button>
                       <button
                         onClick={() => handleFeedback(msg.id, -1)}
-                        className={`hover:text-red-400 ${
-                          feedbackGiven[msg.id] === -1 ? "text-red-400 font-bold" : ""
+                        className={`hover:text-red-700 transition cursor-pointer ${
+                          feedbackGiven[msg.id] === -1 ? "text-red-700 font-bold" : ""
                         }`}
                       >
                         👎
@@ -408,8 +483,8 @@ export default function Home() {
             })}
 
             {thinkingState && (
-              <div className="flex items-center gap-2 rounded-xl bg-blue-950/40 border border-blue-800/50 px-4 py-2.5 text-xs text-blue-300 animate-pulse">
-                <span className="animate-spin">⚙️</span>
+              <div className="flex items-center gap-2 rounded-xl bg-[#FAF4E4] border border-[#E8D2A3] px-4 py-2.5 text-xs text-[#7A5135] font-semibold animate-pulse">
+                <span className="animate-spin text-[#C59A3D]">⚙️</span>
                 <span>{thinkingState}</span>
               </div>
             )}
@@ -418,18 +493,18 @@ export default function Home() {
           </div>
         )}
 
-        {/* BOTTOM PROMPT BAR & TOOLS (Gemini Style) */}
+        {/* BOTTOM PROMPT BAR & TOOLS (Gemini Style on Warm Ivory) */}
         <div className="w-full space-y-3 pt-2">
           {/* Centered Gemini Prompt Bar */}
-          <div className="relative w-full rounded-2xl border border-slate-700 bg-[#161d27] shadow-2xl focus-within:border-blue-500 transition">
-            {/* FLOATING TOOLS MENU (Just like the Gemini Screenshot) */}
+          <div className="relative w-full rounded-2xl border border-[#E5DCBF] bg-[#FFFEFA] shadow-md focus-within:border-[#285943] focus-within:ring-2 focus-within:ring-[#285943]/20 transition">
+            {/* FLOATING TOOLS MENU (IP-SAKTI Palette) */}
             {isToolsOpen && (
               <div
                 ref={toolsMenuRef}
-                className="absolute bottom-full left-3 mb-2 w-64 rounded-2xl border border-slate-700 bg-[#1a2332] p-2 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in slide-in-from-bottom-2"
+                className="absolute bottom-full left-3 mb-2 w-72 rounded-2xl border border-[#E5DCBF] bg-[#FFFEFA] p-2.5 shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2"
               >
-                <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Legal Tools &amp; Actions
+                <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#7A5135]">
+                  Statutory Actions &amp; Tools
                 </div>
 
                 <button
@@ -437,12 +512,12 @@ export default function Home() {
                     setActiveModal("calculator");
                     setIsToolsOpen(false);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-200 transition hover:bg-blue-600/20 hover:text-blue-300"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#182C22] transition hover:bg-[#E9F1E8] hover:text-[#285943] cursor-pointer"
                 >
-                  <span className="text-lg">🧮</span>
+                  <span className="text-xl">🧮</span>
                   <div className="text-left">
-                    <div className="font-semibold">Fee Calculator</div>
-                    <div className="text-[11px] text-slate-400">Compute patent/TM fees (80% rebate)</div>
+                    <div className="font-bold text-[#285943]">Fee Calculator</div>
+                    <div className="text-[11px] text-[#7A5135]">Patent / TM fees with 80% subsidy</div>
                   </div>
                 </button>
 
@@ -451,12 +526,12 @@ export default function Home() {
                     setActiveModal("wizard");
                     setIsToolsOpen(false);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-200 transition hover:bg-blue-600/20 hover:text-blue-300"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#182C22] transition hover:bg-[#E9F1E8] hover:text-[#285943] cursor-pointer"
                 >
-                  <span className="text-lg">🔍</span>
+                  <span className="text-xl">🔍</span>
                   <div className="text-left">
-                    <div className="font-semibold">"Am I Patentable?"</div>
-                    <div className="text-[11px] text-slate-400">Section 3 &amp; NBA risk assessment</div>
+                    <div className="font-bold text-[#285943]">"Am I Patentable?"</div>
+                    <div className="text-[11px] text-[#7A5135]">Section 3 &amp; NBA risk assessment</div>
                   </div>
                 </button>
 
@@ -465,23 +540,38 @@ export default function Home() {
                     setActiveModal("faqs");
                     setIsToolsOpen(false);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-200 transition hover:bg-blue-600/20 hover:text-blue-300"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#182C22] transition hover:bg-[#E9F1E8] hover:text-[#285943] cursor-pointer"
                 >
-                  <span className="text-lg">📚</span>
+                  <span className="text-xl">📚</span>
                   <div className="text-left">
-                    <div className="font-semibold">Statutory FAQs (25)</div>
-                    <div className="text-[11px] text-slate-400">Browse verified legal Q&amp;A</div>
+                    <div className="font-bold text-[#285943]">Statutory FAQs (25)</div>
+                    <div className="text-[11px] text-[#7A5135]">Instant verified legal answers</div>
                   </div>
                 </button>
 
-                <div className="my-1 border-t border-slate-700/80" />
+                <button
+                  onClick={() => {
+                    void loadMySessions();
+                    setActiveModal("history");
+                    setIsToolsOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#182C22] transition hover:bg-[#E9F1E8] hover:text-[#285943] cursor-pointer"
+                >
+                  <span className="text-xl">🕒</span>
+                  <div className="text-left">
+                    <div className="font-bold text-[#285943]">Past Consultations</div>
+                    <div className="text-[11px] text-[#7A5135]">Resume previous sessions &amp; records</div>
+                  </div>
+                </button>
+
+                <div className="my-1.5 border-t border-[#E5DCBF]" />
 
                 <button
                   onClick={() => {
                     handleExportPDF();
                     setIsToolsOpen(false);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs text-slate-300 transition hover:bg-slate-700/50"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-[#285943] transition hover:bg-[#FAF6ED] cursor-pointer"
                 >
                   <span>📄</span>
                   <span>Export Consultation (PDF)</span>
@@ -492,7 +582,7 @@ export default function Home() {
                     handleResetChat();
                     setIsToolsOpen(false);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs text-slate-300 transition hover:bg-slate-700/50"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-[#7A5135] transition hover:bg-[#FAF6ED] cursor-pointer"
                 >
                   <span>🔄</span>
                   <span>New Consultation</span>
@@ -505,18 +595,18 @@ export default function Home() {
                 e.preventDefault();
                 void sendMessage();
               }}
-              className="flex items-center px-4 py-3 gap-2"
+              className="flex items-center px-4 py-3 gap-2.5"
             >
-              {/* + Tools Menu Trigger (Exact match with Gemini screenshot) */}
+              {/* + Tools Menu Trigger */}
               <button
                 type="button"
                 onClick={() => setIsToolsOpen(!isToolsOpen)}
-                className={`grid size-9 place-items-center rounded-xl transition ${
+                className={`grid size-9 place-items-center rounded-xl transition cursor-pointer font-bold ${
                   isToolsOpen
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                    ? "bg-[#285943] text-white"
+                    : "bg-[#E9F1E8] text-[#285943] hover:bg-[#D9E5D7]"
                 }`}
-                title="Open IP Tools & Wizards"
+                title="Open Statutory Tools & Wizards"
               >
                 <span className="text-lg leading-none">{isToolsOpen ? "✕" : "＋"}</span>
               </button>
@@ -526,16 +616,16 @@ export default function Home() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about Indian patents, trademarks, TKDL in English, Hindi, or Marathi..."
+                placeholder="Ask in English, Hindi (उदा. हळद व दुधाचे पेटेंट?), or Marathi..."
                 disabled={isStreaming}
-                className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 outline-none"
+                className="flex-1 bg-transparent text-sm text-[#182C22] placeholder-[#7E9086] outline-none font-medium"
               />
 
               {/* Send Button */}
               <button
                 type="submit"
                 disabled={isStreaming || !input.trim()}
-                className="rounded-xl bg-blue-600 p-2 text-white transition hover:bg-blue-500 disabled:opacity-40"
+                className="rounded-xl bg-[#285943] p-2.5 text-white transition hover:bg-[#1E4433] disabled:opacity-40 shadow-xs cursor-pointer"
               >
                 <svg
                   className="size-4"
@@ -546,7 +636,7 @@ export default function Home() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     d="M14 5l7 7m0 0l-7 7m7-7H3"
                   />
                 </svg>
@@ -554,14 +644,14 @@ export default function Home() {
             </form>
           </div>
 
-          {/* Quick FAQ / Suggestion Pills Below Chat Bar */}
+          {/* Quick FAQ / Suggestion Pills (Sage & Ivory) */}
           {isChatEmpty && (
             <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
               {QUICK_SUGGESTIONS.map((q, idx) => (
                 <button
                   key={idx}
                   onClick={() => sendMessage(q)}
-                  className="rounded-full border border-slate-800 bg-[#161d27]/70 px-3.5 py-1.5 text-xs text-slate-400 transition hover:border-slate-600 hover:bg-slate-800 hover:text-slate-200"
+                  className="rounded-full border border-[#E5DCBF] bg-[#FFFEFA] px-3.5 py-1.5 text-xs font-semibold text-[#285943] transition hover:border-[#8FAF8B] hover:bg-[#E9F1E8] shadow-2xs cursor-pointer"
                 >
                   {q}
                 </button>
@@ -571,13 +661,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* MODALS FOR TOOLS (Fee Calculator, Wizard, FAQs) */}
+      {/* MODALS FOR TOOLS */}
+      {/* 1. Fee Calculator */}
       {activeModal === "calculator" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-2 text-slate-900 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#FFFEFA] p-2 text-[#182C22] shadow-2xl border border-[#E5DCBF]">
             <button
               onClick={() => setActiveModal(null)}
-              className="absolute right-4 top-4 z-10 rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+              className="absolute right-4 top-4 z-10 rounded-full bg-[#FAF6ED] p-2 text-[#7A5135] hover:bg-[#E5DCBF] transition cursor-pointer"
             >
               ✕
             </button>
@@ -586,12 +677,13 @@ export default function Home() {
         </div>
       )}
 
+      {/* 2. Patentability Wizard */}
       {activeModal === "wizard" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-2 text-slate-900 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#FFFEFA] p-2 text-[#182C22] shadow-2xl border border-[#E5DCBF]">
             <button
               onClick={() => setActiveModal(null)}
-              className="absolute right-4 top-4 z-10 rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+              className="absolute right-4 top-4 z-10 rounded-full bg-[#FAF6ED] p-2 text-[#7A5135] hover:bg-[#E5DCBF] transition cursor-pointer"
             >
               ✕
             </button>
@@ -600,14 +692,18 @@ export default function Home() {
         </div>
       )}
 
+      {/* 3. Statutory FAQs */}
       {activeModal === "faqs" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-6 text-slate-900 shadow-2xl">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="text-xl font-bold">25 Statutory FAQs</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-3xl bg-[#FFFEFA] p-6 text-[#182C22] shadow-2xl border border-[#E5DCBF]">
+            <div className="flex items-center justify-between border-b border-[#E5DCBF] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📚</span>
+                <h2 className="text-xl font-extrabold text-[#285943]">25 Statutory FAQs</h2>
+              </div>
               <button
                 onClick={() => setActiveModal(null)}
-                className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+                className="rounded-full bg-[#FAF6ED] p-2 text-[#7A5135] hover:bg-[#E5DCBF] transition cursor-pointer"
               >
                 ✕
               </button>
@@ -620,14 +716,93 @@ export default function Home() {
                     setActiveModal(null);
                     sendMessage(f.question);
                   }}
-                  className="cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-500 hover:bg-blue-50/40"
+                  className="cursor-pointer rounded-2xl border border-[#E5DCBF] bg-[#FAF6ED] p-4 transition hover:border-[#8FAF8B] hover:bg-[#E9F1E8]"
                 >
-                  <span className="text-xs font-bold uppercase text-blue-700">{f.category}</span>
-                  <h4 className="mt-1 font-semibold text-slate-900">{f.question}</h4>
-                  <p className="mt-2 line-clamp-2 text-xs text-slate-600">{f.answer}</p>
+                  <span className="text-xs font-bold uppercase text-[#7A5135]">{f.category}</span>
+                  <h4 className="mt-1 font-bold text-[#285943]">{f.question}</h4>
+                  <p className="mt-2 line-clamp-2 text-xs text-[#56685E]">{f.answer}</p>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Past Consultations / History Modal */}
+      {activeModal === "history" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl bg-[#FFFEFA] p-6 text-[#182C22] shadow-2xl border border-[#E5DCBF]">
+            <div className="flex items-center justify-between border-b border-[#E5DCBF] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🕒</span>
+                <div>
+                  <h2 className="text-xl font-extrabold text-[#285943]">Past Consultations</h2>
+                  <p className="text-xs text-[#7A5135]">Saved legal advisory records for {currentUser?.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveModal(null)}
+                className="rounded-full bg-[#FAF6ED] p-2 text-[#7A5135] hover:bg-[#E5DCBF] transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingSessions ? (
+              <div className="py-12 text-center text-sm font-medium text-[#7A5135] animate-pulse">
+                🌿 Loading your saved consultation records...
+              </div>
+            ) : mySessions.length === 0 ? (
+              <div className="py-12 text-center text-[#56685E]">
+                <div className="text-3xl mb-2">📜</div>
+                <div className="font-semibold text-base text-[#182C22]">No consultation records found yet</div>
+                <div className="text-xs mt-1 text-[#7A5135]">
+                  Start asking questions in the assistant and your full multi-turn conversations will be saved here automatically!
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-[#E5DCBF] rounded-2xl border border-[#E5DCBF] bg-[#FAF6ED]/60">
+                {mySessions.map((s) => {
+                  const sId = s.session_id || s.id || "";
+                  return (
+                    <div key={sId} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#E9F1E8]/50 transition">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[#285943] text-sm">
+                            {s.title || `Consultation #${sId.substring(5, 11)}`}
+                          </span>
+                          {s.message_count !== undefined && (
+                            <span className="rounded-full bg-[#E9F1E8] border border-[#C8DAC5] px-2 py-0.5 text-[10px] font-bold text-[#285943]">
+                              {s.message_count} messages
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-[#7A5135]">
+                          Session ID: <code className="font-mono bg-[#FFFEFA] px-1 rounded border border-[#E5DCBF]">{sId}</code> · Updated: {new Date(s.updated_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => resumeSession(sId)}
+                          className="rounded-xl bg-[#285943] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#1E4433] transition cursor-pointer"
+                        >
+                          💬 Resume
+                        </button>
+                        <button
+                          onClick={() => handleExportPDF(sId)}
+                          className="rounded-xl bg-[#FFFEFA] border border-[#E5DCBF] px-3 py-1.5 text-xs font-bold text-[#7A5135] hover:bg-[#FAF6ED] transition cursor-pointer"
+                          title="Download Advisory PDF"
+                        >
+                          📄 PDF
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+            )}
           </div>
         </div>
       )}

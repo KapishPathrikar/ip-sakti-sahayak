@@ -15,41 +15,93 @@ INJECTION_KEYWORDS = [
     "developer mode",
 ]
 
-# Core keywords to detect if the query is relevant to Intellectual Property / Indian Law
+# Core keywords to detect if the query is relevant to Intellectual Property / Indian & International Law
 IP_KEYWORDS = [
     "patent",
     "trademark",
+    "trade mark",
     "copyright",
     "design",
+    "industrial design",
+    "wipo",
+    "pct",
+    "patent cooperation treaty",
+    "madrid",
+    "trips",
+    "paris convention",
+    "hague",
+    "berne",
+    "budapest",
+    "world intellectual property",
     "biological diversity",
     "ayush",
     "ayurveda",
+    "unani",
+    "siddha",
+    "sowa rigpa",
+    "herbal",
     "drug",
     "cosmetic",
+    "formulation",
     "ipr",
     "intellectual property",
     "rule",
     "act",
     "law",
+    "section 3",
+    "section 3(p)",
+    "section 3(e)",
+    "section 3(d)",
+    "section 3(k)",
+    "section 3(i)",
+    "section 6",
     "gi tag",
     "geographical indication",
     "prior art",
     "novelty",
     "inventive step",
+    "industrial applicability",
     "filing",
     "fee",
+    "rebate",
+    "subsidy",
     "infringement",
     "licensing",
+    "royalty",
     "traditional knowledge",
     "tkdl",
     "nba",
     "national biodiversity authority",
+    "sbb",
+    "bmc",
     "form 1",
     "form 2",
     "form 3",
+    "form 5",
+    "form 9",
     "form 18",
+    "form 18a",
+    "tm-a",
+    "tm-m",
+    "tm-r",
     "examiner",
+    "controller",
+    "cgpdtm",
+    "ipo",
     "office action",
+    "opposition",
+    "revocation",
+    "compulsory license",
+    "specification",
+    "claim",
+    "priority",
+    "provisional",
+    "complete",
+    "application",
+    "inventor",
+    "applicant",
+    "startup",
+    "msme",
     "पेटंट",
     "पेटेंट",
     "ट्रेडमार्क",
@@ -69,25 +121,26 @@ IP_KEYWORDS = [
 ]
 
 
+def is_injection_query(query: str) -> bool:
+    """Check solely for prompt injection attempts."""
+    clean = query.lower().strip()
+    return any(kw in clean for kw in INJECTION_KEYWORDS)
+
+
 def is_safe_query(query: str) -> tuple[bool, str]:
-    """Validate query against prompt injections and off-topic requests.
-    
-    Returns (is_safe, error_reason).
-    """
+    """Validate query against prompt injections and off-topic requests."""
     clean_query = query.lower().strip()
 
-    # 1. Check for prompt injection keywords
-    for keyword in INJECTION_KEYWORDS:
-        if keyword in clean_query:
-            return False, "prompt_injection"
+    if is_injection_query(clean_query):
+        return False, "prompt_injection"
 
-    # 2. Check for general relevance (off-topic guardrail)
-    # We do a substring search on our list of IP keywords
+    # Relevance check (off-topic guardrail)
     has_ip_keyword = any(keyword in clean_query for keyword in IP_KEYWORDS)
     if not has_ip_keyword:
         return False, "off_topic"
 
     return True, "safe"
+
 
 
 def get_safety_response(reason: str, lang: str = "en") -> str:
