@@ -11,6 +11,9 @@ venv/
 # Local Vector Database & Indexes
 chroma_db/
 !chroma_db/.gitkeep
+*.db
+*.sqlite3
+
 
 # Environment variables & secrets
 .env

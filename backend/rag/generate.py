@@ -38,6 +38,11 @@ try:
 except (ImportError, ValueError):
 	from web_search import needs_web_search, search_web, format_web_context_for_prompt
 
+try:
+	from .cloud_llm import _call_cloud_llm, _stream_cloud_llm
+except (ImportError, ValueError):
+	from cloud_llm import _call_cloud_llm, _stream_cloud_llm
+
 
 
 import json
@@ -54,7 +59,7 @@ DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
 
 
 def _call_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL) -> str | None:
-	"""Send prompt to local Ollama instance, with retries to handle model loading/boot-up times."""
+	"""Send prompt to local Ollama instance, falling back to Cloud LLM if Ollama is offline."""
 	url = f"{base_url.rstrip('/')}/api/generate"
 	payload = {
 		"model": model,
@@ -63,8 +68,8 @@ def _call_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str =
 		"keep_alive": "1h",  # Keep model in GPU memory for 1 hour to prevent reload delays
 	}
 	
-	max_retries = 3
-	timeout = 180  # Generous timeout to allow large 20B models to load
+	max_retries = 2
+	timeout = 15  # Fast detection if Ollama is not running
 	
 	for attempt in range(1, max_retries + 1):
 		try:
@@ -84,19 +89,18 @@ def _call_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str =
 			except Exception:
 				pass
 			
-			# If it's a 500 error, the model is likely loading or crashed
 			print(f"[Warning] Ollama HTTP {http_err.code} on attempt {attempt}/{max_retries}: {error_detail or http_err.reason}")
 			if attempt < max_retries:
-				wait_time = attempt * 8  # Wait 8s, then 16s...
-				print(f"Waiting {wait_time}s for model '{model}' to load/boot up...")
-				time.sleep(wait_time)
+				time.sleep(3)
 				
 		except Exception as err:
-			print(f"[Warning] Failed to query Ollama on attempt {attempt}/{max_retries}: {err}")
+			print(f"[Notice] Ollama local query attempt {attempt}/{max_retries} not available: {err}")
 			if attempt < max_retries:
-				time.sleep(5)
+				time.sleep(2)
 				
-	return None
+	print("[LLM Router] Local Ollama unavailable. Seamlessly routing to Cloud LLM fallback...")
+	return _call_cloud_llm(prompt)
+
 
 
 
@@ -107,10 +111,11 @@ def answer_question(
 	limit: int = 5,
 	model: str = DEFAULT_OLLAMA_MODEL,
 	session_id: str | None = None,
+	user_id: int | None = None,
 ) -> dict[str, Any]:
 	"""Retrieve context and generate an accurate, grounded answer with session history support."""
 	# Ensure session exists if requested
-	active_session_id = session_manager.get_or_create_session(session_id) if session_id is not None else None
+	active_session_id = session_manager.get_or_create_session(session_id, user_id=user_id) if session_id is not None else None
 
 	# Detect language of the incoming query
 	detected_lang = detect_language(query)
@@ -127,8 +132,8 @@ def answer_question(
 	if not is_safe:
 		safety_response = get_safety_response(reason, lang=detected_lang)
 		if active_session_id:
-			session_manager.add_message(active_session_id, "user", query)
-			session_manager.add_message(active_session_id, "assistant", safety_response)
+			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
 		return {"answer": safety_response, "citations": [], "grounded": False, "session_id": active_session_id}
 
 
@@ -145,8 +150,8 @@ def answer_question(
 			"confidence": f"{round(faq_score * 100)}%",
 		}]
 		if active_session_id:
-			session_manager.add_message(active_session_id, "user", query)
-			session_manager.add_message(active_session_id, "assistant", ans_text)
+			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", ans_text, citations=citations, confidence=f"{round(faq_score * 100)}%", is_from_faq=True, user_id=user_id)
 		return {
 			"answer": ans_text,
 			"citations": citations,
@@ -159,9 +164,10 @@ def answer_question(
 	if not chunks:
 		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
-			session_manager.add_message(active_session_id, "user", query)
-			session_manager.add_message(active_session_id, "assistant", translated_no_answer)
+			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", translated_no_answer, user_id=user_id)
 		return {"answer": translated_no_answer, "citations": [], "grounded": False, "session_id": active_session_id}
+
 
 	citations = []
 	seen_citations: set[tuple[str, int]] = set()
@@ -242,8 +248,8 @@ If the context does not provide sufficient information, clarify what is known an
 		llm_answer = translate_text(llm_answer, target_lang=detected_lang, source_lang="en")
 
 	if active_session_id:
-		session_manager.add_message(active_session_id, "user", query)
-		session_manager.add_message(active_session_id, "assistant", llm_answer)
+		session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+		session_manager.add_message(active_session_id, "assistant", llm_answer, citations=citations, user_id=user_id)
 
 	return {
 		"answer": llm_answer,
@@ -254,30 +260,36 @@ If the context does not provide sufficient information, clarify what is known an
 
 
 
-def _stream_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL):
-	"""Yield individual token chunks directly from Ollama streaming API."""
+def _stream_llm(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL):
+	"""Yield individual token chunks from Ollama, with automatic fallback to Cloud LLM."""
 	url = f"{base_url.rstrip('/')}/api/generate"
 	payload = {
 		"model": model,
 		"prompt": prompt,
 		"stream": True,
-		"keep_alive": "1h",  # Keep model in GPU memory for 1 hour to prevent reload delays
+		"keep_alive": "1h",  # Keep model in GPU memory for 1 hour
 	}
 	req = urllib.request.Request(
 		url,
 		data=json.dumps(payload).encode("utf-8"),
 		headers={"Content-Type": "application/json"},
 	)
-	with urllib.request.urlopen(req, timeout=180) as response:
-		for line in response:
-			if line:
-				try:
-					data = json.loads(line.decode("utf-8"))
-					token = data.get("response", "")
-					if token:
-						yield token
-				except Exception:
-					continue
+	try:
+		with urllib.request.urlopen(req, timeout=10) as response:
+			for line in response:
+				if line:
+					try:
+						data = json.loads(line.decode("utf-8"))
+						token = data.get("response", "")
+						if token:
+							yield token
+					except Exception:
+						continue
+			return
+	except Exception as err:
+		print(f"[Notice] Ollama local stream not available ({err}). Routing to Cloud LLM stream...")
+		yield from _stream_cloud_llm(prompt)
+
 
 
 def answer_question_stream(
@@ -286,9 +298,10 @@ def answer_question_stream(
 	limit: int = 5,
 	model: str = DEFAULT_OLLAMA_MODEL,
 	session_id: str | None = None,
+	user_id: int | None = None,
 ):
 	"""Stream RAG response token-by-token via Server-Sent Events (SSE)."""
-	active_session_id = session_manager.get_or_create_session(session_id) if session_id is not None else None
+	active_session_id = session_manager.get_or_create_session(session_id, user_id=user_id) if session_id is not None else None
 	detected_lang = detect_language(query)
 
 	# Emit initial thinking state
@@ -306,8 +319,8 @@ def answer_question_stream(
 	if not is_safe:
 		safety_response = get_safety_response(reason, lang=detected_lang)
 		if active_session_id:
-			session_manager.add_message(active_session_id, "user", query)
-			session_manager.add_message(active_session_id, "assistant", safety_response)
+			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
 		yield f"data: {json.dumps({'type': 'token', 'token': safety_response})}\n\n"
 		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id})}\n\n"
 		return
@@ -326,11 +339,12 @@ def answer_question_stream(
 			"confidence": f"{round(faq_score * 100)}%",
 		}]
 		if active_session_id:
-			session_manager.add_message(active_session_id, "user", query)
-			session_manager.add_message(active_session_id, "assistant", ans_text)
+			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", ans_text, citations=citations, confidence=f"{round(faq_score * 100)}%", is_from_faq=True, user_id=user_id)
 		yield f"data: {json.dumps({'type': 'token', 'token': ans_text})}\n\n"
 		yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'from_faq': True})}\n\n"
 		return
+
 
 	chunks = retrieve(english_query, persist_dir, limit)
 	if not chunks:
@@ -412,9 +426,10 @@ If the context does not provide sufficient information, clarify what is known an
 	if detected_lang in {"en", "hinglish", "marathish"}:
 		# Stream tokens live
 		try:
-			for token in _stream_ollama(system_prompt, model=model):
+			for token in _stream_llm(system_prompt, model=model):
 				full_answer.append(token)
 				yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
+
 		except Exception as err:
 			print(f"[Warning] Streaming error: {err}")
 			fallback_ans = "Relevant information from the available sources:\n\n" + "\n\n".join(
@@ -430,13 +445,12 @@ If the context does not provide sufficient information, clarify what is known an
 		full_answer = [translated_answer]
 		yield f"data: {json.dumps({'type': 'token', 'token': translated_answer})}\n\n"
 
-	final_text = "".join(full_answer)
-
 	if active_session_id:
-		session_manager.add_message(active_session_id, "user", query)
-		session_manager.add_message(active_session_id, "assistant", final_text)
+		session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+		session_manager.add_message(active_session_id, "assistant", final_text, citations=citations, user_id=user_id)
 
 	yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id})}\n\n"
+
 
 
 

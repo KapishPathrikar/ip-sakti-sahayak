@@ -10,17 +10,23 @@
 
 - **`frontend/`**: Next.js 16 App Router interface.
 - **`backend/`**: FastAPI REST & Server-Sent Events (SSE) streaming server.
+  - `backend/database.py`: SQLAlchemy engine (SQLite locally, PostgreSQL in production).
+  - `backend/models.py`: Database tables (`users`, `chat_sessions`, `chat_messages`, `message_feedbacks`).
+  - `backend/auth.py`: JWT token generation, bcrypt password hashing, and user dependencies.
+  - `backend/schemas.py`: Pydantic validation schemas for Auth, Sessions, and Feedback.
   - `backend/rag/ingest.py`: PDF/text extractor & 768-dimensional vector chunker (`all-mpnet-base-v2`).
   - `backend/rag/retrieve.py`: In-memory singleton vector retriever with cosine similarity ranking (<90ms).
-  - `backend/rag/generate.py`: Ollama LLM generator with prompt crafting, keep-alive, and real-time SSE streaming.
+  - `backend/rag/generate.py`: Multi-tier LLM router (Ollama -> Cloud LiteLLM fallback -> Grounded context).
   - `backend/rag/translation.py`: Multi-dialect engine supporting English, pure Hindi (Devnagari), pure Marathi (Devnagari), Hinglish, and Marathish.
   - `backend/rag/safety.py`: Prompt-injection defense and off-topic guardrails with multilingual safety disclaimers (EN, HI, MR).
-  - `backend/rag/rate_limiter.py`: Sliding-window rate limiter (5 req/min burst, 25 queries/24h quota, FAQ exemption).
-  - `backend/rag/session.py`: Multi-turn conversational session history manager (`session_id`).
+  - `backend/rag/rate_limiter.py`: Sliding-window limiter (5 req/min burst, 25/day guest, 50/day registered, FAQ exemption).
+  - `backend/rag/session.py`: Persistent multi-turn conversational session history manager (`session_id`).
+  - `backend/rag/fee_calculator.py`: Official Indian IP Statutory Fee Calculator (First Schedule of Patent Rules 2024).
+  - `backend/rag/patentability_wizard.py`: "Am I Patentable?" Statutory risk assessment wizard (Section 3 & NBA analysis).
+  - `backend/rag/pdf_exporter.py`: Official Legal Consultation Advisory Report generator in formatted PDF.
   - `backend/rag/faq_matcher.py`: In-memory semantic matcher for instant (<0.01s) deterministic legal answers.
   - `backend/data/faqs.json`: 25 curated, statutory-backed legal FAQs with exact section citations.
   - `backend/rag/web_search.py`: Live web search augmentation for real-time government updates and clickable links.
-  - `backend/rag/generate.py`: Ollama LLM generator with prompt crafting, keep-alive, "Thinking..." indicators, and real-time SSE streaming.
 
 - **`corpus/`**: Official legal source manuals organized as `national`, `international`, and `ayurveda`.
 - **`chroma_db/`**: Local 768-dimension vector database (generated on-demand, git-ignored).
@@ -37,6 +43,10 @@
 | **3 — Conversational & Multilingual** | Multi-turn & vernacular support | Multi-turn session memory (`POST /api/chat`), history endpoints, English / Hindi / Marathi / Hinglish translation layer. | ✅ **Complete** |
 | **4 — Safety & Guardrails** | Trustworthy legal delivery | Prompt-injection prevention, off-topic question blocking, statutory disclaimers, sliding-window rate limiting (25 queries/24h, 5 req/min burst, FAQ exemption), automated unit test suite. | ✅ **Complete** |
 | **5 — Streaming & Semantic Cache** | Low-latency real-time response | SSE token streaming (`POST /api/chat/stream`), 25 pre-verified legal FAQs with instant (<0.01s) deterministic answering (`GET /api/faqs`), and Live Web Search for clickable government links. | ✅ **Complete** |
+| **6 — Persistence & Authentication** | Production database & user accounts | SQLite/PostgreSQL persistence (`users`, `chat_sessions`, `chat_messages`), JWT authentication (`POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`), user chat history (`GET /api/chat/my-sessions`), feedback rating (`POST /api/feedback`), and 50 queries/day registered user quota. | ✅ **Complete** |
+| **7 — Legal Calculators & PDF Export** | Interactive tools & formal reports | Official IP Fee Calculator (`POST /api/tools/fee-calculator`), "Am I Patentable?" Wizard (`POST /api/tools/patentability-check`), and PDF Consultation Advisory Export (`GET /api/chat/export/{session_id}`). | ✅ **Complete** |
+
+
 
 
 ---

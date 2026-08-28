@@ -11,6 +11,13 @@ deep-translator
 httpx
 duckduckgo-search
 ddgs
+sqlalchemy
+psycopg2-binary
+passlib
+bcrypt
+pyjwt
+python-multipart
+reportlab
 
 
 # Frontend (Next.js) dependencies
