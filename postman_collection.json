@@ -1,0 +1,127 @@
+{
+  "info": {
+    "name": "IP Shakti Sahayak API",
+    "description": "RAG backend for Indian IP law assistance",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List FAQs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/faqs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "faqs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ask Question (FAQ)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"What is Intellectual Property?\",\n  \"limit\": 4\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ask",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ask"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ask Question (RAG)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"How to file a patent in India?\",\n  \"limit\": 4,\n  \"model\": \"llama3.2:3b\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ask",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ask"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Streaming Chat",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"Explain trademark registration\",\n  \"limit\": 4\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/chat/stream",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "chat",
+            "stream"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    }
+  ]
+}

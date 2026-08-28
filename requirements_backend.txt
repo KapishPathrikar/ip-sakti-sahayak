@@ -1,0 +1,13 @@
+# Backend (Python) dependencies only
+langchain
+langchain-community
+chromadb
+fastapi
+uvicorn
+pypdf
+sentence-transformers
+python-dotenv
+deep-translator
+httpx
+duckduckgo-search
+ddgs
