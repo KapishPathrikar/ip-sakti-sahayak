@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+        <meta charset="utf-8" />
+        <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+        <title>IP-SAKTI - Official Fee Calculator</title>
+        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Source+Serif+4:wght@500&amp;display=swap"
+                rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+                rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+                rel="stylesheet" />
+        <script id="tailwind-config">
+                tailwind.config = {
+                        darkMode: "class",
+                        theme: {
+                                extend: {
+                                        "colors": {
+                                                "inverse-surface": "#243429",
+                                                "tertiary-fixed-dim": "#ffb693",
+                                                "on-tertiary-fixed-variant": "#7a3000",
+                                                "secondary-fixed": "#d7eba5",
+                                                "secondary-container": "#d7eba5",
+                                                "primary-fixed": "#c1edc9",
+                                                "surface-container-lowest": "#ffffff",
+                                                "surface-container-low": "#e5f9e7",
+                                                "background": "#ebfeed",
+                                                "surface-tint": "#3f674a",
+                                                "on-tertiary-fixed": "#351000",
+                                                "error-container": "#ffdad6",
+                                                "primary": "#3d6448",
+                                                "on-primary-container": "#f6fff4",
+                                                "surface-variant": "#d4e7d6",
+                                                "error": "#ba1a1a",
+                                                "primary-fixed-dim": "#a5d1ae",
+                                                "surface-bright": "#ebfeed",
+                                                "secondary": "#54642d",
+                                                "on-tertiary": "#ffffff",
+                                                "on-primary": "#ffffff",
+                                                "inverse-primary": "#a5d1ae",
+                                                "on-primary-fixed": "#00210e",
+                                                "surface-dim": "#ccdfce",
+                                                "on-secondary-fixed-variant": "#3d4c17",
+                                                "surface-container-highest": "#d4e7d6",
+                                                "on-surface-variant": "#414942",
+                                                "outline": "#727971",
+                                                "on-secondary": "#ffffff",
+                                                "outline-variant": "#c1c8c0",
+                                                "secondary-fixed-dim": "#bbce8b",
+                                                "tertiary-container": "#bf5515",
+                                                "on-secondary-fixed": "#151f00",
+                                                "on-primary-fixed-variant": "#284f34",
+                                                "on-error-container": "#93000a",
+                                                "on-secondary-container": "#5a6a32",
+                                                "surface-container-high": "#daeddc",
+                                                "surface": "#ebfeed",
+                                                "primary-container": "#557e60",
+                                                "on-error": "#ffffff",
+                                                "surface-container": "#dff3e2",
+                                                "on-background": "#0f1f15",
+                                                "on-surface": "#0f1f15",
+                                                "on-tertiary-container": "#fffbff",
+                                                "tertiary": "#9c3f00",
+                                                "inverse-on-surface": "#e2f6e4",
+                                                "tertiary-fixed": "#ffdbcc"
+                                        },
+                                        "borderRadius": {
+                                                "DEFAULT": "0.125rem",
+                                                "lg": "0.25rem",
+                                                "xl": "0.5rem",
+                                                "full": "0.75rem"
+                                        },
+                                        "spacing": {
+                                                "margin-desktop": "40px",
+                                                "margin-mobile": "16px",
+                                                "unit": "8px",
+                                                "gutter": "24px",
+                                                "container-max": "1280px"
+                                        },
+                                        "fontFamily": {
+                                                "label-sm": [
+                                                        "Inter"
+                                                ],
+                                                "headline-md": [
+                                                        "Inter"
+                                                ],
+                                                "display-lg": [
+                                                        "Inter"
+                                                ],
+                                                "display-lg-mobile": [
+                                                        "Inter"
+                                                ],
+                                                "statutory-citation": [
+                                                        "\"Source Serif 4\""
+                                                ],
+                                                "body-lg": [
+                                                        "Inter"
+                                                ],
+                                                "body-md": [
+                                                        "Inter"
+                                                ]
+                                        },
+                                        "fontSize": {
+                                                "label-sm": [
+                                                        "12px",
+                                                        {
+                                                                "lineHeight": "16px",
+                                                                "letterSpacing": "0.05em",
+                                                                "fontWeight": "600"
+                                                        }
+                                                ],
+                                                "headline-md": [
+                                                        "24px",
+                                                        {
+                                                                "lineHeight": "32px",
+                                                                "fontWeight": "600"
+                                                        }
+                                                ],
+                                                "display-lg": [
+                                                        "48px",
+                                                        {
+                                                                "lineHeight": "56px",
+                                                                "letterSpacing": "-0.02em",
+                                                                "fontWeight": "700"
+                                                        }
+                                                ],
+                                                "display-lg-mobile": [
+                                                        "32px",
+                                                        {
+                                                                "lineHeight": "40px",
+                                                                "letterSpacing": "-0.01em",
+                                                                "fontWeight": "700"
+                                                        }
+                                                ],
+                                                "statutory-citation": [
+                                                        "20px",
+                                                        {
+                                                                "lineHeight": "30px",
+                                                                "fontWeight": "500"
+                                                        }
+                                                ],
+                                                "body-lg": [
+                                                        "18px",
+                                                        {
+                                                                "lineHeight": "28px",
+                                                                "fontWeight": "400"
+                                                        }
+                                                ],
+                                                "body-md": [
+                                                        "16px",
+                                                        {
+                                                                "lineHeight": "24px",
+                                                                "fontWeight": "400"
+                                                        }
+                                                ]
+                                        }
+                                },
+                        },
+                }
+        </script>
+        <style>
+                body {
+                        background-color: #FAFAF5;
+                        /* Natural Minimalist Surface */
+                }
+
+                /* Ambient shadow for cards */
+                .ambient-shadow {
+                        box-shadow: 0px 4px 20px rgba(61, 100, 72, 0.04);
+                }
+
+                .card-border {
+                        border: 1px solid rgba(27, 43, 32, 0.1);
+                }
+        </style>
+</head>
+
+<body class="text-[#1B2B20] font-body-md antialiased min-h-screen flex flex-col md:flex-row">
+        <!-- Desktop SideNav -->
+        <nav
+                class="hidden md:flex flex-col h-screen p-gutter w-[280px] bg-[#FFFDE7] border-r card-border fixed left-0 top-0 z-50">
+                <div class="mb-8 flex items-center gap-3">
+                        <span class="material-symbols-outlined text-[#638C6D] text-4xl" data-weight="fill"
+                                style="font-variation-settings: 'FILL' 1;">eco</span>
+                        <div>
+                                <h1 class="font-display-lg text-[#638C6D] text-2xl tracking-tight leading-none">IP-SAKTI
+                                </h1>
+                                <p class="font-label-sm text-[#1B2B20]/80 uppercase">AI Legal Suite</p>
+                        </div>
+                </div>
+                <button
+                        class="w-full bg-[#638C6D] text-on-primary py-3 px-4 rounded-lg font-label-sm uppercase tracking-wider mb-8 hover:bg-[#DF6D2D] transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-lg">add_comment</span>
+                        New Chat
+                </button>
+                <ul class="space-y-2 flex-grow">
+                        <!-- Active state logic applied to Legal Research as Fee Calculator falls under tools/research -->
+                        <li class="">
+                                <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1B2B20]/80 hover:bg-surface-container-high transition-colors duration-200"
+                                        href="#">
+                                        <span class="material-symbols-outlined text-xl">history</span>
+                                        <span class="font-body-md">History</span>
+                                </a>
+                        </li>
+                        <li class="">
+                                <a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#FFFDE7]/75 text-on-secondary-container border-l-4 border-[#638C6D] font-bold"
+                                        href="#">
+                                        <span class="material-symbols-outlined text-xl">menu_book</span>
+                                        <span class="font-body-md">Legal Research</span>
+                                </a>
+                        </li>
+                        <li class="">
+                                <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1B2B20]/80 hover:bg-surface-container-high transition-colors duration-200"
+                                        href="#">
+                                        <span class="material-symbols-outlined text-xl">settings</span>
+                                        <span class="font-body-md">Account Settings</span>
+                                </a>
+                        </li>
+                </ul>
+                <div class="mt-auto border-t card-border pt-4">
+                        <ul class="space-y-2">
+                                <li class="">
+                                        <a class="flex items-center gap-3 px-4 py-2 rounded-lg text-[#1B2B20]/80 hover:bg-surface-container-high transition-colors duration-200"
+                                                href="#">
+                                                <span class="material-symbols-outlined text-lg">account_circle</span>
+                                                <span class="font-label-sm">Profile Status</span>
+                                        </a>
+                                </li>
+                        </ul>
+                </div>
+        </nav>
+        <!-- Main Content Canvas -->
+        <main
+                class="flex-1 md:ml-[280px] w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-8 md:py-12">
+                <!-- Mobile Top Nav Placeholder (Simplified for Tool View focus) -->
+                <div class="md:hidden flex justify-between items-center mb-8">
+                        <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[#638C6D] text-3xl" data-weight="fill"
+                                        style="font-variation-settings: 'FILL' 1;">eco</span>
+                                <h1 class="font-display-lg-mobile text-[#638C6D] text-xl">IP-SAKTI</h1>
+                        </div>
+                        <button class="text-[#1B2B20]"><span class="material-symbols-outlined">menu</span></button>
+                </div>
+                <!-- Header -->
+                <div class="mb-10 max-w-3xl mx-auto text-center md:text-left">
+                        <h1 class="font-display-lg md:font-display-lg text-[#1B2B20] text-4xl md:text-5xl font-bold mb-3">Tools</h1>
+                        <p class="font-body-lg text-[#1B2B20]/80">Estimate official registry fees and professional
+                                charges for Patents and Trademarks in India. <br class="hidden md:block" />Includes
+                                special provisions for Startups, MSMEs, and Educational Institutions.</p>
+                        <div class="mt-8 flex gap-2 p-1 bg-surface-container-low rounded-xl w-fit">
+                                <button class="px-6 py-2 rounded-lg font-label-sm uppercase tracking-wider transition-all bg-[#638C6D] text-on-primary shadow-sm"
+                                        id="btn-fee-calc">
+                                        Official Fee Calculator
+                                </button>
+                                <button class="px-6 py-2 rounded-lg font-label-sm uppercase tracking-wider transition-all text-[#1B2B20]/80 hover:bg-surface-container-high"
+                                        id="btn-patent-wizard">
+                                        Am I Patentable?
+                                </button>
+                        </div>
+                </div>
+                <!-- Calculator Grid Layout -->
+                <div id="tool-container">
+                        <!-- Official Fee Calculator View -->
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-5xl mx-auto" id="view-fee-calc">
+                                <div class="lg:col-span-7 space-y-6">
+                                        <div class="bg-[#FFFDE7]/75 rounded-xl p-6 md:p-8 card-border ambient-shadow">
+                                                <div class="mb-8">
+                                                        <label
+                                                                class="block font-label-sm text-[#1B2B20]/80 uppercase tracking-wider mb-4">Select
+                                                                IP Type</label>
+                                                        <div class="grid grid-cols-2 gap-4">
+                                                                <label class="relative cursor-pointer">
+                                                                        <input checked="" class="peer sr-only"
+                                                                                name="ip_type" type="radio"
+                                                                                value="patent" />
+                                                                        <div
+                                                                                class="p-4 rounded-lg border card-border bg-surface-container-lowest peer-checked:bg-[#FFFDE7] peer-checked:border-[#638C6D] transition-all duration-200 flex flex-col items-center text-center gap-2">
+                                                                                <span
+                                                                                        class="material-symbols-outlined text-3xl text-[#1B2B20]/80 peer-checked:text-[#638C6D]">lightbulb</span>
+                                                                                <span
+                                                                                        class="font-headline-md text-base peer-checked:text-[#638C6D]">Patent</span>
+                                                                        </div>
+                                                                </label>
+                                                                <label class="relative cursor-pointer">
+                                                                        <input class="peer sr-only" name="ip_type"
+                                                                                type="radio" value="trademark" />
+                                                                        <div
+                                                                                class="p-4 rounded-lg border card-border bg-surface-container-lowest peer-checked:bg-[#FFFDE7] peer-checked:border-[#638C6D] transition-all duration-200 flex flex-col items-center text-center gap-2">
+                                                                                <span
+                                                                                        class="material-symbols-outlined text-3xl text-[#1B2B20]/80 peer-checked:text-[#638C6D]">verified</span>
+                                                                                <span
+                                                                                        class="font-headline-md text-base peer-checked:text-[#638C6D]">Trademark</span>
+                                                                        </div>
+                                                                </label>
+                                                        </div>
+                                                </div>
+                                                <div class="mb-8">
+                                                        <label
+                                                                class="block font-label-sm text-[#1B2B20]/80 uppercase tracking-wider mb-4">Applicant
+                                                                Status</label>
+                                                        <select
+                                                                class="w-full bg-[#FFFDE7]/75 border card-border text-[#1B2B20] rounded-lg px-4 py-3 font-body-md focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none transition-shadow">
+                                                                <option value="natural">Natural Person(s)</option>
+                                                                <option value="startup">Startup / MSME / Educational
+                                                                        Inst.</option>
+                                                                <option value="other">Other Entity (Large Corp)</option>
+                                                        </select>
+                                                </div>
+                                                <div class="mb-8">
+                                                        <label
+                                                                class="block font-label-sm text-[#1B2B20]/80 uppercase tracking-wider mb-4">Filing
+                                                                Stage</label>
+                                                        <select
+                                                                class="w-full bg-[#FFFDE7]/75 border card-border text-[#1B2B20] rounded-lg px-4 py-3 font-body-md focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none transition-shadow">
+                                                                <option>New Application (E-filing)</option>
+                                                                <option>Request for Examination</option>
+                                                                <option>Early Publication</option>
+                                                                <option>Renewal</option>
+                                                        </select>
+                                                </div>
+                                                <div class="space-y-4 pt-4 border-t card-border">
+                                                        <div
+                                                                class="flex items-center justify-between p-4 rounded-lg bg-[#FFFDE7]/75 border border-[#638C6D]/20">
+                                                                <div>
+                                                                        <p
+                                                                                class="font-headline-md text-base text-[#638C6D]">
+                                                                                80% Startup Subsidy Eligibility</p>
+                                                                        <p class="font-label-sm text-[#1B2B20]/80 mt-1">
+                                                                                DPIIT Recognized Startups receive
+                                                                                significant fee reductions.</p>
+                                                                </div>
+                                                                <label
+                                                                        class="relative inline-flex items-center cursor-pointer">
+                                                                        <input checked="" class="sr-only peer"
+                                                                                type="checkbox" value="" />
+                                                                        <div
+                                                                                class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]">
+                                                                        </div>
+                                                                </label>
+                                                        </div>
+                                                        <div
+                                                                class="flex items-center justify-between p-4 rounded-lg bg-surface-container-lowest card-border">
+                                                                <div>
+                                                                        <p class="font-body-md text-[#1B2B20]">Expedited
+                                                                                Examination</p>
+                                                                        <p class="font-label-sm text-[#1B2B20]/80 mt-1">
+                                                                                Available for specific applicant
+                                                                                categories.</p>
+                                                                </div>
+                                                                <label
+                                                                        class="relative inline-flex items-center cursor-pointer">
+                                                                        <input class="sr-only peer" type="checkbox"
+                                                                                value="" />
+                                                                        <div
+                                                                                class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]">
+                                                                        </div>
+                                                                </label>
+                                                        </div>
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="lg:col-span-5">
+                                        <div
+                                                class="bg-[#FFFDE7]/75 rounded-xl border card-border ambient-shadow sticky top-8 overflow-hidden flex flex-col h-full">
+                                                <div class="bg-[#E7FBB4] p-6 border-b card-border">
+                                                        <p
+                                                                class="font-label-sm text-[#1B2B20] uppercase tracking-wider mb-2">
+                                                                Estimated Total</p>
+                                                        <div class="flex items-baseline gap-2">
+                                                                <span
+                                                                        class="font-display-lg text-[#638C6D]">₹14,600</span>
+                                                                <span class="font-body-md text-[#1B2B20]">INR</span>
+                                                        </div>
+                                                </div>
+                                                <div class="p-6 flex-grow flex flex-col">
+                                                        <h3 class="font-headline-md text-lg text-[#1B2B20] mb-6">Fee
+                                                                Breakdown</h3>
+                                                        <div class="space-y-4 mb-8">
+                                                                <div
+                                                                        class="flex justify-between items-center pb-4 border-b border-surface-variant">
+                                                                        <div>
+                                                                                <p
+                                                                                        class="font-body-md text-[#1B2B20] font-medium">
+                                                                                        Official Registry Fee</p>
+                                                                                <p
+                                                                                        class="font-label-sm text-[#1B2B20]/80">
+                                                                                        Patent Application (E-filing)
+                                                                                </p>
+                                                                        </div>
+                                                                        <span
+                                                                                class="font-statutory-citation text-[#1B2B20]">₹1,600</span>
+                                                                </div>
+                                                                <div
+                                                                        class="flex justify-between items-center pb-4 border-b border-surface-variant">
+                                                                        <div>
+                                                                                <p
+                                                                                        class="font-body-md text-[#1B2B20] font-medium">
+                                                                                        Professional Charges</p>
+                                                                                <p
+                                                                                        class="font-label-sm text-[#1B2B20]/80">
+                                                                                        Drafting &amp; Filing Services
+                                                                                </p>
+                                                                        </div>
+                                                                        <span
+                                                                                class="font-statutory-citation text-[#1B2B20]">₹13,000</span>
+                                                                </div>
+                                                                <div
+                                                                        class="flex justify-between items-center text-[#638C6D] bg-[#FFFDE7]/75 p-3 rounded-md border card-border">
+                                                                        <div class="flex items-center gap-2">
+                                                                                <span
+                                                                                        class="material-symbols-outlined text-sm">check_circle</span>
+                                                                                <p class="font-label-sm font-medium">
+                                                                                        Startup Subsidy Applied</p>
+                                                                        </div>
+                                                                        <span class="font-label-sm">-80% on Official
+                                                                                Fees</span>
+                                                                </div>
+                                                        </div>
+                                                        <div
+                                                                class="bg-surface-container p-4 rounded-lg mb-8 mt-auto flex gap-3">
+                                                                <span
+                                                                        class="material-symbols-outlined text-[#1B2B20]/80 mt-0.5 text-xl">info</span>
+                                                                <p
+                                                                        class="font-label-sm text-[#1B2B20]/80 leading-relaxed">
+                                                                        Professional fees are estimates based on
+                                                                        standard IP-SAKTI partner rates.</p>
+                                                        </div>
+                                                        <button
+                                                                class="w-full bg-[#638C6D] text-on-primary py-4 px-6 rounded-lg font-label-sm uppercase tracking-wider hover:bg-[#DF6D2D] transition-colors shadow-sm">Generate
+                                                                Formal Quote</button>
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+                        <!-- Am I Patentable? Wizard View (Hidden by default) -->
+                        <div class="hidden max-w-3xl mx-auto space-y-8" id="view-patent-wizard">
+                                <div class="bg-[#FFFDE7]/75 rounded-xl p-6 md:p-8 card-border ambient-shadow space-y-6">
+                                        <div>
+                                                <label
+                                                        class="block font-label-sm text-[#1B2B20]/80 uppercase tracking-wider mb-2">Invention
+                                                        Title</label>
+                                                <input class="w-full bg-surface-container-lowest border card-border rounded-lg px-4 py-3 font-body-md focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                                                        placeholder="e.g. Synergistic Herbal Formulation for Blood Glucose Management"
+                                                        type="text" />
+                                        </div>
+                                        <div>
+                                                <label
+                                                        class="block font-label-sm text-[#1B2B20]/80 uppercase tracking-wider mb-2">Brief
+                                                        Technical Description</label>
+                                                <textarea
+                                                        class="w-full bg-surface-container-lowest border card-border rounded-lg px-4 py-3 font-body-md focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                                                        placeholder="Explain the composition, active ingredients, or novel extraction process..."
+                                                        rows="4"></textarea>
+                                        </div>
+                                        <div class="pt-6 border-t card-border">
+                                                <label
+                                                        class="block font-label-sm text-[#1B2B20]/80 uppercase tracking-wider mb-4">Statutory
+                                                        Criteria Checklist</label>
+                                                <div
+                                                        class="space-y-4 bg-surface-container-low p-6 rounded-xl border border-[#638C6D]/10">
+                                                        <label class="flex items-start gap-3 cursor-pointer">
+                                                                <input class="mt-1 rounded border-surface-variant text-[#638C6D] focus:ring-[#638C6D]"
+                                                                        type="checkbox" />
+                                                                <span class="font-body-md text-[#1B2B20]/80">Is the
+                                                                        invention based on traditional Ayurvedic, Unani,
+                                                                        Siddha, or herbal knowledge? (Section
+                                                                        3(p))</span>
+                                                        </label>
+                                                        <label class="flex items-start gap-3 cursor-pointer">
+                                                                <input class="mt-1 rounded border-surface-variant text-[#638C6D] focus:ring-[#638C6D]"
+                                                                        type="checkbox" />
+                                                                <span class="font-body-md text-[#1B2B20]/80">Is it an
+                                                                        admixture or combination of known herbs/chemical
+                                                                        substances? (Section 3(e))</span>
+                                                        </label>
+                                                        <label class="flex items-start gap-3 cursor-pointer">
+                                                                <input class="mt-1 rounded border-surface-variant text-[#638C6D] focus:ring-[#638C6D]"
+                                                                        type="checkbox" />
+                                                                <span class="font-body-md text-[#1B2B20]/80">Do you
+                                                                        possess experimental laboratory proof of
+                                                                        synergistic therapeutic efficacy?</span>
+                                                        </label>
+                                                        <label class="flex items-start gap-3 cursor-pointer">
+                                                                <input class="mt-1 rounded border-surface-variant text-[#638C6D] focus:ring-[#638C6D]"
+                                                                        type="checkbox" />
+                                                                <span class="font-body-md text-[#1B2B20]/80">Does it
+                                                                        utilize biological resources (plants, herbs,
+                                                                        seeds) sourced from India? (Section 6
+                                                                        NBA)</span>
+                                                        </label>
+                                                        <label class="flex items-start gap-3 cursor-pointer">
+                                                                <input class="mt-1 rounded border-surface-variant text-[#638C6D] focus:ring-[#638C6D]"
+                                                                        type="checkbox" />
+                                                                <span class="font-body-md text-[#1B2B20]/80">Is the
+                                                                        primary invention drafted as a method of
+                                                                        treating a disease? (Section 3(i))</span>
+                                                        </label>
+                                                        <label class="flex items-start gap-3 cursor-pointer">
+                                                                <input class="mt-1 rounded border-surface-variant text-[#638C6D] focus:ring-[#638C6D]"
+                                                                        type="checkbox" />
+                                                                <span class="font-body-md text-[#1B2B20]/80">Has this
+                                                                        formulation/process already been published in
+                                                                        journals, presented publicly, or sold?</span>
+                                                        </label>
+                                                </div>
+                                        </div>
+                                        <button
+                                                class="w-full bg-[#638C6D] text-on-primary py-4 px-6 rounded-lg font-label-sm uppercase tracking-wider hover:bg-[#DF6D2D] transition-colors shadow-sm flex items-center justify-center gap-2">
+                                                <span class="material-symbols-outlined text-lg">rocket_launch</span>
+                                                Evaluate Patentability Risk
+                                        </button>
+                                </div>
+                        </div>
+                </div>
+        </main>
+</body>
+
+</html>

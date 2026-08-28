@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import AuthModal from "../components/AuthModal";
-import FeeCalculatorWidget from "../components/FeeCalculatorWidget";
-import PatentabilityWizardWidget from "../components/PatentabilityWizardWidget";
+import FeeCalculatorView from "../components/FeeCalculatorView";
+import LegalResearchView from "../components/LegalResearchView";
+import AccountSettingsView from "../components/AccountSettingsView";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 
 interface Citation {
@@ -21,14 +22,6 @@ interface Message {
   isFaq?: boolean;
 }
 
-interface FAQ {
-  id: string;
-  category: string;
-  question: string;
-  answer: string;
-  source: string;
-}
-
 interface SavedSession {
   session_id: string;
   id?: string;
@@ -38,30 +31,63 @@ interface SavedSession {
   updated_at: string;
 }
 
-
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+function formatTimestamp(isoString?: string): string {
+  if (!isoString) return "";
+  try {
+    let raw = isoString.trim();
+    if (!raw.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(raw) && !/[+-]\d{4}$/.test(raw)) {
+      raw += "Z";
+    }
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return isoString;
+  }
+}
+
 const QUICK_SUGGESTIONS = [
-  "🌿 Can an Ayurvedic formulation be patented in India?",
-  "⚖️ What are the patent filing fees for startups with 80% rebate?",
-  "📜 What is the Traditional Knowledge Digital Library (TKDL)?",
-  "🧪 Explain Section 3(e) synergism requirement for herbal drugs",
-  "🌱 When is National Biodiversity Authority (NBA) approval mandatory?",
-  "🌐 Official portal link to apply for an Indian patent online",
+  {
+    title: "Can Haldi & Milk be patented?",
+    desc: "Traditional Knowledge Check",
+    icon: "🌿",
+    query: "Can an Ayurvedic formulation combining turmeric (haldi) and milk (dudh) be patented in India?",
+  },
+  {
+    title: "80% Startup Fee Rebates",
+    desc: "Fee Calculation Guide",
+    icon: "🧮",
+    query: "What are the official patent filing fees in India for DPIIT recognized startups with 80% rebate?",
+  },
+  {
+    title: "Section 3(p) TKDL Exclusions",
+    desc: "Statutory Analysis",
+    icon: "📜",
+    query: "What are the patent exclusions for traditional medicine under Section 3(p) and TKDL guidelines?",
+  },
 ];
 
 export default function Home() {
+  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools">("chat");
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [thinkingState, setThinkingState] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string>(() => "sess-" + Math.random().toString(36).substring(2, 9));
+  const [sessionId, setSessionId] = useState<string>("sess-new");
   const [feedbackGiven, setFeedbackGiven] = useState<{ [msgId: string]: number }>({});
 
-  // Tool dropdown & modals state
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
-  const [activeModal, setActiveModal] = useState<"calculator" | "wizard" | "faqs" | "history" | null>(null);
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  // Saved sessions state
   const [mySessions, setMySessions] = useState<SavedSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
 
@@ -69,12 +95,12 @@ export default function Home() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [serviceOnline, setServiceOnline] = useState<boolean | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const toolsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setSessionId("sess-" + Math.random().toString(36).substring(2, 9));
+
     const token = localStorage.getItem("ip_shakti_token");
     const userStr = localStorage.getItem("ip_shakti_user");
     if (token) setAuthToken(token);
@@ -83,45 +109,22 @@ export default function Home() {
         setCurrentUser(JSON.parse(userStr));
       } catch {}
     }
-
-    async function init() {
-      try {
-        const res = await fetch(`${apiBaseUrl}/health`);
-        setServiceOnline(res.ok);
-      } catch {
-        setServiceOnline(false);
-      }
-
-      try {
-        const faqRes = await fetch(`${apiBaseUrl}/api/faqs`);
-        if (faqRes.ok) {
-          const faqData = await faqRes.json();
-          setFaqs(faqData.faqs || []);
-        }
-      } catch {}
-    }
-    void init();
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, thinkingState]);
+    if (authToken) {
+      void loadMySessions();
+    }
+  }, [authToken, sessionId]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target as Node)) {
-        setIsToolsOpen(false);
-      }
+    if (currentView === "chat") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [messages, thinkingState, currentView]);
 
   async function loadMySessions() {
-    if (!authToken) {
-      setIsAuthOpen(true);
-      return;
-    }
+    if (!authToken) return;
     setLoadingSessions(true);
     try {
       const res = await fetch(`${apiBaseUrl}/api/chat/my-sessions`, {
@@ -139,8 +142,8 @@ export default function Home() {
   }
 
   async function resumeSession(pastSessionId: string) {
-    setActiveModal(null);
-    setThinkingState("Loading previous consultation...");
+    setCurrentView("chat");
+    setThinkingState("Loading consultation record...");
     try {
       const res = await fetch(`${apiBaseUrl}/api/chat/history/${pastSessionId}`);
       if (res.ok) {
@@ -166,8 +169,8 @@ export default function Home() {
     const text = textToSend || input.trim();
     if (!text || isStreaming) return;
 
+    setCurrentView("chat");
     setInput("");
-    setIsToolsOpen(false);
     const userMsgId = "user-" + Date.now();
     const assistantMsgId = "asst-" + Date.now();
 
@@ -177,7 +180,7 @@ export default function Home() {
     ]);
 
     setIsStreaming(true);
-    setThinkingState("🌿 Consulting Indian IP statutes, TKDL & Ayush guidelines...");
+    setThinkingState("Analyzing Indian Patents Act 1970 & TKDL...");
     let partialText = "";
 
     try {
@@ -268,6 +271,7 @@ export default function Home() {
     } finally {
       setIsStreaming(false);
       setThinkingState(null);
+      void loadMySessions();
     }
   }
 
@@ -297,6 +301,7 @@ export default function Home() {
   function handleResetChat() {
     setSessionId("sess-" + Math.random().toString(36).substring(2, 9));
     setMessages([]);
+    setCurrentView("chat");
   }
 
   function handleLogout() {
@@ -310,502 +315,527 @@ export default function Home() {
   const isChatEmpty = messages.length === 0;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#F7F3E8] text-[#182C22] font-sans antialiased">
-      {/* Top Navbar */}
-      <header className="flex items-center justify-between px-6 py-3.5 border-b border-[#E5DCBF] bg-[#FFFEFA]/95 backdrop-blur-md sticky top-0 z-40 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-[#285943] to-[#1E4433] text-white font-bold text-sm shadow-sm">
-            🌿
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold tracking-tight text-[#285943] text-base">
-                IP-SAKTI
-              </span>
-              <span className="rounded-full bg-[#FAF4E4] border border-[#E8D2A3] px-2 py-0.5 text-[10px] font-bold text-[#C59A3D]">
-                Legal AI
-              </span>
-            </div>
-            <span className="text-[11px] font-medium text-[#7A5135]">
-              Ancient Knowledge → Modern Intelligence
-            </span>
-          </div>
+    <div className="bg-[#FAFAF5] text-[#1B2B20] font-sans h-screen overflow-hidden flex flex-col md:flex-row">
+      {/* ── Top Navigation (Mobile Only) ────────────────────────────── */}
+      <header className="md:hidden flex justify-between items-center w-full px-4 py-3 sticky top-0 z-40 bg-[#FFFDE7]/80 backdrop-blur-md border-b border-[#E6E5DD]">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentView(currentView === "chat" ? "history" : "chat")}
+            className="text-[#638C6D] p-1"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="font-bold text-lg text-[#638C6D]">IP-SAKTI</span>
         </div>
-
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-[#56685E]">
-            <span
-              className={`size-2 rounded-full ${
-                serviceOnline === true
-                  ? "bg-[#285943]"
-                  : serviceOnline === false
-                    ? "bg-red-500"
-                    : "bg-[#C59A3D]"
-              }`}
+          <button
+            onClick={handleResetChat}
+            className="p-1.5 rounded-full bg-[#638C6D] text-white text-xs font-bold"
+            title="New Chat"
+          >
+            ＋
+          </button>
+          <div
+            onClick={() => (currentUser ? setCurrentView("settings") : setIsAuthOpen(true))}
+            className="w-8 h-8 rounded-full overflow-hidden border border-[#c1c8c0] cursor-pointer bg-[#E5F9E7]"
+          >
+            <img
+              alt="User Avatar"
+              className="w-full h-full object-cover"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9lk-V00H9o6k4G8IJexs3h2HKtANXj1QbDFLg7zaEe9wqSfHBzzjJH-LK4bW7AifHooA2M-6Qs-2kcjNwn6yZ9kGlEi7bCY8HZ7wybNCyD1uRoHdhDFADexqiPgjD1q3YVMytPsH4R24-PNkIXM0imI3dbAfyg7wK3pnsUqz0bCsrNDBfyExM3yORSpI2EytQW0a8LVx4PohstAs0IiiEAGZJb6XhOEzOawe5jS7qjW8SoulSf-nfxA"
             />
-            <span className="hidden sm:inline font-medium">
-              {serviceOnline ? "Database Online" : "Connecting"}
-            </span>
           </div>
-
-          {currentUser ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  void loadMySessions();
-                  setActiveModal("history");
-                }}
-                className="flex items-center gap-1.5 rounded-full bg-[#E9F1E8] border border-[#C8DAC5] px-3.5 py-1.5 text-xs font-semibold text-[#285943] hover:bg-[#D9E5D7] transition cursor-pointer"
-                title="View Saved Consultations"
-              >
-                <span>🕒 History</span>
-                <span className="opacity-60">·</span>
-                <span className="font-bold">{currentUser.email.split("@")[0]}</span>
-              </button>
-              <button
-                onClick={handleLogout}
-                className="text-xs font-semibold text-[#7A5135] hover:text-red-700 hover:underline cursor-pointer"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsAuthOpen(true)}
-              className="rounded-xl bg-[#285943] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#1E4433] cursor-pointer"
-            >
-              Sign In / History
-            </button>
-          )}
         </div>
       </header>
 
-      {/* Main Container */}
-      <div className="flex flex-1 flex-col items-center justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full">
-        {/* CENTER HERO (When chat is empty) */}
-        {isChatEmpty ? (
-          <div className="flex flex-1 flex-col items-center justify-center text-center my-auto py-12 max-w-2xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#E9F1E8] border border-[#C8DAC5] px-3.5 py-1 text-xs font-bold text-[#285943]">
-              <span>🏛️</span>
-              <span>Indian Patent, Trademark &amp; TKDL Legal Advisory</span>
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-[#285943]">
-              How may I guide your invention today?
-            </h1>
-
-            <p className="mt-3.5 text-sm sm:text-base text-[#7A5135] font-medium leading-relaxed">
-              Explore patent eligibility under Section 3, verify TKDL prior art, compute 80% statutory rebates, or assess NBA approvals with authoritative citations.
-            </p>
+      {/* ── Sidebar (Desktop) ─────────────────────────────────────────── */}
+      <aside
+        className="hidden md:flex flex-col h-screen p-6 w-[280px] fixed left-0 top-0 border-r border-[#daeddc] z-30 transition-all duration-300 select-none"
+        style={{ backgroundColor: "rgb(255, 253, 231)" }}
+      >
+        {/* Brand */}
+        <div
+          onClick={handleResetChat}
+          className="flex items-center gap-3 mb-8 px-2 cursor-pointer"
+        >
+          <img
+            alt="IP-SAKTI Logo"
+            className="w-10 h-10 object-contain rounded-lg shadow-2xs"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9lk-V00H9o6k4G8IJexs3h2HKtANXj1QbDFLg7zaEe9wqSfHBzzjJH-LK4bW7AifHooA2M-6Qs-2kcjNwn6yZ9kGlEi7bCY8HZ7wybNCyD1uRoHdhDFADexqiPgjD1q3YVMytPsH4R24-PNkIXM0imI3dbAfyg7wK3pnsUqz0bCsrNDBfyExM3yORSpI2EytQW0a8LVx4PohstAs0IiiEAGZJb6XhOEzOawe5jS7qjW8SoulSf-nfxA"
+          />
+          <div>
+            <h1 className="text-[24px] font-bold leading-tight text-[#638C6D]">IP-SAKTI</h1>
+            <p className="text-[12px] font-semibold text-[#414942] opacity-70 uppercase tracking-wider">AI Legal Suite</p>
           </div>
-        ) : (
-          /* CONVERSATION STREAM VIEW */
-          <div className="flex-1 w-full space-y-4 overflow-y-auto py-4">
-            <div className="flex items-center justify-between pb-2.5 border-b border-[#E5DCBF] text-xs text-[#7A5135]">
-              <span className="font-semibold">Consultation Reference: {sessionId}</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleExportPDF()}
-                  className="rounded-lg bg-[#FFFEFA] border border-[#E5DCBF] px-3 py-1 text-[#285943] font-semibold hover:bg-[#FAF6ED] shadow-2xs cursor-pointer"
-                >
-                  📄 Export PDF
-                </button>
-                <button
-                  onClick={handleResetChat}
-                  className="rounded-lg bg-[#FFFEFA] border border-[#E5DCBF] px-3 py-1 text-[#7A5135] font-semibold hover:bg-[#FAF6ED] shadow-2xs cursor-pointer"
-                >
-                  🔄 New Consultation
-                </button>
-              </div>
-            </div>
+        </div>
 
-            {messages.map((msg) => {
-              const isUser = msg.role === "user";
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
-                >
-                  <div
-                    className={`max-w-[90%] sm:max-w-[82%] rounded-2xl px-5 py-3.5 text-sm shadow-xs ${
-                      isUser
-                        ? "bg-[#285943] text-white rounded-br-xs font-medium"
-                        : "bg-[#FFFEFA] text-[#182C22] rounded-bl-xs border border-[#E5DCBF]"
-                    }`}
-                  >
-                    <MarkdownRenderer content={msg.content} isUser={isUser} />
+        {/* CTA: New Chat */}
+        <button
+          onClick={handleResetChat}
+          className="w-full mb-6 bg-[#638C6D] hover:bg-[#557e60] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+        >
+          <span className="text-lg leading-none font-bold">＋</span>
+          <span>New Chat</span>
+        </button>
 
-                    {msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-3.5 border-t border-[#E5DCBF] pt-2.5 text-xs">
-                        <div className="flex items-center gap-1 font-bold text-[#285943]">
-                          <span>📚</span>
-                          <span>Official Statutory Citations:</span>
-                        </div>
-                        <ul className="mt-1.5 list-inside list-disc space-y-1 text-[11px] text-[#56685E]">
-                          {msg.citations.map((c, i) => (
-                            <li key={i}>
-                              <span className="font-medium text-[#182C22]">{c.source}</span> (Page {c.page})
-                              {c.confidence && (
-                                <span className="ml-1.5 rounded-sm bg-[#FAF4E4] border border-[#E8D2A3] px-1.5 py-0.2 text-[10px] font-bold text-[#C59A3D]">
-                                  {c.confidence}
-                                </span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-
-                  {!isUser && msg.content && (
-                    <div className="mt-1.5 flex items-center gap-2 px-1 text-xs text-[#7A5135]">
-                      <span>Was this statutory guidance accurate?</span>
-                      <button
-                        onClick={() => handleFeedback(msg.id, 1)}
-                        className={`hover:text-[#285943] transition cursor-pointer ${
-                          feedbackGiven[msg.id] === 1 ? "text-[#285943] font-bold" : ""
-                        }`}
-                      >
-                        👍
-                      </button>
-                      <button
-                        onClick={() => handleFeedback(msg.id, -1)}
-                        className={`hover:text-red-700 transition cursor-pointer ${
-                          feedbackGiven[msg.id] === -1 ? "text-red-700 font-bold" : ""
-                        }`}
-                      >
-                        👎
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {thinkingState && (
-              <div className="flex items-center gap-2 rounded-xl bg-[#FAF4E4] border border-[#E8D2A3] px-4 py-2.5 text-xs text-[#7A5135] font-semibold animate-pulse">
-                <span className="animate-spin text-[#C59A3D]">⚙️</span>
-                <span>{thinkingState}</span>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
+        {/* Navigation Tabs */}
+        <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1">
+          <div className="px-3 py-1 text-[#414942] text-[11px] font-bold uppercase tracking-wider mb-1">
+            Navigation
           </div>
-        )}
 
-        {/* BOTTOM PROMPT BAR & TOOLS (Gemini Style on Warm Ivory) */}
-        <div className="w-full space-y-3 pt-2">
-          {/* Centered Gemini Prompt Bar */}
-          <div className="relative w-full rounded-2xl border border-[#E5DCBF] bg-[#FFFEFA] shadow-md focus-within:border-[#285943] focus-within:ring-2 focus-within:ring-[#285943]/20 transition">
-            {/* FLOATING TOOLS MENU (IP-SAKTI Palette) */}
-            {isToolsOpen && (
-              <div
-                ref={toolsMenuRef}
-                className="absolute bottom-full left-3 mb-2 w-72 rounded-2xl border border-[#E5DCBF] bg-[#FFFEFA] p-2.5 shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2"
-              >
-                <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#7A5135]">
-                  Statutory Actions &amp; Tools
-                </div>
+          <button
+            onClick={() => setCurrentView("chat")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${
+              currentView === "chat"
+                ? "bg-[#E7FBB4] text-[#5a6a32] border-l-4 border-[#638C6D] font-bold"
+                : "text-[#414942] hover:bg-[#daeddc]/60"
+            }`}
+          >
+            <span className="text-base">💬</span>
+            <span className="text-sm font-medium truncate">New Chat</span>
+          </button>
 
-                <button
-                  onClick={() => {
-                    setActiveModal("calculator");
-                    setIsToolsOpen(false);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#182C22] transition hover:bg-[#E9F1E8] hover:text-[#285943] cursor-pointer"
-                >
-                  <span className="text-xl">🧮</span>
-                  <div className="text-left">
-                    <div className="font-bold text-[#285943]">Fee Calculator</div>
-                    <div className="text-[11px] text-[#7A5135]">Patent / TM fees with 80% subsidy</div>
-                  </div>
-                </button>
+          <button
+            onClick={() => setCurrentView("history")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${
+              currentView === "history"
+                ? "bg-[#E7FBB4] text-[#5a6a32] border-l-4 border-[#638C6D] font-bold"
+                : "text-[#414942] hover:bg-[#daeddc]/60"
+            }`}
+          >
+            <span className="text-base">🕒</span>
+            <span className="text-sm font-medium truncate">Recent Inquiries</span>
+          </button>
 
-                <button
-                  onClick={() => {
-                    setActiveModal("wizard");
-                    setIsToolsOpen(false);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#182C22] transition hover:bg-[#E9F1E8] hover:text-[#285943] cursor-pointer"
-                >
-                  <span className="text-xl">🔍</span>
-                  <div className="text-left">
-                    <div className="font-bold text-[#285943]">"Am I Patentable?"</div>
-                    <div className="text-[11px] text-[#7A5135]">Section 3 &amp; NBA risk assessment</div>
-                  </div>
-                </button>
+          <button
+            onClick={() => setCurrentView("research")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${
+              currentView === "research"
+                ? "bg-[#E7FBB4] text-[#5a6a32] border-l-4 border-[#638C6D] font-bold"
+                : "text-[#414942] hover:bg-[#daeddc]/60"
+            }`}
+          >
+            <span className="text-base">📖</span>
+            <span className="text-sm font-medium truncate">Legal Research</span>
+          </button>
 
-                <button
-                  onClick={() => {
-                    setActiveModal("faqs");
-                    setIsToolsOpen(false);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#182C22] transition hover:bg-[#E9F1E8] hover:text-[#285943] cursor-pointer"
-                >
-                  <span className="text-xl">📚</span>
-                  <div className="text-left">
-                    <div className="font-bold text-[#285943]">Statutory FAQs (25)</div>
-                    <div className="text-[11px] text-[#7A5135]">Instant verified legal answers</div>
-                  </div>
-                </button>
+          <button
+            onClick={() => setCurrentView("tools")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${
+              currentView === "tools"
+                ? "bg-[#E7FBB4] text-[#5a6a32] border-l-4 border-[#638C6D] font-bold"
+                : "text-[#414942] hover:bg-[#daeddc]/60"
+            }`}
+          >
+            <span className="text-base">🧮</span>
+            <span className="text-sm font-medium truncate">IP Tools &amp; Calculator</span>
+          </button>
 
-                <button
-                  onClick={() => {
-                    void loadMySessions();
-                    setActiveModal("history");
-                    setIsToolsOpen(false);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#182C22] transition hover:bg-[#E9F1E8] hover:text-[#285943] cursor-pointer"
-                >
-                  <span className="text-xl">🕒</span>
-                  <div className="text-left">
-                    <div className="font-bold text-[#285943]">Past Consultations</div>
-                    <div className="text-[11px] text-[#7A5135]">Resume previous sessions &amp; records</div>
-                  </div>
-                </button>
-
-                <div className="my-1.5 border-t border-[#E5DCBF]" />
-
-                <button
-                  onClick={() => {
-                    handleExportPDF();
-                    setIsToolsOpen(false);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-[#285943] transition hover:bg-[#FAF6ED] cursor-pointer"
-                >
-                  <span>📄</span>
-                  <span>Export Consultation (PDF)</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleResetChat();
-                    setIsToolsOpen(false);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-[#7A5135] transition hover:bg-[#FAF6ED] cursor-pointer"
-                >
-                  <span>🔄</span>
-                  <span>New Consultation</span>
-                </button>
-              </div>
-            )}
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void sendMessage();
-              }}
-              className="flex items-center px-4 py-3 gap-2.5"
-            >
-              {/* + Tools Menu Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsToolsOpen(!isToolsOpen)}
-                className={`grid size-9 place-items-center rounded-xl transition cursor-pointer font-bold ${
-                  isToolsOpen
-                    ? "bg-[#285943] text-white"
-                    : "bg-[#E9F1E8] text-[#285943] hover:bg-[#D9E5D7]"
-                }`}
-                title="Open Statutory Tools & Wizards"
-              >
-                <span className="text-lg leading-none">{isToolsOpen ? "✕" : "＋"}</span>
-              </button>
-
-              {/* Chat Input */}
+          {/* Search History */}
+          <div className="mt-4 px-1">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#727971] text-xs">🔍</span>
               <input
+                className="w-full bg-[#e5f9e7] border border-transparent focus:border-[#638C6D] rounded-lg pl-8 pr-3 py-1.5 text-xs text-[#1B2B20] outline-none transition-colors placeholder:text-[#414942]/60"
+                placeholder="Search history..."
                 type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask in English, Hindi (उदा. हळद व दुधाचे पेटेंट?), or Marathi..."
-                disabled={isStreaming}
-                className="flex-1 bg-transparent text-sm text-[#182C22] placeholder-[#7E9086] outline-none font-medium"
+                onChange={(e) => {
+                  const q = e.target.value.toLowerCase();
+                  if (!q) {
+                    void loadMySessions();
+                  } else {
+                    setMySessions((prev) =>
+                      prev.filter((s) => (s.title || "").toLowerCase().includes(q))
+                    );
+                  }
+                }}
               />
-
-              {/* Send Button */}
-              <button
-                type="submit"
-                disabled={isStreaming || !input.trim()}
-                className="rounded-xl bg-[#285943] p-2.5 text-white transition hover:bg-[#1E4433] disabled:opacity-40 shadow-xs cursor-pointer"
-              >
-                <svg
-                  className="size-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M14 5l7 7m0 0l-7 7m7-7H3"
-                  />
-                </svg>
-              </button>
-            </form>
+            </div>
           </div>
 
-          {/* Quick FAQ / Suggestion Pills (Sage & Ivory) */}
-          {isChatEmpty && (
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-              {QUICK_SUGGESTIONS.map((q, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => sendMessage(q)}
-                  className="rounded-full border border-[#E5DCBF] bg-[#FFFEFA] px-3.5 py-1.5 text-xs font-semibold text-[#285943] transition hover:border-[#8FAF8B] hover:bg-[#E9F1E8] shadow-2xs cursor-pointer"
-                >
-                  {q}
-                </button>
-              ))}
+          {/* Grouped Recent Sessions */}
+          {mySessions.length > 0 && (
+            <div className="mt-4 space-y-1">
+              <div className="px-3 py-1 text-[#414942] text-[10px] font-bold uppercase tracking-wider">
+                Recent Chats
+              </div>
+              {mySessions.slice(0, 5).map((s) => {
+                const sId = s.session_id || s.id || "";
+                return (
+                  <button
+                    key={sId}
+                    onClick={() => resumeSession(sId)}
+                    className="w-full text-left px-3 py-1.5 text-xs text-[#414942] hover:bg-[#daeddc]/60 rounded-lg truncate transition-colors block cursor-pointer"
+                  >
+                    {s.title || `Consultation #${sId.slice(-4)}`}
+                  </button>
+                );
+              })}
             </div>
           )}
-        </div>
-      </div>
+        </nav>
 
-      {/* MODALS FOR TOOLS */}
-      {/* 1. Fee Calculator */}
-      {activeModal === "calculator" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#FFFEFA] p-2 text-[#182C22] shadow-2xl border border-[#E5DCBF]">
-            <button
-              onClick={() => setActiveModal(null)}
-              className="absolute right-4 top-4 z-10 rounded-full bg-[#FAF6ED] p-2 text-[#7A5135] hover:bg-[#E5DCBF] transition cursor-pointer"
+        {/* Footer Profile */}
+        <div className="mt-auto pt-4 border-t border-[#daeddc]">
+          <div
+            onClick={() => (currentUser ? setCurrentView("settings") : setIsAuthOpen(true))}
+            className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#daeddc]/60 transition-colors cursor-pointer"
+          >
+            <img
+              alt="User Profile"
+              className="w-8 h-8 rounded-full bg-[#d4e7d6] object-cover border border-[#c1c8c0]"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9lk-V00H9o6k4G8IJexs3h2HKtANXj1QbDFLg7zaEe9wqSfHBzzjJH-LK4bW7AifHooA2M-6Qs-2kcjNwn6yZ9kGlEi7bCY8HZ7wybNCyD1uRoHdhDFADexqiPgjD1q3YVMytPsH4R24-PNkIXM0imI3dbAfyg7wK3pnsUqz0bCsrNDBfyExM3yORSpI2EytQW0a8LVx4PohstAs0IiiEAGZJb6XhOEzOawe5jS7qjW8SoulSf-nfxA"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-[#1B2B20] truncate">
+                {currentUser?.full_name || (currentUser?.email ? currentUser.email.split("@")[0] : "Dr. Aditi Sharma")}
+              </p>
+              <p className="text-[10px] text-[#727971] truncate">
+                {currentUser ? "Active Session" : "Sign In / Profile"}
+              </p>
+            </div>
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentView("settings");
+              }}
+              className="text-[#727971] hover:text-[#1B2B20] text-sm"
+              title="Account Settings"
             >
-              ✕
-            </button>
-            <FeeCalculatorWidget />
+              ⚙️
+            </span>
           </div>
         </div>
-      )}
+      </aside>
 
-      {/* 2. Patentability Wizard */}
-      {activeModal === "wizard" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#FFFEFA] p-2 text-[#182C22] shadow-2xl border border-[#E5DCBF]">
-            <button
-              onClick={() => setActiveModal(null)}
-              className="absolute right-4 top-4 z-10 rounded-full bg-[#FAF6ED] p-2 text-[#7A5135] hover:bg-[#E5DCBF] transition cursor-pointer"
-            >
-              ✕
-            </button>
-            <PatentabilityWizardWidget />
-          </div>
-        </div>
-      )}
+      {/* ── Main Content Area ─────────────────────────────────────────── */}
+      <main className="flex-1 flex flex-col relative w-full md:ml-[280px] bg-[#FAFAF5] transition-all duration-300 h-screen overflow-hidden">
+        {/* Dynamic Views Container */}
+        <div className="flex-1 overflow-y-auto w-full px-4 md:px-10 pt-6 md:pt-10 pb-36 flex flex-col items-center">
+          {currentView === "research" && (
+            <LegalResearchView
+              onAskQuestion={(q) => {
+                void sendMessage(q);
+              }}
+            />
+          )}
 
-      {/* 3. Statutory FAQs */}
-      {activeModal === "faqs" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-3xl bg-[#FFFEFA] p-6 text-[#182C22] shadow-2xl border border-[#E5DCBF]">
-            <div className="flex items-center justify-between border-b border-[#E5DCBF] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">📚</span>
-                <h2 className="text-xl font-extrabold text-[#285943]">25 Statutory FAQs</h2>
+          {currentView === "tools" && <FeeCalculatorView />}
+
+          {currentView === "settings" && (
+            <AccountSettingsView
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              onOpenAuth={() => setIsAuthOpen(true)}
+              onProfileUpdate={(updatedUser) => {
+                setCurrentUser(updatedUser);
+              }}
+            />
+          )}
+
+          {currentView === "history" && (
+            <div className="w-full max-w-[800px] space-y-4 pt-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-[#1B2B20]">Past Consultation Inquiries</h2>
+                {authToken && (
+                  <button
+                    onClick={() => handleExportPDF()}
+                    className="px-3 py-1.5 rounded-lg border border-[#638C6D] text-xs font-semibold text-[#638C6D] hover:bg-[#E5F9E7] transition cursor-pointer"
+                  >
+                    📄 Export Current PDF
+                  </button>
+                )}
               </div>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="rounded-full bg-[#FAF6ED] p-2 text-[#7A5135] hover:bg-[#E5DCBF] transition cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {faqs.map((f) => (
-                <div
-                  key={f.id}
-                  onClick={() => {
-                    setActiveModal(null);
-                    sendMessage(f.question);
-                  }}
-                  className="cursor-pointer rounded-2xl border border-[#E5DCBF] bg-[#FAF6ED] p-4 transition hover:border-[#8FAF8B] hover:bg-[#E9F1E8]"
-                >
-                  <span className="text-xs font-bold uppercase text-[#7A5135]">{f.category}</span>
-                  <h4 className="mt-1 font-bold text-[#285943]">{f.question}</h4>
-                  <p className="mt-2 line-clamp-2 text-xs text-[#56685E]">{f.answer}</p>
+
+              {!currentUser ? (
+                <div className="p-8 text-center bg-white rounded-2xl border border-[#daeddc]">
+                  <p className="text-xs text-[#727971]">Sign in to view and resume your saved consultation records</p>
+                  <button
+                    onClick={() => setIsAuthOpen(true)}
+                    className="mt-3 rounded-xl bg-[#638C6D] px-4 py-2 text-xs font-bold text-white cursor-pointer"
+                  >
+                    Sign In
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Past Consultations / History Modal */}
-      {activeModal === "history" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl bg-[#FFFEFA] p-6 text-[#182C22] shadow-2xl border border-[#E5DCBF]">
-            <div className="flex items-center justify-between border-b border-[#E5DCBF] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🕒</span>
-                <div>
-                  <h2 className="text-xl font-extrabold text-[#285943]">Past Consultations</h2>
-                  <p className="text-xs text-[#7A5135]">Saved legal advisory records for {currentUser?.email}</p>
+              ) : mySessions.length === 0 ? (
+                <div className="p-8 text-center bg-white rounded-2xl border border-[#daeddc] text-xs text-[#727971]">
+                  No saved consultations found in your account archive.
                 </div>
-              </div>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="rounded-full bg-[#FAF6ED] p-2 text-[#7A5135] hover:bg-[#E5DCBF] transition cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {loadingSessions ? (
-              <div className="py-12 text-center text-sm font-medium text-[#7A5135] animate-pulse">
-                🌿 Loading your saved consultation records...
-              </div>
-            ) : mySessions.length === 0 ? (
-              <div className="py-12 text-center text-[#56685E]">
-                <div className="text-3xl mb-2">📜</div>
-                <div className="font-semibold text-base text-[#182C22]">No consultation records found yet</div>
-                <div className="text-xs mt-1 text-[#7A5135]">
-                  Start asking questions in the assistant and your full multi-turn conversations will be saved here automatically!
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 divide-y divide-[#E5DCBF] rounded-2xl border border-[#E5DCBF] bg-[#FAF6ED]/60">
-                {mySessions.map((s) => {
-                  const sId = s.session_id || s.id || "";
-                  return (
-                    <div key={sId} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#E9F1E8]/50 transition">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-[#285943] text-sm">
-                            {s.title || `Consultation #${sId.substring(5, 11)}`}
-                          </span>
-                          {s.message_count !== undefined && (
-                            <span className="rounded-full bg-[#E9F1E8] border border-[#C8DAC5] px-2 py-0.5 text-[10px] font-bold text-[#285943]">
-                              {s.message_count} messages
-                            </span>
-                          )}
+              ) : (
+                <div className="space-y-3">
+                  {mySessions.map((s) => {
+                    const sId = s.session_id || s.id || "";
+                    return (
+                      <div
+                        key={sId}
+                        onClick={() => resumeSession(sId)}
+                        className="p-4 rounded-xl bg-white border border-[#daeddc] flex items-center justify-between hover:border-[#638C6D] cursor-pointer transition shadow-2xs group"
+                      >
+                        <div>
+                          <div className="font-bold text-sm text-[#1B2B20] group-hover:text-[#638C6D] transition-colors">
+                            {s.title || `Consultation #${sId.slice(-6)}`}
+                          </div>
+                          <div className="text-[11px] text-[#727971] mt-0.5">
+                            {formatTimestamp(s.updated_at)}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-[#7A5135]">
-                          Session ID: <code className="font-mono bg-[#FFFEFA] px-1 rounded border border-[#E5DCBF]">{sId}</code> · Updated: {new Date(s.updated_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => resumeSession(sId)}
-                          className="rounded-xl bg-[#285943] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#1E4433] transition cursor-pointer"
-                        >
-                          💬 Resume
-                        </button>
-                        <button
-                          onClick={() => handleExportPDF(sId)}
-                          className="rounded-xl bg-[#FFFEFA] border border-[#E5DCBF] px-3 py-1.5 text-xs font-bold text-[#7A5135] hover:bg-[#FAF6ED] transition cursor-pointer"
-                          title="Download Advisory PDF"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportPDF(sId);
+                          }}
+                          className="px-3 py-1.5 rounded-lg border border-[#daeddc] text-xs font-semibold text-[#638C6D] hover:bg-[#E7FBB4]/50 cursor-pointer"
                         >
                           📄 PDF
                         </button>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {currentView === "chat" && (
+            <div className="w-full max-w-[800px] flex flex-col items-center">
+              {isChatEmpty ? (
+                /* ── Empty Dashboard Welcome State (Exact Stitch Layout) ── */
+                <div className="w-full flex flex-col items-center text-center mt-6 md:mt-12">
+                  <img
+                    alt="IP-SAKTI Emblem"
+                    className="w-16 h-16 md:w-20 md:h-20 mb-6 opacity-80 mix-blend-multiply rounded-xl"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9lk-V00H9o6k4G8IJexs3h2HKtANXj1QbDFLg7zaEe9wqSfHBzzjJH-LK4bW7AifHooA2M-6Qs-2kcjNwn6yZ9kGlEi7bCY8HZ7wybNCyD1uRoHdhDFADexqiPgjD1q3YVMytPsH4R24-PNkIXM0imI3dbAfyg7wK3pnsUqz0bCsrNDBfyExM3yORSpI2EytQW0a8LVx4PohstAs0IiiEAGZJb6XhOEzOawe5jS7qjW8SoulSf-nfxA"
+                  />
+                  <h2 className="text-[32px] md:text-[48px] font-bold text-[#1B2B20] mb-10 max-w-2xl leading-tight tracking-tight">
+                    How can IP-SAKTI assist your invention today?
+                  </h2>
+
+                  {/* Suggestion Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    {QUICK_SUGGESTIONS.map((card, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => sendMessage(card.query)}
+                        className="flex items-start gap-3 p-4 rounded-xl border border-[#638C6D]/20 transition-all duration-200 text-left shadow-xs cursor-pointer group"
+                        style={{ backgroundColor: "rgba(255, 253, 231, 0.75)" }}
+                      >
+                        <span className="text-xl shrink-0">{card.icon}</span>
+                        <div>
+                          <p className="font-semibold text-sm text-[#1B2B20] group-hover:text-[#638C6D] transition-colors leading-snug">
+                            {card.title}
+                          </p>
+                          <p className="text-xs text-[#414942] mt-1 opacity-70">
+                            {card.desc}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* ── Active Conversation Stream ─────────────────────────── */
+                <div className="w-full space-y-6 pt-2">
+                  {messages.map((msg) => {
+                    const isUser = msg.role === "user";
+                    return (
+                      <div key={msg.id} className="w-full">
+                        {isUser ? (
+                          /* User Query Bubble */
+                          <div className="flex justify-end w-full">
+                            <div className="bg-[#daeddc] text-[#1B2B20] rounded-2xl rounded-tr-sm px-5 py-3 max-w-[85%] shadow-xs">
+                              <p className="text-sm font-medium">{msg.content}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          /* AI Advisory Response Card */
+                          <div className="flex justify-start w-full">
+                            <div className="bg-white border border-[#daeddc] rounded-2xl w-full shadow-xs overflow-hidden flex flex-col relative">
+                              {/* Internal Header */}
+                              <div className="bg-[#FFFDE7]/80 px-6 py-3 border-b border-[#daeddc] flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="text-[#638C6D] text-lg">🛡️</span>
+                                  <h3 className="text-sm font-bold text-[#638C6D] m-0 uppercase tracking-wide">
+                                    {msg.isFaq ? "Statutory Guidance (Verified FAQ)" : "Section 3 & Statutory Guidance"}
+                                  </h3>
+                                </div>
+                                <button
+                                  onClick={() => handleExportPDF()}
+                                  className="text-xs font-bold text-[#638C6D] hover:underline cursor-pointer"
+                                >
+                                  Export PDF ↗
+                                </button>
+                              </div>
+
+                              {/* Card Body */}
+                              <div className="p-6 space-y-4">
+                                <MarkdownRenderer content={msg.content} />
+
+                                {/* Official Citations */}
+                                {msg.citations && msg.citations.length > 0 && (
+                                  <div className="mt-4 border-t border-[#daeddc] pt-3 text-xs">
+                                    <div className="flex items-center gap-1.5 font-bold text-[#bf5515] mb-2">
+                                      <span>📜</span>
+                                      <span>Official Statutory Citations:</span>
+                                    </div>
+                                    <ul className="space-y-1.5 text-[12px] text-[#414942]">
+                                      {msg.citations.map((c, i) => (
+                                        <li key={i} className="flex items-start gap-2">
+                                          <span className="text-[#638C6D] font-bold">•</span>
+                                          <div>
+                                            <span className="font-semibold text-[#1B2B20]">{c.source}</span>
+                                            <span className="text-[#727971] ml-1">(Page {c.page})</span>
+                                            {c.confidence && (
+                                              <span className="ml-2 rounded bg-[#FFFDE7] border border-[#bf5515]/30 px-1.5 py-0.5 text-[10px] font-bold text-[#bf5515]">
+                                                {c.confidence}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Card Footer (Feedback) */}
+                              <div className="bg-[#FAFAF5] px-6 py-2.5 border-t border-[#daeddc] flex items-center justify-between text-xs text-[#727971]">
+                                <span className="text-[11px]">IP-SAKTI Verified Statutory Corpus</span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    aria-label="Helpful"
+                                    onClick={() => handleFeedback(msg.id, 1)}
+                                    className={`p-1.5 rounded-lg hover:bg-white transition-colors cursor-pointer ${
+                                      feedbackGiven[msg.id] === 1 ? "text-[#638C6D] font-bold bg-white" : ""
+                                    }`}
+                                  >
+                                    👍 Helpful
+                                  </button>
+                                  <button
+                                    aria-label="Not Helpful"
+                                    onClick={() => handleFeedback(msg.id, -1)}
+                                    className={`p-1.5 rounded-lg hover:bg-white transition-colors cursor-pointer ${
+                                      feedbackGiven[msg.id] === -1 ? "text-red-700 font-bold bg-white" : ""
+                                    }`}
+                                  >
+                                    👎 Report
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Active Thinking Indicator */}
+              {thinkingState && (
+                <div className="flex justify-start w-full mt-4">
+                  <div className="flex items-center gap-3 text-[#638C6D] text-xs font-semibold animate-pulse bg-[#FFFDE7] px-4 py-2 rounded-xl border border-[#638C6D]/20">
+                    <span className="animate-spin text-sm">🌿</span>
+                    <span>{thinkingState}</span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Floating Prompt Bar (Exact Stitch Layout & Pill Styling) ─ */}
+        {currentView === "chat" && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 bg-gradient-to-t from-[#FAFAF5] via-[#FAFAF5] to-transparent pointer-events-none z-40">
+            <div className="max-w-[800px] mx-auto pointer-events-auto">
+              <div
+                className="rounded-full p-2 flex items-center gap-2 shadow-lg border border-[#E6E5DD] transition-all duration-300 focus-within:border-[#638C6D]"
+                style={{ backgroundColor: "rgba(255, 253, 231, 0.9)" }}
+              >
+                {/* Left Tool Button */}
+                <button
+                  type="button"
+                  onClick={() => setCurrentView("tools")}
+                  className="p-3 text-[#5a6a32] hover:bg-white/50 rounded-full transition-colors shrink-0 flex items-center justify-center cursor-pointer"
+                  title="Open Official IP Tools, Fee Calculator & Wizard"
+                >
+                  <span className="text-xl leading-none">🧮</span>
+                </button>
+
+                {/* Input Textbox */}
+                <div className="flex-1 py-1 px-2">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void sendMessage();
+                      }
+                    }}
+                    placeholder="Draft a patent claim for an AI model or Ayurvedic formulation..."
+                    disabled={isStreaming}
+                    className="w-full bg-transparent border-none outline-none text-sm text-[#1B2B20] placeholder-[#1B2B20]/50 focus:ring-0 font-normal"
+                  />
+                </div>
+
+                {/* Send Button */}
+                <button
+                  type="button"
+                  onClick={() => void sendMessage()}
+                  disabled={isStreaming || !input.trim()}
+                  className="p-3 bg-[#DF6D2D] hover:bg-[#bf5515] text-white rounded-full transition-colors shrink-0 flex items-center justify-center shadow-md disabled:opacity-50 cursor-pointer"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </button>
               </div>
 
-            )}
+              <div className="text-center mt-3 text-xs text-[#414942] opacity-60">
+                IP-SAKTI can make mistakes. Verify important legal information with a registered Patent Agent.
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
+
+      {/* ── Bottom Navigation (Mobile Only) ─────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-[#e5f9e7] border-t border-[#daeddc] flex justify-around items-center py-2 px-2 z-40">
+        <button
+          onClick={() => setCurrentView("chat")}
+          className={`flex flex-col items-center gap-1 p-2 ${currentView === "chat" ? "text-[#638C6D] font-bold" : "text-[#414942]"}`}
+        >
+          <span className="text-lg">💬</span>
+          <span className="text-[10px]">Chat</span>
+        </button>
+        <button
+          onClick={() => setCurrentView("research")}
+          className={`flex flex-col items-center gap-1 p-2 ${currentView === "research" ? "text-[#638C6D] font-bold" : "text-[#414942]"}`}
+        >
+          <span className="text-lg">📖</span>
+          <span className="text-[10px]">Research</span>
+        </button>
+        <button
+          onClick={() => setCurrentView("tools")}
+          className={`flex flex-col items-center gap-1 p-2 ${currentView === "tools" ? "text-[#638C6D] font-bold" : "text-[#414942]"}`}
+        >
+          <span className="text-lg">🧮</span>
+          <span className="text-[10px]">Tools</span>
+        </button>
+        <button
+          onClick={() => (currentUser ? setCurrentView("settings") : setIsAuthOpen(true))}
+          className={`flex flex-col items-center gap-1 p-2 ${currentView === "settings" ? "text-[#638C6D] font-bold" : "text-[#414942]"}`}
+        >
+          <span className="text-lg">👤</span>
+          <span className="text-[10px]">Profile</span>
+        </button>
+      </nav>
 
       {/* Auth Modal */}
       <AuthModal
@@ -816,6 +846,6 @@ export default function Home() {
           setCurrentUser(user);
         }}
       />
-    </main>
+    </div>
   );
 }

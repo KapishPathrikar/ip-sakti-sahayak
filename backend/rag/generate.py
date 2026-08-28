@@ -231,8 +231,16 @@ If the context does not provide sufficient information, clarify what is known an
 === INSTRUCTIONS ===
 - Provide a clear, well-structured, and helpful explanation.
 - Reference relevant sections, rules, or guidelines where applicable.
-- If live web sources with URLs are available, include useful clickable markdown links e.g. [Portal Name](URL).
+- If referencing official portals or search engines, ONLY use verified canonical URLs:
+  * Official IP India Portal: https://ipindia.gov.in
+  * InPASS Patent Search: https://ipindiaservices.gov.in/publicsearch
+  * Traditional Knowledge Digital Library (TKDL): https://www.tkdl.res.in
+  * Ministry of AYUSH: https://ayush.gov.in
+  * WIPO: https://www.wipo.int
+  * CDSCO: https://cdsco.gov.in
+- Never generate relative, incomplete, or speculative URLs.
 - Answer directly and professionally."""
+
 
 	if detected_lang == "hinglish":
 		system_prompt += """
@@ -428,8 +436,16 @@ If the context does not provide sufficient information, clarify what is known an
 === INSTRUCTIONS ===
 - Provide a clear, well-structured, and helpful explanation.
 - Reference relevant sections, rules, or guidelines where applicable.
-- If live web sources with URLs are available, include useful clickable markdown links e.g. [Portal Name](URL).
+- If referencing official portals or search engines, ONLY use verified canonical URLs:
+  * Official IP India Portal: https://ipindia.gov.in
+  * InPASS Patent Search: https://ipindiaservices.gov.in/publicsearch
+  * Traditional Knowledge Digital Library (TKDL): https://www.tkdl.res.in
+  * Ministry of AYUSH: https://ayush.gov.in
+  * WIPO: https://www.wipo.int
+  * CDSCO: https://cdsco.gov.in
+- Never generate relative, incomplete, or speculative URLs.
 - Answer directly and professionally."""
+
 
 	if detected_lang == "hinglish":
 		system_prompt += """

@@ -12,6 +12,10 @@ except (ImportError, ValueError):
 	from database import Base
 
 
+def get_utc_now() -> datetime.datetime:
+	return datetime.datetime.now(datetime.timezone.utc)
+
+
 class User(Base):
 	__tablename__ = "users"
 
@@ -22,7 +26,7 @@ class User(Base):
 	role = Column(String(50), default="user", nullable=False)  # "user", "admin", "lawyer"
 	is_active = Column(Boolean, default=True, nullable=False)
 	daily_query_limit = Column(Integer, default=50, nullable=False)  # 50 for registered users
-	created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+	created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
 	# Relationships
 	sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
@@ -35,8 +39,9 @@ class ChatSession(Base):
 	session_id = Column(String(100), unique=True, index=True, nullable=False)
 	user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	title = Column(String(255), default="New Legal Consultation", nullable=False)
-	created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
-	updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
+	created_at = Column(DateTime, default=get_utc_now, nullable=False)
+	updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
+
 
 	# Relationships
 	user = relationship("User", back_populates="sessions")

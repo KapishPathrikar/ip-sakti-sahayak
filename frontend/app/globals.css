@@ -1,48 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --ivory-bg: #F7F3E8;
-  --ivory-surface: #FFFEFA;
-  --ivory-card: #FAF6ED;
-  --ivory-border: #E5DCBF;
-  --herbal-green: #285943;
-  --herbal-green-hover: #1E4433;
-  --herbal-green-dark: #153124;
-  --sage: #8FAF8B;
-  --sage-light: #E9F1E8;
-  --sage-border: #C8DAC5;
-  --earth-brown: #7A5135;
-  --earth-brown-light: #F4ECE6;
-  --muted-gold: #C59A3D;
-  --gold-light: #FBF4E4;
-  --gold-border: #E8D2A3;
-  --text-main: #182C22;
-  --text-muted: #56685E;
+  --primary: #638C6D;
+  --primary-hover: #3D6448;
+  --secondary: #E7FBB4;
+  --tertiary: #DF6D2D;
+  --rust: #C84C05;
+  --background: #FAFAF5;
+  --surface: #FFFDE7;
+  --surface-container: #F0EFE9;
+  --on-surface: #0F1F15;
+  --on-surface-variant: #414942;
+  --outline: #727971;
+  --outline-variant: #C1C8C0;
 }
 
 body {
-  background-color: var(--ivory-bg);
-  color: var(--text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background-color: var(--background);
+  color: var(--on-surface);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Custom Scrollbar for IP-SAKTI */
+/* Custom Serif for Statutory Citations & Legal Text */
+.font-statutory {
+  font-family: 'Source Serif 4', Georgia, serif;
+}
+
+/* Custom Minimalist Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--ivory-bg);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--sage);
+  background: #C1C8C0;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--herbal-green);
+  background: #638C6D;
 }

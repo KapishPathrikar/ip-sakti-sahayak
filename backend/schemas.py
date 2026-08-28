@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_serializer
+
 
 
 class UserRegister(BaseModel):
@@ -25,6 +26,12 @@ class UserOut(BaseModel):
 	daily_query_limit: int
 	created_at: datetime.datetime
 
+	@field_serializer("created_at")
+	def serialize_created_at(self, dt: datetime.datetime, _info):
+		if dt.tzinfo is None:
+			dt = dt.replace(tzinfo=datetime.timezone.utc)
+		return dt.isoformat()
+
 	class Config:
 		from_attributes = True
 
@@ -40,6 +47,12 @@ class SessionOut(BaseModel):
 	title: str
 	created_at: datetime.datetime
 	updated_at: datetime.datetime
+
+	@field_serializer("created_at", "updated_at")
+	def serialize_dt(self, dt: datetime.datetime, _info):
+		if dt.tzinfo is None:
+			dt = dt.replace(tzinfo=datetime.timezone.utc)
+		return dt.isoformat()
 
 	class Config:
 		from_attributes = True

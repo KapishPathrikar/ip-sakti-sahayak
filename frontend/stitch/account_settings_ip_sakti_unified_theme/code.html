@@ -1,0 +1,341 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>IP-SAKTI - Account Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "inverse-surface": "#243429",
+                "tertiary-fixed-dim": "#ffb693",
+                "on-tertiary-fixed-variant": "#7a3000",
+                "secondary-fixed": "#d7eba5",
+                "secondary-container": "#d7eba5",
+                "primary-fixed": "#c1edc9",
+                "surface-container-lowest": "#ffffff",
+                "surface-container-low": "#e5f9e7",
+                "background": "#ebfeed",
+                "surface-tint": "#3f674a",
+                "on-tertiary-fixed": "#351000",
+                "error-container": "#ffdad6",
+                "primary": "#3d6448",
+                "on-primary-container": "#f6fff4",
+                "surface-variant": "#d4e7d6",
+                "error": "#ba1a1a",
+                "primary-fixed-dim": "#a5d1ae",
+                "surface-bright": "#ebfeed",
+                "secondary": "#54642d",
+                "on-tertiary": "#ffffff",
+                "on-primary": "#ffffff",
+                "inverse-primary": "#a5d1ae",
+                "on-primary-fixed": "#00210e",
+                "surface-dim": "#ccdfce",
+                "on-secondary-fixed-variant": "#3d4c17",
+                "surface-container-highest": "#d4e7d6",
+                "on-surface-variant": "#414942",
+                "outline": "#727971",
+                "on-secondary": "#ffffff",
+                "outline-variant": "#c1c8c0",
+                "secondary-fixed-dim": "#bbce8b",
+                "tertiary-container": "#bf5515",
+                "on-secondary-fixed": "#151f00",
+                "on-primary-fixed-variant": "#284f34",
+                "on-error-container": "#93000a",
+                "on-secondary-container": "#5a6a32",
+                "surface-container-high": "#daeddc",
+                "surface": "#ebfeed",
+                "primary-container": "#557e60",
+                "on-error": "#ffffff",
+                "surface-container": "#dff3e2",
+                "on-background": "#0f1f15",
+                "on-surface": "#0f1f15",
+                "on-tertiary-container": "#fffbff",
+                "tertiary": "#9c3f00",
+                "inverse-on-surface": "#e2f6e4",
+                "tertiary-fixed": "#ffdbcc"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {
+                "margin-desktop": "40px",
+                "margin-mobile": "16px",
+                "unit": "8px",
+                "gutter": "24px",
+                "container-max": "1280px"
+        },
+        "fontFamily": {
+                "label-sm": [
+                        "Inter"
+                ],
+                "headline-md": [
+                        "Inter"
+                ],
+                "display-lg": [
+                        "Inter"
+                ],
+                "display-lg-mobile": [
+                        "Inter"
+                ],
+                "statutory-citation": [
+                        "\"Source Serif 4\""
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "body-md": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "display-lg-mobile": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "statutory-citation": [
+                        "20px",
+                        {
+                                "lineHeight": "30px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Ambient shadow for level 2 */
+        .ambient-shadow {
+            box-shadow: 0 4px 20px 0 rgba(61, 100, 72, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-[#FAFAF5] text-on-background font-body-md min-h-screen flex">
+<!-- Top Navigation (Mobile) -->
+<div class="md:hidden flex justify-between items-center w-full px-margin-mobile py-4 sticky top-0 z-40 bg-[#FFFDE7]/80 backdrop-blur-md">
+<div class="flex items-center gap-2">
+<span class="font-display-lg-mobile text-display-lg-mobile font-bold text-[#638C6D]">IP-SAKTI</span>
+</div>
+<div class="flex gap-4 items-center">
+<span class="material-symbols-outlined cursor-pointer text-on-surface-variant transition-transform duration-200">notifications</span>
+<div class="w-8 h-8 rounded-full bg-secondary-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A small circular avatar of a young Indian male professional wearing a light blue button-down shirt, smiling warmly against a blurred natural background. Soft, even lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLFDrsfreMFy4XbWgj-ORqd00OEX3CWgquFtR8x-pGDMShmrUlDIJ9P4H99X8m8CVhKX7HIme4NX_jb_ZjO2DYRJ0Wbl1UzMtHtU6TCtB_a0lex4hAyruZ6BGC4fB80MoVmL5HnPJdKDKMEUqH8EyaCUplND0AbWN9h1pdwV-EwnmmZvd0iZY04Agu_achN2hOEy0bLtQbQBFC6seVEthGV_WARznr4neVYhHb7mxf31DtXqaJVhb_jQ">
+</div>
+</div>
+</div>
+<!-- Side Navigation (Desktop) -->
+<nav class="hidden md:flex flex-col h-screen p-gutter w-[280px] bg-[#FFFDE7] fixed left-0 top-0 border-r border-surface-container-low border-opacity-50">
+<div class="mb-12 px-4 pt-4 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-container filled">gavel</span>
+</div>
+<div>
+<h1 class="font-display-lg text-headline-md font-bold text-[#638C6D] tracking-tight">IP-SAKTI</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">AI Legal Suite</p>
+</div>
+</div>
+<button class="mb-8 mx-4 flex items-center justify-center gap-2 bg-[#638C6D] text-on-primary py-3 px-4 rounded-full font-label-sm text-label-sm hover:opacity-90 transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add_comment</span>
+            New Chat
+        </button>
+<div class="flex-1 flex flex-col gap-2 px-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]">add_comment</span>
+<span class="font-body-md">New Chat</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]">history</span>
+<span class="font-body-md">History</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+<span class="font-body-md">Legal Research</span>
+</a>
+
+<!-- Active Tab -->
+
+</div>
+<div class="mt-auto pt-6 border-t border-surface-container-low px-2 pb-4 flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-[18px]">account_circle</span>
+                Profile Status
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+                System Health
+            </a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-[280px] p-margin-mobile md:p-margin-desktop max-w-container-max mx-auto w-full">
+<header class="mb-10 pt-4 md:pt-0">
+<h2 class="font-headline-md text-headline-md text-on-background mb-2">Account Settings</h2>
+<p class="text-on-surface-variant font-body-md">Manage your profile, usage limits, and data preferences.</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Profile & Usage -->
+<div class="lg:col-span-2 flex flex-col gap-8">
+<!-- Profile Card -->
+<section class="bg-surface-container-lowest rounded-2xl p-8 ambient-shadow border border-surface-container-high/50">
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8 pb-8 border-b border-surface-container-high">
+<div class="w-24 h-24 rounded-full bg-surface-variant overflow-hidden shrink-0 border-4 border-[#FFFDE7]">
+<img class="w-full h-full object-cover" data-alt="A professional portrait of an Indian male in his late 20s. He is wearing a neat light blue shirt, looking confident and approachable. The background is a very soft, blurred modern office environment. High-quality lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBlrDJ92e0InbEqUdFoGT0LuKH1JGJjRQ5HBHdVOHOZ9X-L3iktSLcw8GpOkrFlTFxTA_WtDucP43Mm9DM5YQBdxDejlUaV1VKr5OU2BZX7XECY_hvJxMZoJTS5eMOPFOU9YaTYonmP2i3371sx82DPe7LeQGthzIxnxvTXtfsKWZsvLDiX8eb7actn4NtOmrA2KNRuqSpw8SAYtfKiahRmEcN1qE-y_kKooutpvoCx9vmXtAnR7CEcw">
+</div>
+<div class="flex-1">
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Rajesh Kumar</h3>
+<p class="text-[#638C6D] font-label-sm text-label-sm uppercase tracking-wider mb-3">IP Researcher / Startup</p>
+<div class="flex items-center gap-2 text-on-surface-variant font-body-md">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+                                rajesh@startup.in
+                            </div>
+</div>
+<button class="mt-4 sm:mt-0 px-4 py-2 rounded-full border border-[#638C6D] text-[#638C6D] font-label-sm text-label-sm hover:bg-[#638C6D]/5 transition-colors">
+                            Edit Profile
+                        </button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Organization</label>
+<div class="px-4 py-3 rounded-lg bg-surface-container-low text-on-background font-body-md border border-surface-variant">
+                                InnovateTech Solutions
+                            </div>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Timezone</label>
+<div class="px-4 py-3 rounded-lg bg-surface-container-low text-on-background font-body-md border border-surface-variant flex items-center justify-between">
+                                IST (UTC+05:30)
+                                <span class="material-symbols-outlined text-on-surface-variant">arrow_drop_down</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Plan & Usage Widget -->
+
+</div>
+<!-- Right Column: Security & Privacy -->
+<div class="flex flex-col gap-8">
+<!-- Security Card -->
+<section class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow border border-surface-container-high/50">
+<h3 class="font-body-lg text-body-lg font-semibold text-on-background mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[#638C6D]">lock</span>
+                        Security
+                    </h3>
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div>
+<h4 class="font-body-md text-on-background font-medium group-hover:text-[#638C6D] transition-colors">Password</h4>
+<p class="text-sm text-on-surface-variant">Last changed 3 months ago</p>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</div>
+
+
+
+
+</div>
+</section>
+<!-- Data Privacy Card -->
+<section class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow border border-surface-container-high/50">
+<h3 class="font-body-lg text-body-lg font-semibold text-on-background mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary">shield_lock</span>
+                        Data Privacy
+                    </h3>
+<p class="text-sm text-on-surface-variant mb-6">Manage your legal research data and history. Actions taken here are permanent.</p>
+<div class="flex flex-col gap-3">
+<button class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-[#638C6D] text-[#638C6D] font-label-sm text-label-sm hover:bg-[#638C6D]/5 transition-colors">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                            Export All Records
+                        </button>
+<button class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-error/10 text-error font-label-sm text-label-sm hover:bg-error/20 transition-colors mt-2">
+<span class="material-symbols-outlined text-[18px]">delete_forever</span>
+                            Clear History
+                        </button>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile) -->
+<div class="md:hidden fixed bottom-0 left-0 w-full bg-[#FFFDE7] border-t border-surface-container-low pb-safe flex justify-around items-center px-2 py-2 z-40">
+<a class="flex flex-col items-center p-2 text-on-surface-variant hover:text-[#638C6D] transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">history</span>
+<span class="text-[10px] mt-1 font-medium">History</span>
+</a>
+<a class="flex flex-col items-center p-2 text-on-surface-variant hover:text-[#638C6D] transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">menu_book</span>
+<span class="text-[10px] mt-1 font-medium">Research</span>
+</a>
+<a class="flex flex-col items-center p-2 -mt-6 bg-[#638C6D] text-on-primary rounded-full w-14 h-14 justify-center shadow-lg hover:opacity-90 transition-opacity" href="#">
+<span class="material-symbols-outlined text-[28px]">add_comment</span>
+</a>
+<a class="flex flex-col items-center p-2 text-on-surface-variant hover:text-[#638C6D] transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">gavel</span>
+<span class="text-[10px] mt-1 font-medium">Cases</span>
+</a>
+<a class="flex flex-col items-center p-2 text-[#638C6D]" href="#">
+<div class="px-4 py-1 bg-secondary-container rounded-full mb-1">
+<span class="material-symbols-outlined text-[24px] filled">settings</span>
+</div>
+<span class="text-[10px] font-bold">Settings</span>
+</a>
+</div>
+
+
+</body></html>

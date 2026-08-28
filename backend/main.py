@@ -136,9 +136,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 @app.on_event("startup")
@@ -239,6 +240,28 @@ async def login_user_endpoint(request: Request, db: Session = Depends(get_db)):
 def get_current_user_profile(current_user: User = Depends(get_current_user)):
     """Return the profile of the currently authenticated user."""
     return UserOut.model_validate(current_user)
+
+
+class ProfileUpdateIn(BaseModel):
+    full_name: str | None = None
+    role: str | None = None
+
+
+@app.put("/api/auth/profile", response_model=UserOut, tags=["auth"])
+def update_user_profile_endpoint(
+    payload: ProfileUpdateIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update user profile permanently in database."""
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name.strip()
+    if payload.role is not None:
+        current_user.role = payload.role.strip()
+    db.commit()
+    db.refresh(current_user)
+    return UserOut.model_validate(current_user)
+
 
 
 

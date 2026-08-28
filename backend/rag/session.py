@@ -117,13 +117,15 @@ class SessionManager:
 		if SessionLocal and DBChatMessage and DBChatSession:
 			try:
 				with SessionLocal() as db:
-					# Update title on first user message
-					if role == "user" and len(self._sessions[session_id]) <= 2:
-						db_session = db.query(DBChatSession).filter(DBChatSession.session_id == session_id).first()
-						if db_session and db_session.title == "New Legal Consultation":
-							# Truncate to reasonable title
-							db_session.title = content[:60] + ("..." if len(content) > 60 else "")
-							db.commit()
+					db_session = db.query(DBChatSession).filter(DBChatSession.session_id == session_id).first()
+					if db_session:
+						# Update title on first user message
+						if role == "user" and len(self._sessions[session_id]) <= 2:
+							if db_session.title == "New Legal Consultation":
+								db_session.title = content[:60] + ("..." if len(content) > 60 else "")
+						# Always update session updated_at timestamp
+						import datetime
+						db_session.updated_at = datetime.datetime.now(datetime.timezone.utc)
 
 					cites_str = json.dumps(citations) if citations else None
 					db_msg = DBChatMessage(
@@ -138,6 +140,7 @@ class SessionManager:
 					db.commit()
 			except Exception as err:
 				print(f"[Session DB Write Notice] {err}")
+
 
 	def get_history(self, session_id: str) -> list[dict[str, Any]]:
 		"""Retrieve recent conversation history for a given session."""
