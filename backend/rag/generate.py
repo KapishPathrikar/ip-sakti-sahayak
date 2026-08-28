@@ -445,11 +445,15 @@ If the context does not provide sufficient information, clarify what is known an
 		full_answer = [translated_answer]
 		yield f"data: {json.dumps({'type': 'token', 'token': translated_answer})}\n\n"
 
+	final_text = "".join(full_answer)
+
 	if active_session_id:
 		session_manager.add_message(active_session_id, "user", query, user_id=user_id)
 		session_manager.add_message(active_session_id, "assistant", final_text, citations=citations, user_id=user_id)
 
 	yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id})}\n\n"
+
+
 
 
 
