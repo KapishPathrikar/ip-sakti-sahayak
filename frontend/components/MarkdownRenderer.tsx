@@ -3,6 +3,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 
 interface MarkdownRendererProps {
   content: string;
@@ -53,6 +54,7 @@ export default function MarkdownRenderer({ content, isUser = false }: MarkdownRe
     <div className="markdown-content text-sm leading-relaxed text-[#0F1F15] space-y-4">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           h1: ({ children }) => (
             <h1 className="mt-4 mb-2 text-lg font-bold text-[#638C6D] border-b border-[#E6E5DD] pb-1">

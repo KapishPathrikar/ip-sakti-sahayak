@@ -337,9 +337,9 @@ export default function FeeCalculatorView() {
                         max={500}
                         value={pagesCount}
                         onChange={(e) => setPagesCount(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                        className="w-full bg-white border card-border text-[#1B2B20] rounded-xl pl-4 pr-24 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#414942]/60 font-medium">
+                      <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-[#414942]/60 font-medium pointer-events-none">
                         {pagesCount > 30 ? `+${pagesCount - 30} extra` : "Included"}
                       </span>
                     </div>
@@ -356,9 +356,9 @@ export default function FeeCalculatorView() {
                         max={100}
                         value={claimsCount}
                         onChange={(e) => setClaimsCount(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                        className="w-full bg-white border card-border text-[#1B2B20] rounded-xl pl-4 pr-24 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#414942]/60 font-medium">
+                      <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-[#414942]/60 font-medium pointer-events-none">
                         {claimsCount > 10 ? `+${claimsCount - 10} extra` : "Included"}
                       </span>
                     </div>
@@ -367,9 +367,9 @@ export default function FeeCalculatorView() {
               )}
 
               {/* Toggles */}
-              <div className="space-y-4 pt-4 border-t card-border">
+              <div className="space-y-4 pt-4 border-t border-[#1B2B20]/10">
                 {/* Startup 80% Subsidy Switch */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#638C6D]/30">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#1B2B20]/10 ambient-shadow">
                   <div className="pr-4">
                     <p className="font-bold text-sm text-[#638C6D]">80% Startup Subsidy Eligibility</p>
                     <p className="text-xs text-[#414942] mt-0.5">
@@ -388,7 +388,7 @@ export default function FeeCalculatorView() {
                 </div>
 
                 {/* Expedited Examination Switch */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white card-border">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#1B2B20]/10 ambient-shadow">
                   <div className="pr-4">
                     <p className="font-semibold text-sm text-[#1B2B20]">Expedited Examination</p>
                     <p className="text-xs text-[#414942] mt-0.5">
@@ -413,7 +413,7 @@ export default function FeeCalculatorView() {
           <div className="lg:col-span-5">
             <div className="bg-[#FFFDE7]/75 rounded-2xl border card-border ambient-shadow sticky top-8 overflow-hidden flex flex-col h-full">
               {/* Estimated Total Header Strip */}
-              <div className="bg-[#E7FBB4] p-6 border-b card-border">
+              <div className="bg-[#E7FBB4] p-6 border-b border-[#1B2B20]/10">
                 <p className="text-xs font-bold text-[#1B2B20] uppercase tracking-wider mb-1">
                   Estimated Total
                 </p>
@@ -430,7 +430,7 @@ export default function FeeCalculatorView() {
                 <div>
                   <h3 className="font-bold text-base text-[#1B2B20] mb-4">Fee Breakdown</h3>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center pb-3 border-b card-border">
+                    <div className="flex justify-between items-center pb-3 border-b border-[#1B2B20]/10">
                       <div>
                         <p className="text-sm font-semibold text-[#1B2B20]">Official Registry Fee</p>
                         <p className="text-xs text-[#727971]">
@@ -460,7 +460,7 @@ export default function FeeCalculatorView() {
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center pb-3 border-b card-border">
+                    <div className="flex justify-between items-center pb-3 border-b border-[#1B2B20]/10">
                       <div>
                         <p className="text-sm font-semibold text-[#1B2B20]">Professional Charges</p>
                         <p className="text-xs text-[#727971]">Drafting &amp; Filing Services</p>
@@ -541,7 +541,7 @@ export default function FeeCalculatorView() {
             </div>
 
             {/* Statutory Checklist */}
-            <div className="pt-6 border-t card-border">
+            <div className="pt-6 border-t border-[#1B2B20]/10">
               <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-4">
                 Statutory Criteria Checklist
               </label>
@@ -642,7 +642,7 @@ export default function FeeCalculatorView() {
           {/* Wizard Result Display */}
           {wizResult && (
             <div className="bg-white rounded-2xl p-6 md:p-8 card-border ambient-shadow space-y-6 animate-in fade-in">
-              <div className="flex items-center justify-between border-b card-border pb-4">
+              <div className="flex items-center justify-between border-b border-[#1B2B20]/10 pb-4">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-2xl text-[#638C6D]">verified</span>
                   <h3 className="text-lg font-bold text-[#1B2B20]">Patentability Evaluation Result</h3>
@@ -696,7 +696,7 @@ export default function FeeCalculatorView() {
       {isQuoteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-6 card-border ambient-shadow animate-in zoom-in-95">
-            <div className="flex items-center justify-between border-b card-border pb-4">
+            <div className="flex items-center justify-between border-b border-[#1B2B20]/10 pb-4">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-2xl text-[#638C6D]">receipt_long</span>
                 <div>
@@ -713,11 +713,11 @@ export default function FeeCalculatorView() {
             </div>
 
             <div className="space-y-3 text-xs text-[#414942]">
-              <div className="flex justify-between py-1.5 border-b card-border">
+              <div className="flex justify-between py-1.5 border-b border-[#1B2B20]/10">
                 <span>IP Filing Type:</span>
                 <span className="font-bold text-[#1B2B20] capitalize">{ipType} (India E-filing)</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b card-border">
+              <div className="flex justify-between py-1.5 border-b border-[#1B2B20]/10">
                 <span>Applicant Category:</span>
                 <span className="font-bold text-[#1B2B20]">
                   {applicantType === "startup"
@@ -727,11 +727,11 @@ export default function FeeCalculatorView() {
                     : "Large Entity"}
                 </span>
               </div>
-              <div className="flex justify-between py-1.5 border-b card-border">
+              <div className="flex justify-between py-1.5 border-b border-[#1B2B20]/10">
                 <span>Official Government Fee:</span>
                 <span className="font-statutory font-bold text-[#1B2B20]">₹{officialFee.toLocaleString("en-IN")}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b card-border">
+              <div className="flex justify-between py-1.5 border-b border-[#1B2B20]/10">
                 <span>Professional Partner Services:</span>
                 <span className="font-statutory font-bold text-[#1B2B20]">₹{professionalFee.toLocaleString("en-IN")}</span>
               </div>

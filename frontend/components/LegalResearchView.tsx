@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 const apiBaseUrl = "";
 
@@ -144,9 +145,6 @@ export default function LegalResearchView({ onAskQuestion }: LegalResearchViewPr
                       {faq.category}
                     </span>
                   </div>
-                  <span className="font-mono text-xs text-[#727971] bg-white px-2 py-0.5 rounded border card-border">
-                    {faq.id}
-                  </span>
                 </div>
 
                 <div className="p-6 space-y-4">
@@ -156,9 +154,16 @@ export default function LegalResearchView({ onAskQuestion }: LegalResearchViewPr
                   </h3>
 
                   {/* Answer Text */}
-                  <p className={`text-sm text-[#414942] leading-relaxed ${isExpanded ? "whitespace-pre-line" : "line-clamp-3"}`}>
-                    {faq.answer}
-                  </p>
+                  <div className={`text-sm text-[#414942] leading-relaxed ${isExpanded ? "whitespace-pre-line" : "line-clamp-3"}`}>
+                    <ReactMarkdown 
+                      components={{
+                        p: ({ children }) => <span>{children}</span>,
+                        strong: ({ children }) => <strong className="font-bold text-[#0F1F15]">{children}</strong>,
+                      }}
+                    >
+                      {faq.answer}
+                    </ReactMarkdown>
+                  </div>
 
                   {/* Expanded Statutory Highlight Box (Stitch Unified Theme style) */}
                   {isExpanded && (

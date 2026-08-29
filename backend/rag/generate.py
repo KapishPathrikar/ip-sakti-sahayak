@@ -100,7 +100,11 @@ def _call_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str =
 				time.sleep(2)
 				
 	print("[LLM Router] Local Ollama unavailable. Seamlessly routing to Cloud LLM fallback...")
-	return _call_cloud_llm(prompt)
+	fallback_msg = "\n\n*[System: The local model is not currently active... querying cloud model (Gemini 3.5 Flash Lite)]*\n\n"
+	cloud_response = _call_cloud_llm(prompt)
+	if cloud_response:
+		return fallback_msg + cloud_response
+	return None
 
 
 
@@ -308,6 +312,7 @@ def _stream_llm(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = 
 			return
 	except Exception as err:
 		print(f"[Notice] Ollama local stream not available ({err}). Routing to Cloud LLM stream...")
+		yield "\n\n*[System: The local model is not currently active... querying cloud model (Gemini 3.5 Flash Lite)]*\n\n"
 		yield from _stream_cloud_llm(prompt)
 
 
