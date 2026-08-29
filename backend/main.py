@@ -63,7 +63,7 @@ try:
     from rag.rate_limiter import rate_limiter
     from rag.fee_calculator import calculate_ip_fee
     from rag.patentability_wizard import assess_patentability
-    from rag.pdf_exporter import generate_consultation_pdf
+    from rag.pdf_exporter import generate_consultation_pdf, generate_fee_quote_pdf
 except (ImportError, ValueError):
     from backend.rag.generate import answer_question, answer_question_stream, DEFAULT_OLLAMA_MODEL
     from backend.rag.retrieve import retrieve
@@ -72,7 +72,7 @@ except (ImportError, ValueError):
     from backend.rag.rate_limiter import rate_limiter
     from backend.rag.fee_calculator import calculate_ip_fee
     from backend.rag.patentability_wizard import assess_patentability
-    from backend.rag.pdf_exporter import generate_consultation_pdf
+    from backend.rag.pdf_exporter import generate_consultation_pdf, generate_fee_quote_pdf
 
 
 
@@ -232,14 +232,33 @@ async def login_user_endpoint(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Account is deactivated.")
 
     token = create_access_token(data={"sub": user.email})
-    return Token(access_token=token, user=UserOut.model_validate(user))
+    return Token(access_token=token, user=_populate_user_usage(db, user))
 
+
+def _populate_user_usage(db: Session, user: User) -> UserOut:
+    import datetime
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    start_of_day = datetime.datetime(now_utc.year, now_utc.month, now_utc.day, tzinfo=datetime.timezone.utc)
+    
+    daily_queries_used = db.query(DBChatMessage).join(ChatSession).filter(
+        ChatSession.user_id == user.id,
+        DBChatMessage.role == "user",
+        DBChatMessage.is_from_faq == False,
+        DBChatMessage.created_at >= start_of_day
+    ).count()
+    
+    out = UserOut.model_validate(user)
+    out.daily_queries_used = daily_queries_used
+    return out
 
 
 @app.get("/api/auth/me", response_model=UserOut, tags=["auth"])
-def get_current_user_profile(current_user: User = Depends(get_current_user)):
+def get_current_user_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Return the profile of the currently authenticated user."""
-    return UserOut.model_validate(current_user)
+    return _populate_user_usage(db, current_user)
 
 
 class ProfileUpdateIn(BaseModel):
@@ -260,7 +279,7 @@ def update_user_profile_endpoint(
         current_user.role = payload.role.strip()
     db.commit()
     db.refresh(current_user)
-    return UserOut.model_validate(current_user)
+    return _populate_user_usage(db, current_user)
 
 
 
@@ -379,7 +398,15 @@ def chat_stream_endpoint(
             session_id=payload.session_id,
             user_id=current_user.id if current_user else None,
         )
-        return StreamingResponse(generator, media_type="text/event-stream")
+        return StreamingResponse(
+            generator, 
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            }
+        )
     except HTTPException:
         raise
     except Exception as err:
@@ -412,13 +439,43 @@ def get_my_sessions_endpoint(
 
 
 @app.delete("/api/chat/history/{session_id}", tags=["chat"])
-def clear_chat_history_endpoint(session_id: str) -> dict[str, Any]:
+def clear_chat_history_endpoint(
+    session_id: str,
+    current_user: User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
     """Clear conversation history for a given session."""
     cleared = session_manager.clear_session(session_id)
+    if current_user:
+        sess = db.query(ChatSession).filter(
+            ChatSession.session_id == session_id,
+            ChatSession.user_id == current_user.id,
+        ).first()
+        if sess:
+            db.delete(sess)
+            db.commit()
     return {
         "session_id": session_id,
         "cleared": cleared,
     }
+
+
+@app.delete("/api/chat/all-history", tags=["chat"])
+def clear_all_chat_history(
+    current_user: User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Permanently delete all consultation histories for the authenticated user or active sessions."""
+    if current_user:
+        sessions = db.query(ChatSession).filter(ChatSession.user_id == current_user.id).all()
+        for s in sessions:
+            session_manager.clear_session(s.session_id)
+            db.delete(s)
+        db.commit()
+    else:
+        for sid in session_manager.list_sessions():
+            session_manager.clear_session(sid)
+    return {"message": "All consultation history cleared successfully."}
 
 
 @app.get("/api/chat/sessions", tags=["chat"])
@@ -543,6 +600,19 @@ def export_chat_session_pdf(
     )
 
     filename = f"IP_Shakti_Consultation_{session_id[:8]}.pdf"
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/api/tools/quote-pdf", tags=["tools"])
+def export_fee_quote_pdf_endpoint(payload: dict[str, Any]):
+    """Export official fee quotation and cost breakdown as a formatted, downloadable PDF."""
+    pdf_buffer = generate_fee_quote_pdf(payload)
+    quote_ref = payload.get("quote_id", "Quote")
+    filename = f"IP_SAKTI_Formal_Quote_{quote_ref}.pdf"
     return StreamingResponse(
         pdf_buffer,
         media_type="application/pdf",

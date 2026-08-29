@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import datetime
 from collections import defaultdict
 from typing import NamedTuple
 
@@ -17,9 +18,9 @@ class RateLimitStatus(NamedTuple):
 
 class SlidingWindowRateLimiter:
 	"""
-	In-memory sliding window rate limiter.
+	In-memory rate limiter.
 	- Burst limit: max_burst queries per burst_window_seconds (default: 5 queries / 60s)
-	- Daily quota: max_daily queries per daily_window_seconds (default: 25 queries / 86400s)
+	- Daily quota: max_daily queries per calendar day (UTC)
 	"""
 
 	def __init__(
@@ -27,7 +28,7 @@ class SlidingWindowRateLimiter:
 		max_burst: int = 5,
 		burst_window_seconds: int = 60,
 		max_daily: int = 25,
-		daily_window_seconds: int = 86400,
+		daily_window_seconds: int = 86400, # Kept for backward compatibility if needed elsewhere
 	):
 		self.max_burst = max_burst
 		self.burst_window_seconds = burst_window_seconds
@@ -42,11 +43,14 @@ class SlidingWindowRateLimiter:
 		FAQ cache queries are exempt from quotas.
 		"""
 		now = time.time()
+		now_utc = datetime.datetime.now(datetime.timezone.utc)
+		start_of_day = datetime.datetime(now_utc.year, now_utc.month, now_utc.day, tzinfo=datetime.timezone.utc)
+		cutoff_daily = start_of_day.timestamp()
+
 		timestamps = self._requests[client_id]
 
-		# 1. Prune timestamps older than 24 hours
-		cutoff_daily = now - self.daily_window_seconds
-		valid_timestamps = [t for t in timestamps if t > cutoff_daily]
+		# 1. Prune timestamps older than 12:00 AM UTC today
+		valid_timestamps = [t for t in timestamps if t >= cutoff_daily]
 		self._requests[client_id] = valid_timestamps
 
 		# If it's a pre-verified FAQ query, always allow with zero quota deduction
@@ -71,15 +75,16 @@ class SlidingWindowRateLimiter:
 				burst_remaining=0,
 			)
 
-		# 3. Check Daily Quota (last 24 hours)
+		# 3. Check Daily Quota (calendar day)
 		if len(valid_timestamps) >= self.max_daily:
-			oldest_daily = min(valid_timestamps)
-			retry_after = max(1, int(self.daily_window_seconds - (now - oldest_daily)))
+			# Time until next midnight UTC
+			next_midnight = start_of_day + datetime.timedelta(days=1)
+			retry_after = max(1, int(next_midnight.timestamp() - now))
 			hours = retry_after // 3600
 			minutes = (retry_after % 3600) // 60
 			return RateLimitStatus(
 				allowed=False,
-				reason=f"Daily limit reached ({self.max_daily} queries / 24h). Resets in {hours}h {minutes}m.",
+				reason=f"Daily limit reached ({self.max_daily} queries / day). Resets in {hours}h {minutes}m.",
 				retry_after_seconds=retry_after,
 				daily_remaining=0,
 				burst_remaining=max(0, self.max_burst - len(burst_requests)),

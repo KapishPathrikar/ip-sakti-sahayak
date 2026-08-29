@@ -480,3 +480,211 @@ def generate_consultation_pdf(
 	doc.build(story)
 	buffer.seek(0)
 	return buffer
+
+
+def generate_fee_quote_pdf(quote_data: dict[str, Any]) -> io.BytesIO:
+	"""Generate a formal, beautifully formatted fee quotation and cost estimate PDF."""
+	buffer = io.BytesIO()
+	doc = SimpleDocTemplate(
+		buffer,
+		pagesize=letter,
+		rightMargin=40,
+		leftMargin=40,
+		topMargin=40,
+		bottomMargin=40,
+	)
+
+	sage_green = colors.HexColor("#285943")
+	terracotta = colors.HexColor("#A84B24")
+	light_bg = colors.HexColor("#F8F9F3")
+	ivory_border = colors.HexColor("#E5DCBF")
+	text_dark = colors.HexColor("#1A201C")
+
+	styles = getSampleStyleSheet()
+	title_style = ParagraphStyle(
+		"QuoteTitle",
+		parent=styles["Normal"],
+		fontName="Helvetica-Bold",
+		fontSize=18,
+		leading=22,
+		textColor=sage_green,
+	)
+	subtitle_style = ParagraphStyle(
+		"QuoteSubtitle",
+		parent=styles["Normal"],
+		fontName="Helvetica",
+		fontSize=10,
+		leading=13,
+		textColor=terracotta,
+	)
+	header_cell = ParagraphStyle(
+		"QHeaderCell",
+		parent=styles["Normal"],
+		fontName="Helvetica-Bold",
+		fontSize=9,
+		textColor=colors.white,
+	)
+	body_cell = ParagraphStyle(
+		"QBodyCell",
+		parent=styles["Normal"],
+		fontName="Helvetica",
+		fontSize=9,
+		leading=12,
+		textColor=text_dark,
+	)
+	bold_cell = ParagraphStyle(
+		"QBoldCell",
+		parent=styles["Normal"],
+		fontName="Helvetica-Bold",
+		fontSize=9,
+		leading=12,
+		textColor=text_dark,
+	)
+	disclaimer_style = ParagraphStyle(
+		"QDisclaimer",
+		parent=styles["Normal"],
+		fontName="Helvetica-Oblique",
+		fontSize=7.5,
+		leading=10,
+		textColor=colors.HexColor("#555555"),
+	)
+
+	story: list[Any] = []
+
+	# 1. Header Banner
+	story.append(Paragraph("<b>IP-SAKTI LEGAL TECH SUITE</b>", title_style))
+	story.append(Paragraph("Official Statutory Fee Estimate &amp; Formal Quotation", subtitle_style))
+	story.append(Spacer(1, 10))
+	story.append(HRFlowable(width="100%", thickness=1.5, color=sage_green, spaceAfter=12))
+
+	# 2. Quotation Metadata Table
+	quote_ref = quote_data.get("quote_id") or f"IPS-QT-{datetime.date.today().year}-{datetime.datetime.now().strftime('%H%M%S')}"
+	issue_date = datetime.date.today().strftime("%B %d, %Y")
+	valid_until = (datetime.date.today() + datetime.timedelta(days=30)).strftime("%B %d, %Y")
+	ip_type = str(quote_data.get("ip_type", "Patent")).upper()
+	applicant_type = str(quote_data.get("applicant_type", "Startup / MSME")).title()
+	subsidy_status = "80% DPIIT Subsidy Applied (Rule 7(3))" if quote_data.get("is_subsidy_eligible", True) else "Standard / Large Entity Tariff"
+
+	meta_data = [
+		[
+			Paragraph("<b>Quotation Reference:</b>", bold_cell),
+			Paragraph(quote_ref, body_cell),
+			Paragraph("<b>Date of Issue:</b>", bold_cell),
+			Paragraph(issue_date, body_cell),
+		],
+		[
+			Paragraph("<b>IP Type:</b>", bold_cell),
+			Paragraph(f"Indian {ip_type} Application", body_cell),
+			Paragraph("<b>Valid Until:</b>", bold_cell),
+			Paragraph(valid_until, body_cell),
+		],
+		[
+			Paragraph("<b>Applicant Class:</b>", bold_cell),
+			Paragraph(applicant_type, body_cell),
+			Paragraph("<b>Subsidy Status:</b>", bold_cell),
+			Paragraph(subsidy_status, body_cell),
+		],
+	]
+
+	meta_table = Table(meta_data, colWidths=[110, 155, 95, 170])
+	meta_table.setStyle(
+		TableStyle([
+			("BACKGROUND", (0, 0), (-1, -1), light_bg),
+			("BOX", (0, 0), (-1, -1), 0.5, ivory_border),
+			("INNERGRID", (0, 0), (-1, -1), 0.5, ivory_border),
+			("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+			("TOPPADDING", (0, 0), (-1, -1), 5),
+			("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+		])
+	)
+	story.append(meta_table)
+	story.append(Spacer(1, 14))
+
+	# 3. Itemized Fee Table
+	table_data = [
+		[
+			Paragraph("<b>Item Description / Statutory Form</b>", header_cell),
+			Paragraph("<b>Category</b>", header_cell),
+			Paragraph("<b>Statutory Reference</b>", header_cell),
+			Paragraph("<b>Amount (INR)</b>", header_cell),
+		]
+	]
+
+	# Breakdown items
+	breakdown = quote_data.get("breakdown", [])
+	if not breakdown:
+		breakdown = [
+			{"item": f"{ip_type} E-Filing Application Fee", "category": "Official Registry Fee", "rule": "First Schedule", "fee_inr": quote_data.get("official_fee", 1600)},
+		]
+
+	for item in breakdown:
+		desc = item.get("item") or item.get("description") or "Filing Service"
+		cat = "Official Registry Fee" if "Official" in item.get("category", "") or "Fee" in item.get("category", "") else "Official IPO Fee"
+		rule = item.get("rule") or "First Schedule, Patents Rules 2003"
+		fee = item.get("fee_inr") or item.get("amount") or 0
+		table_data.append([
+			Paragraph(sanitize_text(desc), body_cell),
+			Paragraph(cat, body_cell),
+			Paragraph(rule, body_cell),
+			Paragraph(f"INR {float(fee):,.2f}", bold_cell),
+		])
+
+	# Professional Charges
+	prof_fee = float(quote_data.get("professional_fee", 13000 if ip_type == "PATENT" else 5000))
+	table_data.append([
+		Paragraph("Professional Drafting, Review &amp; Registry Filing Charges", body_cell),
+		Paragraph("Partner Fee", body_cell),
+		Paragraph("Standard IP-SAKTI Partner Tariff", body_cell),
+		Paragraph(f"INR {prof_fee:,.2f}", bold_cell),
+	])
+
+	# Totals
+	official_fee = float(quote_data.get("official_fee", 1600))
+	total_fee = official_fee + prof_fee
+
+	table_data.append([
+		Paragraph("<b>Official Registry Subtotal:</b>", bold_cell),
+		Paragraph("", body_cell),
+		Paragraph("", body_cell),
+		Paragraph(f"<b>INR {official_fee:,.2f}</b>", bold_cell),
+	])
+	table_data.append([
+		Paragraph("<b>TOTAL ESTIMATED QUOTATION:</b>", ParagraphStyle("BigTot", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, textColor=sage_green)),
+		Paragraph("", body_cell),
+		Paragraph("", body_cell),
+		Paragraph(f"<b>INR {total_fee:,.2f}</b>", ParagraphStyle("BigTotVal", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, textColor=sage_green)),
+	])
+
+	fee_table = Table(table_data, colWidths=[200, 110, 120, 100])
+	fee_table.setStyle(
+		TableStyle([
+			("BACKGROUND", (0, 0), (-1, 0), sage_green),
+			("BOX", (0, 0), (-1, -1), 0.5, ivory_border),
+			("INNERGRID", (0, 0), (-1, -3), 0.5, ivory_border),
+			("LINEABOVE", (0, -2), (-1, -2), 1, sage_green),
+			("BACKGROUND", (0, -1), (-1, -1), light_bg),
+			("TOPPADDING", (0, 0), (-1, -1), 5),
+			("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+			("ALIGN", (3, 0), (3, -1), "RIGHT"),
+		])
+	)
+	story.append(fee_table)
+	story.append(Spacer(1, 16))
+
+	# 4. Terms & Statutory Notes
+	notes_text = (
+		"<b>TERMS &amp; STATUTORY COMPLIANCE:</b><br/>"
+		"1. Official Registry Fees are statutory rates paid directly to the Controller General of Patents, Designs and Trade Marks (CGPDTM).<br/>"
+		"2. Startups and MSMEs must hold valid DPIIT / Udyam registration certificates at the time of e-filing to avail the 80% fee reduction.<br/>"
+		"3. Quotation is valid for 30 calendar days from the date of issuance.<br/>"
+		"4. Applicable GST (18%) on professional services is included or calculated separately as per statutory tax invoice."
+	)
+	story.append(Paragraph(notes_text, disclaimer_style))
+	story.append(Spacer(1, 10))
+	story.append(HRFlowable(width="100%", thickness=0.5, color=ivory_border, spaceAfter=8))
+	story.append(Paragraph("Generated electronically by <b>IP-SAKTI Legal Tech Suite</b> — Verified for IPO E-Filing Compliance.", disclaimer_style))
+
+	doc.build(story)
+	buffer.seek(0)
+	return buffer
+

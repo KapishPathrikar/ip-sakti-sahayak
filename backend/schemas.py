@@ -24,6 +24,7 @@ class UserOut(BaseModel):
 	full_name: str | None = None
 	role: str
 	daily_query_limit: int
+	daily_queries_used: int = 0
 	created_at: datetime.datetime
 
 	@field_serializer("created_at")

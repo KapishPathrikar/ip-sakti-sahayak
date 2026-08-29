@@ -16,6 +16,7 @@ interface AccountSettingsViewProps {
   onLogout?: () => void;
   onOpenAuth?: () => void;
   onProfileUpdate?: (updatedUser: any) => void;
+  onClearHistory?: () => void;
 }
 
 export default function AccountSettingsView({
@@ -23,11 +24,11 @@ export default function AccountSettingsView({
   onLogout,
   onOpenAuth,
   onProfileUpdate,
+  onClearHistory,
 }: AccountSettingsViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState("Rajesh Kumar");
-  const [organization, setOrganization] = useState("InnovateTech Solutions");
-  const [timezone, setTimezone] = useState("IST (UTC+05:30)");
+  const [location, setLocation] = useState("Mumbai, India");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -37,8 +38,7 @@ export default function AccountSettingsView({
       if (savedPrefs) {
         const parsed = JSON.parse(savedPrefs);
         if (parsed.fullName) setFullName(parsed.fullName);
-        if (parsed.organization) setOrganization(parsed.organization);
-        if (parsed.timezone) setTimezone(parsed.timezone);
+        if (parsed.location) setLocation(parsed.location);
       } else if (currentUser?.full_name) {
         setFullName(currentUser.full_name);
       }
@@ -50,12 +50,16 @@ export default function AccountSettingsView({
     : "IP RESEARCHER / STARTUP";
   const displayEmail = currentUser?.email || "rajesh@startup.in";
 
+  // Real usage data from backend
+  const queriesMax = currentUser?.daily_query_limit || 50;
+  const queriesUsed = (currentUser as any)?.daily_queries_used || 0; 
+  const usagePercentage = Math.min(100, Math.max(0, (queriesUsed / queriesMax) * 100));
+
   async function handleSaveProfile() {
     setIsEditing(false);
     const newPrefs = {
       fullName: fullName.trim(),
-      organization: organization.trim(),
-      timezone,
+      location: location.trim(),
     };
     localStorage.setItem("ip_shakti_prefs", JSON.stringify(newPrefs));
 
@@ -164,510 +168,232 @@ export default function AccountSettingsView({
     }
   }
 
-  function handleClearHistory() {
+  async function handleClearHistory() {
     if (
       confirm(
-        "Are you sure you want to clear your consultation history? This action is permanent."
+        "Are you sure you want to permanently clear all consultation histories? This action cannot be undone."
       )
     ) {
-      localStorage.removeItem("ip_shakti_sessions");
-      setSaveMessage("Consultation history cleared.");
-      setTimeout(() => setSaveMessage(null), 3000);
+      try {
+        const token = localStorage.getItem("ip_shakti_token");
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch(`${apiBaseUrl}/api/chat/all-history`, {
+          method: "DELETE",
+          headers,
+        });
+
+        localStorage.removeItem("ip_shakti_sessions");
+        if (onClearHistory) onClearHistory();
+
+        if (res.ok) {
+          setSaveMessage("All consultation history has been permanently cleared.");
+        } else {
+          setSaveMessage("History cleared locally.");
+        }
+        setTimeout(() => setSaveMessage(null), 3500);
+      } catch (err) {
+        console.error("Failed to clear history", err);
+        setSaveMessage("Failed to clear history. Please try again.");
+        setTimeout(() => setSaveMessage(null), 3000);
+      }
     }
   }
 
   return (
-    <div className="w-full min-h-screen" style={{ background: "#F0F0E8" }}>
-      <div className="w-full max-w-5xl mx-auto px-6 py-8 space-y-5">
-        {/* Page Header */}
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold text-[#0F1F15]">Account Settings</h2>
-          <p className="text-sm" style={{ color: "#C07000" }}>
-            Manage your{" "}
-            <span style={{ color: "#C07000", textDecoration: "underline", cursor: "pointer" }}>
-              profile
-            </span>
-            ,{" "}
-            <span style={{ color: "#C07000", textDecoration: "underline", cursor: "pointer" }}>
-              usage limits
-            </span>
-            , and{" "}
-            <span style={{ color: "#C07000", textDecoration: "underline", cursor: "pointer" }}>
-              data preferences
-            </span>
-            .
-          </p>
-        </div>
+    <div className="w-full max-w-5xl mx-auto px-2 sm:px-6 py-6 md:py-10 space-y-8 animate-in fade-in transition-colors duration-300 dark:bg-gray-900">
+      {/* ── Header (Stitch Unified Theme) ───────────────────────────── */}
+      <header className="mb-4">
+        <h2 className="text-3xl sm:text-4xl font-bold text-[#1B2B20] mb-2 tracking-tight dark:text-white transition-colors duration-300">
+          Account Settings
+        </h2>
+        <p className="text-sm md:text-base text-[#414942] dark:text-gray-300 transition-colors duration-300">
+          Manage your profile, usage limits, and data preferences.
+        </p>
+      </header>
 
-        {/* Success message */}
-        {saveMessage && (
-          <div
-            className="p-3 rounded-xl text-xs font-semibold flex items-center gap-2"
-            style={{
-              background: "#E5F9E7",
-              border: "1px solid #638C6D",
-              color: "#3D6448",
-            }}
-          >
-            <span>✅</span>
+      {/* Save / Notification Toast */}
+      {saveMessage && (
+        <div className="p-4 rounded-xl bg-[#E7FBB4] border border-[#638C6D]/40 text-[#5A6A32] text-xs font-bold flex items-center justify-between animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">check_circle</span>
             <span>{saveMessage}</span>
           </div>
-        )}
+          <button onClick={() => setSaveMessage(null)} className="text-xs">✕</button>
+        </div>
+      )}
 
-        {/* Main 2-column layout */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 320px",
-            gap: "20px",
-            alignItems: "start",
-          }}
-        >
-          {/* LEFT: Profile Card */}
-          <div
-            style={{
-              background: "#FFFFFF",
-              borderRadius: "12px",
-              border: "1px solid #E0E0D8",
-              padding: "24px",
-            }}
-          >
-            {/* Top row: Avatar + Name/Role/Email + Edit button */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: "16px",
-                paddingBottom: "20px",
-                borderBottom: "1px solid #E8E8E0",
-              }}
-            >
-              {/* Avatar + Info */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                {/* Avatar — small rounded rect matching screenshot */}
-                <div
-                  style={{
-                    width: "64px",
-                    height: "72px",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                    background: "#E8E8E0",
-                  }}
-                >
-                  <img
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBlrDJ92e0InbEqUdFoGT0LuKH1JGJjRQ5HBHdVOHOZ9X-L3iktSLcw8GpOkrFlTFxTA_WtDucP43Mm9DM5YQBdxDejlUaV1VKr5OU2BZX7XECY_hvJxMZoJTS5eMOPFOU9YaTYonmP2i3371sx82DPe7LeQGthzIxnxvTXtfsKWZsvLDiX8eb7actn4NtOmrA2KNRuqSpw8SAYtfKiahRmEcN1qE-y_kKooutpvoCx9vmXtAnR7CEcw"
-                    alt={fullName}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      objectPosition: "top center",
-                    }}
-                  />
-                </div>
-
-                {/* Name, Role, Email */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      style={{
-                        border: "1px solid #D4E7D6",
-                        borderRadius: "6px",
-                        padding: "2px 8px",
-                        fontSize: "18px",
-                        fontWeight: "700",
-                        color: "#0F1F15",
-                        outline: "none",
-                        width: "200px",
-                      }}
-                    />
-                  ) : (
-                    <span
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: "700",
-                        color: "#0F1F15",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {fullName}
-                    </span>
-                  )}
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: "600",
-                      color: "#4A7C5E",
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {displayRole}
-                  </span>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      marginTop: "2px",
-                    }}
-                  >
-                    <svg
-                      width="13"
-                      height="13"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="#888"
-                      strokeWidth="2"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
-                    <span style={{ fontSize: "13px", color: "#555" }}>{displayEmail}</span>
-                  </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* ── Left Column: Profile Card ───────────────────────────────── */}
+        <div className="lg:col-span-2 flex flex-col gap-8">
+          <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 ambient-shadow border card-border dark:border-gray-700 transition-colors duration-300">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8 pb-8 border-b border-[#1B2B20]/10 dark:border-gray-700">
+              {/* Profile Details */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-2xl font-bold text-[#1B2B20] dark:text-white mb-1 transition-colors duration-300">
+                  {fullName}
+                </h3>
+                <p className="text-[#638C6D] dark:text-[#A8DAB5] text-xs font-bold uppercase tracking-wider mb-2 transition-colors duration-300">
+                  {displayRole}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-[#414942] dark:text-gray-400 transition-colors duration-300">
+                  <span className="material-symbols-outlined text-base">mail</span>
+                  <span className="truncate">{displayEmail}</span>
                 </div>
               </div>
 
-              {/* Edit Profile button — top right */}
-              <button
-                onClick={() => {
-                  if (isEditing) handleSaveProfile();
-                  else setIsEditing(true);
-                }}
-                style={{
-                  padding: "5px 14px",
-                  borderRadius: "20px",
-                  border: "1px solid #9ABBA6",
-                  background: "transparent",
-                  color: "#4A7C5E",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-              >
-                {isEditing ? "Save Changes" : "Edit Profile"}
-              </button>
+              {/* Edit / Sign-in Action */}
+              <div>
+                {!currentUser ? (
+                  <button
+                    onClick={onOpenAuth}
+                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl bg-[#638C6D] text-white text-xs font-bold hover:bg-[#557E60] transition-colors shadow-xs cursor-pointer"
+                  >
+                    Sign In / Register
+                  </button>
+                ) : isEditing ? (
+                  <button
+                    onClick={handleSaveProfile}
+                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl bg-[#638C6D] text-white text-xs font-bold hover:bg-[#557E60] transition-colors shadow-xs cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl border border-[#638C6D] text-[#638C6D] text-xs font-bold hover:bg-[#638C6D]/10 transition-colors cursor-pointer"
+                  >
+                    Edit Profile
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Bottom: Organization & Timezone side-by-side */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "20px",
-                marginTop: "20px",
-              }}
-            >
-              {/* Organization */}
+            {/* Profile Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "10px",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#7A9A7E",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Organization
+                <label className="block text-xs font-bold text-[#727971] uppercase tracking-wider mb-2">
+                  Full Name
                 </label>
                 {isEditing ? (
                   <input
                     type="text"
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      background: "#D4F5D8",
-                      border: "1px solid #B8DFC0",
-                      fontSize: "14px",
-                      color: "#0F1F15",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-[#E5F9E7] text-[#1B2B20] text-sm border card-border outline-none focus:ring-2 focus:ring-[#638C6D] dark:bg-gray-800 dark:text-white"
                   />
                 ) : (
-                  <div
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      background: "#D4F5D8",
-                      border: "1px solid #B8DFC0",
-                      fontSize: "14px",
-                      color: "#0F1F15",
-                    }}
-                  >
-                    {organization}
+                  <div className="px-4 py-3 rounded-xl bg-[#E5F9E7]/60 text-[#1B2B20] text-sm border card-border font-medium dark:bg-gray-800 dark:text-white">
+                    {fullName}
                   </div>
                 )}
               </div>
 
-              {/* Timezone */}
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "10px",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#7A9A7E",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Timezone
+                <label className="block text-xs font-bold text-[#727971] uppercase tracking-wider mb-2">
+                  Location
                 </label>
-                <div style={{ position: "relative" }}>
-                  <select
-                    value={timezone}
-                    onChange={(e) => {
-                      const newTz = e.target.value;
-                      setTimezone(newTz);
-                      try {
-                        const savedPrefs = JSON.parse(
-                          localStorage.getItem("ip_shakti_prefs") || "{}"
-                        );
-                        localStorage.setItem(
-                          "ip_shakti_prefs",
-                          JSON.stringify({ ...savedPrefs, timezone: newTz })
-                        );
-                      } catch {}
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "10px 36px 10px 14px",
-                      borderRadius: "8px",
-                      background: "#D4F5D8",
-                      border: "1px solid #B8DFC0",
-                      fontSize: "14px",
-                      color: "#0F1F15",
-                      outline: "none",
-                      appearance: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <option value="IST (UTC+05:30)">IST (UTC+05:30)</option>
-                    <option value="UTC (UTC+00:00)">UTC (UTC+00:00)</option>
-                    <option value="EST (UTC-05:00)">EST (UTC-05:00)</option>
-                    <option value="PST (UTC-08:00)">PST (UTC-08:00)</option>
-                  </select>
-                  <span
-                    style={{
-                      position: "absolute",
-                      right: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      fontSize: "10px",
-                      color: "#4A7C5E",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    ▼
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-[#E5F9E7] text-[#1B2B20] text-sm border card-border outline-none focus:ring-2 focus:ring-[#638C6D] dark:bg-gray-800 dark:text-white"
+                  />
+                ) : (
+                  <div className="px-4 py-3 rounded-xl bg-[#E5F9E7]/60 text-[#1B2B20] text-sm border card-border font-medium dark:bg-gray-800 dark:text-white">
+                    {location}
+                  </div>
+                )}
+              </div>
+
+              <div className="sm:col-span-2 mt-2">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-[#727971] uppercase tracking-wider">
+                    API Usage (Daily)
+                  </label>
+                  <span className="text-xs font-bold text-[#1B2B20] dark:text-white transition-colors duration-300">
+                    {queriesUsed} / {queriesMax} queries
                   </span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT column: Security + Data Privacy */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {/* Security Card */}
-            <div
-              style={{
-                background: "#FFFFFF",
-                borderRadius: "12px",
-                border: "1px solid #E0E0D8",
-                padding: "20px 22px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "14px",
-                }}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="#4A7C5E"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                <span style={{ fontSize: "15px", fontWeight: "700", color: "#0F1F15" }}>
-                  Security
-                </span>
-              </div>
-
-              {/* Password row */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  padding: "6px 4px",
-                  borderRadius: "6px",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "14px", fontWeight: "600", color: "#0F1F15" }}>
-                    Password
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#888" }}>Last changed 3 months ago</div>
+                
+                {/* Progress Bar Track */}
+                <div className="h-3 w-full bg-[#E5F9E7] dark:bg-gray-700 rounded-full overflow-hidden border card-border dark:border-gray-600 transition-colors duration-300">
+                  {/* Progress Bar Fill */}
+                  <div 
+                    className="h-full bg-[#638C6D] transition-all duration-1000 ease-out"
+                    style={{ width: `${usagePercentage}%` }}
+                  ></div>
                 </div>
-                <svg
-                  width="16"
-                  height="16"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="#888"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
+                <p className="text-[10px] text-[#727971] mt-2">
+                  Your limit resets daily at midnight UTC. Upgrade your plan for more queries.
+                </p>
               </div>
             </div>
 
-            {/* Data Privacy Card */}
-            <div
-              style={{
-                background: "#FFFFFF",
-                borderRadius: "12px",
-                border: "1px solid #E0E0D8",
-                padding: "20px 22px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "10px",
-                }}
+            {currentUser && onLogout && (
+              <div className="mt-8 pt-6 border-t border-[#1B2B20]/10 flex justify-end">
+                <button
+                  onClick={onLogout}
+                  className="px-4 py-2 rounded-lg border border-[#BA1A1A]/30 text-xs font-semibold text-[#BA1A1A] hover:bg-[#FFDAD6]/50 transition cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* ── Right Column: Security & Data Privacy ───────────────────── */}
+        <div className="flex flex-col gap-8">
+          {/* Security Card - Hidden per user request */}
+          <section className="hidden bg-white rounded-2xl p-6 ambient-shadow border card-border">
+            <h3 className="text-base font-bold text-[#1B2B20] mb-6 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#638C6D]">lock</span>
+              <span>Security</span>
+            </h3>
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-center p-3.5 hover:bg-[#E5F9E7]/50 rounded-xl transition-colors cursor-pointer group border card-border">
+                <div>
+                  <h4 className="text-sm font-semibold text-[#1B2B20] group-hover:text-[#638C6D] transition-colors">
+                    Password &amp; Auth
+                  </h4>
+                  <p className="text-xs text-[#727971]">Protected via JWT encryption</p>
+                </div>
+                <span className="material-symbols-outlined text-[#727971]">chevron_right</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Data Privacy Card */}
+          <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 ambient-shadow border card-border dark:border-gray-700 transition-colors duration-300">
+            <h3 className="text-base font-bold text-[#1B2B20] dark:text-white mb-2 flex items-center gap-2 transition-colors duration-300">
+              <span className="material-symbols-outlined text-[#DF6D2D]">shield_lock</span>
+              <span>Data Privacy</span>
+            </h3>
+            <p className="text-xs text-[#414942] dark:text-gray-400 mb-6 leading-relaxed transition-colors duration-300">
+              Manage your legal research data and history. Actions taken here are permanent.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleExportAllRecords}
+                disabled={isExporting}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-[#638C6D] text-[#638C6D] text-xs font-bold hover:bg-[#638C6D]/5 transition-colors cursor-pointer"
               >
-                <svg
-                  width="18"
-                  height="18"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="#C07000"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-                <span style={{ fontSize: "15px", fontWeight: "700", color: "#0F1F15" }}>
-                  Data Privacy
-                </span>
-              </div>
+                <span className="material-symbols-outlined text-base">download</span>
+                <span>{isExporting ? "Exporting Records..." : "Export All Records"}</span>
+              </button>
 
-              <p style={{ fontSize: "12px", color: "#666", lineHeight: "1.55", marginBottom: "14px" }}>
-                Manage your legal research data and history. Actions taken here are permanent.
-              </p>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {/* Export All Records */}
-                <button
-                  onClick={handleExportAllRecords}
-                  disabled={isExporting}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "7px",
-                    padding: "9px 16px",
-                    borderRadius: "8px",
-                    border: "1px solid #9ABBA6",
-                    background: "transparent",
-                    color: "#4A7C5E",
-                    fontSize: "13px",
-                    fontWeight: "500",
-                    cursor: isExporting ? "not-allowed" : "pointer",
-                    opacity: isExporting ? 0.6 : 1,
-                  }}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                  {isExporting ? "Exporting..." : "Export All Records"}
-                </button>
-
-                {/* Clear History */}
-                <button
-                  onClick={handleClearHistory}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "7px",
-                    padding: "9px 16px",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "#FCE8E6",
-                    color: "#BA1A1A",
-                    fontSize: "13px",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                  }}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                  Clear History
-                </button>
-              </div>
+              <button
+                onClick={handleClearHistory}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FFDAD6]/50 text-[#BA1A1A] border border-[#BA1A1A]/30 text-xs font-bold hover:bg-[#FFDAD6] transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">delete_forever</span>
+                <span>Clear History</span>
+              </button>
             </div>
-          </div>
+          </section>
         </div>
       </div>
     </div>

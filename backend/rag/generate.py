@@ -323,6 +323,8 @@ def answer_question_stream(
 
 	# Emit initial thinking state
 	yield f"data: {json.dumps({'type': 'thinking', 'message': '🧠 Analyzing Indian IP statutes & legal corpus...'})}\n\n"
+	# Pad to blow out proxy buffers (Next.js rewrites)
+	yield f": {' ' * 2048}\n\n"
 
 
 	# Translate query to English if non-English
@@ -356,7 +358,10 @@ def answer_question_stream(
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
 			session_manager.add_message(active_session_id, "assistant", ans_text, citations=citations, confidence=f"{round(faq_score * 100)}%", is_from_faq=True, user_id=user_id)
-		yield f"data: {json.dumps({'type': 'token', 'token': ans_text})}\n\n"
+		for word in ans_text.split(" "):
+			yield f"data: {json.dumps({'type': 'token', 'token': word + ' '})}\n\n"
+			import time
+			time.sleep(0.03) # Small delay to simulate live streaming
 		yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'from_faq': True})}\n\n"
 		return
 

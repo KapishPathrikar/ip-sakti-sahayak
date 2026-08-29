@@ -16,6 +16,11 @@ export default function FeeCalculatorView() {
   const [feeResult, setFeeResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  // ── Formal Quotation Modal State ──────────────────────────────────────
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [quoteId, setQuoteId] = useState("");
+
   // ── Wizard State ──────────────────────────────────────────────────────
   const [wizTitle, setWizTitle] = useState("");
   const [wizDesc, setWizDesc] = useState("");
@@ -96,10 +101,74 @@ export default function FeeCalculatorView() {
     }
   }, [ipType, applicantType, filingStage, isSubsidyEligible, isExpedited]);
 
-  // Run calculation immediately on load and on any change
   useEffect(() => {
     void calculateFees();
   }, [calculateFees]);
+
+  // ── Formal Quote Handlers ─────────────────────────────────────────────
+  function handleGenerateQuote() {
+    const qNum = "IPS-QT-" + new Date().getFullYear() + "-" + Math.floor(10000 + Math.random() * 90000);
+    setQuoteId(qNum);
+    setIsQuoteModalOpen(true);
+  }
+
+  const officialFee = feeResult?.total_official_fee_inr ?? (isSubsidyEligible ? 1600 : 8000);
+  const professionalFee = ipType === "patent" ? 13000 : 7000;
+  const estimatedTotal = officialFee + professionalFee;
+
+  async function handleDownloadQuotePDF() {
+    setIsDownloadingPdf(true);
+    try {
+      const applicantLabel =
+        applicantType === "startup"
+          ? "Startup / MSME / Educational Inst."
+          : applicantType === "natural"
+          ? "Natural Person(s)"
+          : "Other Entity (Large Corp)";
+
+      const payload = {
+        quote_id: quoteId,
+        ip_type: ipType === "patent" ? "Patent" : "Trademark",
+        applicant_type: applicantLabel,
+        is_subsidy_eligible: isSubsidyEligible,
+        official_fee: officialFee,
+        professional_fee: professionalFee,
+        total_fee: estimatedTotal,
+        breakdown: feeResult?.breakdown || [
+          {
+            item: `${ipType === "patent" ? "Patent" : "Trademark"} E-Filing Application Fee`,
+            category: "Official Registry Fee",
+            fee_inr: officialFee,
+          },
+        ],
+      };
+
+      const res = await fetch(`${apiBaseUrl}/api/tools/quote-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `IP_SAKTI_Quote_${quoteId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        alert("Could not generate PDF. Please try again.");
+      }
+    } catch (err) {
+      console.error("Failed to download PDF quote", err);
+      alert("Error downloading quote PDF.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  }
 
   // ── Patentability Wizard Call ─────────────────────────────────────────
   async function evaluatePatentability() {
@@ -131,205 +200,103 @@ export default function FeeCalculatorView() {
     }
   }
 
-  // ── Standard Professional Partner Fee Estimations ────────────────────
-  const professionalFee = ipType === "patent" ? 13000 : 5000;
-  const isLargeEntity = applicantType === "other" || !isSubsidyEligible;
-  const officialFee = feeResult?.total_fee_inr ?? (ipType === "patent" ? (isLargeEntity ? 8000 : 1600) : (isLargeEntity ? 9000 : 4500));
-  const estimatedTotal = officialFee + professionalFee;
-
-  // Score badge colours
-  const score = wizResult?.patentability_score ?? 0;
-  const scoreBg = score >= 80 ? "#3D6448" : score >= 50 ? "#C84C05" : "#BA1A1A";
-
-  // Shared toggle component
-  const Toggle = ({
-    checked,
-    onChange,
-  }: {
-    checked: boolean;
-    onChange: (v: boolean) => void;
-  }) => (
-    <label className="relative inline-flex items-center cursor-pointer select-none">
-      <input
-        type="checkbox"
-        className="sr-only peer"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <div className="w-11 h-6 bg-[#c1c8c0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]" />
-    </label>
-  );
-
   return (
-    <div
-      className="w-full min-h-screen px-4 md:px-10 py-8 md:py-12"
-      style={{ background: "#FAFAF5", fontFamily: "Inter, sans-serif" }}
-    >
-      {/* ── Header ───────────────────────────────────────────────────── */}
-      <div className="mb-10 max-w-3xl">
-        <h1 style={{ fontSize: "clamp(36px,5.5vw,56px)", fontWeight: 800, lineHeight: 1.1, color: "#1B2B20", marginBottom: "14px", letterSpacing: "-0.025em" }}>
-          Tools
-        </h1>
-        <p style={{ fontSize: "18px", lineHeight: "28px", color: "rgba(27,43,32,0.8)" }}>
+    <div className="w-full max-w-5xl mx-auto px-2 sm:px-6 py-6 md:py-10 animate-in fade-in">
+      {/* ── Header (Stitch IP Tools) ─────────────────────────────────── */}
+      <div className="mb-10 max-w-3xl mx-auto text-center md:text-left">
+        <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-[#FFFDE7]/80 text-[#638C6D] font-bold text-2xl uppercase tracking-wider mb-4 border card-border">
+          <span className="material-symbols-outlined text-3xl">calculate</span>
+          <span>Tools</span>
+        </div>
+        <p className="text-base text-[#414942] leading-relaxed">
           Estimate official registry fees and professional charges for Patents and Trademarks in India.{" "}
           <br className="hidden md:block" />
           Includes special provisions for Startups, MSMEs, and Educational Institutions.
         </p>
 
-        {/* Tab switcher */}
-        <div
-          className="mt-8 flex gap-2 p-1 w-fit rounded-xl"
-          style={{ background: "#e5f9e7" }}
-        >
+        {/* Segmented Toggle Bar */}
+        <div className="mt-8 flex gap-2 p-1.5 bg-[#E5F9E7] rounded-xl w-fit mx-auto md:mx-0 border card-border">
           <button
-            id="btn-fee-calc"
             onClick={() => setActiveTab("calculator")}
-            style={{
-              padding: "8px 24px",
-              borderRadius: "8px",
-              fontSize: "12px",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
-              transition: "all 0.15s",
-              background: activeTab === "calculator" ? "#638C6D" : "transparent",
-              color: activeTab === "calculator" ? "#ffffff" : "rgba(27,43,32,0.8)",
-              boxShadow: activeTab === "calculator" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
-              cursor: "pointer",
-              border: "none",
-            }}
+            className={`px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === "calculator"
+                ? "bg-[#638C6D] text-white shadow-sm"
+                : "text-[#1B2B20]/80 hover:bg-[#DAEDDC]"
+            }`}
           >
             Official Fee Calculator
           </button>
+          {/* Hiding the wizard feature as requested by the user */}
           <button
-            id="btn-patent-wizard"
             onClick={() => setActiveTab("wizard")}
-            style={{
-              padding: "8px 24px",
-              borderRadius: "8px",
-              fontSize: "12px",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
-              transition: "all 0.15s",
-              background: activeTab === "wizard" ? "#638C6D" : "transparent",
-              color: activeTab === "wizard" ? "#ffffff" : "rgba(27,43,32,0.8)",
-              boxShadow: activeTab === "wizard" ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
-              cursor: "pointer",
-              border: "none",
-            }}
+            className={`hidden px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === "wizard"
+                ? "bg-[#638C6D] text-white shadow-sm"
+                : "text-[#1B2B20]/80 hover:bg-[#DAEDDC]"
+            }`}
           >
             Am I Patentable?
           </button>
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          TAB 1 — OFFICIAL FEE CALCULATOR VIEW
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* ── View 1: Fee Calculator Grid ───────────────────────────────── */}
       {activeTab === "calculator" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-5xl" id="view-fee-calc">
-          {/* Left panel — inputs */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-5xl mx-auto">
+          {/* Left Column: Calculator Configuration */}
           <div className="lg:col-span-7 space-y-6">
-            <div
-              className="rounded-xl p-6 md:p-8"
-              style={{
-                background: "rgba(255,253,231,0.75)",
-                border: "1px solid rgba(27,43,32,0.1)",
-                boxShadow: "0px 4px 20px rgba(61,100,72,0.04)",
-              }}
-            >
+            <div className="bg-[#FFFDE7]/75 rounded-2xl p-6 md:p-8 card-border ambient-shadow">
               {/* Select IP Type */}
               <div className="mb-8">
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                    color: "rgba(27,43,32,0.8)",
-                    marginBottom: "16px",
-                  }}
-                >
+                <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-3">
                   Select IP Type
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <div
                     onClick={() => setIpType("patent")}
-                    className="p-4 rounded-lg flex flex-col items-center text-center gap-2 transition-all duration-200 cursor-pointer select-none"
-                    style={{
-                      border: ipType === "patent" ? "1px solid #638C6D" : "1px solid rgba(27,43,32,0.1)",
-                      background: ipType === "patent" ? "rgba(255,253,231,1)" : "#ffffff",
-                    }}
+                    className="relative cursor-pointer"
                   >
-                    <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke={ipType === "patent" ? "#638C6D" : "rgba(27,43,32,0.6)"} strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                    <span
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: 600,
-                        color: ipType === "patent" ? "#638C6D" : "rgba(27,43,32,0.8)",
-                      }}
+                    <div
+                      className={`p-4 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
+                        ipType === "patent"
+                          ? "bg-white border-[#638C6D] shadow-sm ring-2 ring-[#638C6D]/20 text-[#638C6D]"
+                          : "bg-white/80 card-border text-[#414942] hover:bg-white"
+                      }`}
                     >
-                      Patent
-                    </span>
+                      <span className="material-symbols-outlined text-3xl">lightbulb</span>
+                      <span className="font-bold text-sm">Patent</span>
+                    </div>
                   </div>
 
                   <div
                     onClick={() => setIpType("trademark")}
-                    className="p-4 rounded-lg flex flex-col items-center text-center gap-2 transition-all duration-200 cursor-pointer select-none"
-                    style={{
-                      border: ipType === "trademark" ? "1px solid #638C6D" : "1px solid rgba(27,43,32,0.1)",
-                      background: ipType === "trademark" ? "rgba(255,253,231,1)" : "#ffffff",
-                    }}
+                    className="relative cursor-pointer"
                   >
-                    <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke={ipType === "trademark" ? "#638C6D" : "rgba(27,43,32,0.6)"} strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                    </svg>
-                    <span
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: 600,
-                        color: ipType === "trademark" ? "#638C6D" : "rgba(27,43,32,0.8)",
-                      }}
+                    <div
+                      className={`p-4 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
+                        ipType === "trademark"
+                          ? "bg-white border-[#638C6D] shadow-sm ring-2 ring-[#638C6D]/20 text-[#638C6D]"
+                          : "bg-white/80 card-border text-[#414942] hover:bg-white"
+                      }`}
                     >
-                      Trademark
-                    </span>
+                      <span className="material-symbols-outlined text-3xl">verified</span>
+                      <span className="font-bold text-sm">Trademark</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Applicant Status */}
-              <div className="mb-8">
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                    color: "rgba(27,43,32,0.8)",
-                    marginBottom: "16px",
-                  }}
-                >
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
                   Applicant Status
                 </label>
                 <select
                   value={applicantType}
-                  onChange={(e) => handleApplicantStatusChange(e.target.value as any)}
-                  style={{
-                    width: "100%",
-                    background: "rgba(255,253,231,0.75)",
-                    border: "1px solid rgba(27,43,32,0.1)",
-                    color: "#1B2B20",
-                    borderRadius: "8px",
-                    padding: "12px 16px",
-                    fontSize: "16px",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
+                  onChange={(e) =>
+                    handleApplicantStatusChange(e.target.value as "startup" | "natural" | "other")
+                  }
+                  className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none transition-shadow cursor-pointer"
                 >
                   <option value="startup">Startup / MSME / Educational Inst.</option>
                   <option value="natural">Natural Person(s)</option>
@@ -339,315 +306,152 @@ export default function FeeCalculatorView() {
 
               {/* Filing Stage */}
               <div className="mb-8">
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                    color: "rgba(27,43,32,0.8)",
-                    marginBottom: "16px",
-                  }}
-                >
+                <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
                   Filing Stage
                 </label>
                 <select
                   value={filingStage}
                   onChange={(e) => setFilingStage(e.target.value)}
-                  style={{
-                    width: "100%",
-                    background: "rgba(255,253,231,0.75)",
-                    border: "1px solid rgba(27,43,32,0.1)",
-                    color: "#1B2B20",
-                    borderRadius: "8px",
-                    padding: "12px 16px",
-                    fontSize: "16px",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
+                  className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none transition-shadow cursor-pointer"
                 >
                   <option value="new">New Application (E-filing)</option>
                   <option value="examination">Request for Examination</option>
                   <option value="early_pub">Early Publication</option>
-                  <option value="provisional">Renewal</option>
+                  <option value="provisional">Provisional Application</option>
                 </select>
               </div>
 
               {/* Toggles */}
-              <div className="space-y-4 pt-4" style={{ borderTop: "1px solid rgba(27,43,32,0.1)" }}>
-                {/* Startup Subsidy Toggle */}
-                <div
-                  className="flex items-center justify-between p-4 rounded-lg"
-                  style={{ background: "rgba(255,253,231,0.75)", border: "1px solid rgba(99,140,109,0.2)" }}
-                >
-                  <div>
-                    <p style={{ fontSize: "16px", fontWeight: 600, color: "#638C6D" }}>
-                      80% Startup Subsidy Eligibility
-                    </p>
-                    <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(27,43,32,0.8)", marginTop: "4px" }}>
-                      DPIIT Recognized Startups receive significant fee reductions.
+              <div className="space-y-4 pt-4 border-t card-border">
+                {/* Startup 80% Subsidy Switch */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#638C6D]/30">
+                  <div className="pr-4">
+                    <p className="font-bold text-sm text-[#638C6D]">80% Startup Subsidy Eligibility</p>
+                    <p className="text-xs text-[#414942] mt-0.5">
+                      DPIIT Recognized Startups &amp; MSMEs receive significant official fee reductions.
                     </p>
                   </div>
-                  <Toggle checked={isSubsidyEligible} onChange={handleSubsidyToggle} />
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={isSubsidyEligible}
+                      onChange={(e) => handleSubsidyToggle(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#C1C8C0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]"></div>
+                  </label>
                 </div>
 
-                {/* Expedited Examination Toggle */}
-                <div
-                  className="flex items-center justify-between p-4 rounded-lg"
-                  style={{ background: "#ffffff", border: "1px solid rgba(27,43,32,0.1)" }}
-                >
-                  <div>
-                    <p style={{ fontSize: "16px", color: "#1B2B20" }}>Expedited Examination</p>
-                    <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(27,43,32,0.8)", marginTop: "4px" }}>
-                      Available for specific applicant categories.
+                {/* Expedited Examination Switch */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white card-border">
+                  <div className="pr-4">
+                    <p className="font-semibold text-sm text-[#1B2B20]">Expedited Examination</p>
+                    <p className="text-xs text-[#414942] mt-0.5">
+                      Accelerated patent examination under Rule 24C.
                     </p>
                   </div>
-                  <Toggle checked={isExpedited} onChange={setIsExpedited} />
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={isExpedited}
+                      onChange={(e) => setIsExpedited(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#C1C8C0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]"></div>
+                  </label>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right panel — breakdown card */}
+          {/* Right Column: Estimated Total & Breakdown */}
           <div className="lg:col-span-5">
-            <div
-              className="rounded-xl sticky top-8 overflow-hidden flex flex-col"
-              style={{
-                background: "rgba(255,253,231,0.75)",
-                border: "1px solid rgba(27,43,32,0.1)",
-                boxShadow: "0px 4px 20px rgba(61,100,72,0.04)",
-              }}
-            >
-              {/* Total header */}
-              <div
-                className="p-6"
-                style={{ background: "#E7FBB4", borderBottom: "1px solid rgba(27,43,32,0.1)" }}
-              >
-                <p
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    color: "#1B2B20",
-                    marginBottom: "8px",
-                  }}
-                >
+            <div className="bg-[#FFFDE7]/75 rounded-2xl border card-border ambient-shadow sticky top-8 overflow-hidden flex flex-col h-full">
+              {/* Estimated Total Header Strip */}
+              <div className="bg-[#E7FBB4] p-6 border-b card-border">
+                <p className="text-xs font-bold text-[#1B2B20] uppercase tracking-wider mb-1">
                   Estimated Total
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <span
-                    style={{
-                      fontSize: "clamp(32px,5vw,48px)",
-                      fontWeight: 700,
-                      letterSpacing: "-0.02em",
-                      color: "#638C6D",
-                    }}
-                  >
+                  <span className="text-4xl font-extrabold text-[#638C6D]">
                     ₹{estimatedTotal.toLocaleString("en-IN")}
                   </span>
-                  <span style={{ fontSize: "16px", color: "#1B2B20" }}>INR</span>
+                  <span className="text-sm font-bold text-[#1B2B20]">INR</span>
                 </div>
               </div>
 
               {/* Breakdown */}
-              <div className="p-6 flex-grow flex flex-col">
-                <h3 style={{ fontSize: "20px", fontWeight: 600, color: "#1B2B20", marginBottom: "24px" }}>
-                  Fee Breakdown
-                </h3>
-
-                <div className="space-y-4 mb-8">
-                  {/* Official Registry Fee */}
-                  <div
-                    className="flex justify-between items-center pb-4"
-                    style={{ borderBottom: "1px solid #d4e7d6" }}
-                  >
-                    <div>
-                      <p style={{ fontSize: "16px", fontWeight: 500, color: "#1B2B20" }}>
-                        Official Registry Fee
-                      </p>
-                      <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(27,43,32,0.8)" }}>
-                        {ipType === "patent" ? "Patent Application (E-filing)" : "Trademark Application (E-filing)"}
-                      </p>
-                    </div>
-                    <span style={{ fontSize: "20px", fontWeight: 500, color: "#1B2B20" }}>
-                      ₹{officialFee.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-
-                  {/* Professional Charges */}
-                  <div
-                    className="flex justify-between items-center pb-4"
-                    style={{ borderBottom: "1px solid #d4e7d6" }}
-                  >
-                    <div>
-                      <p style={{ fontSize: "16px", fontWeight: 500, color: "#1B2B20" }}>
-                        Professional Charges
-                      </p>
-                      <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(27,43,32,0.8)" }}>
-                        Drafting &amp; Filing Services
-                      </p>
-                    </div>
-                    <span style={{ fontSize: "20px", fontWeight: 500, color: "#1B2B20" }}>
-                      ₹{professionalFee.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-
-                  {/* Itemized breakdown from backend */}
-                  {feeResult?.breakdown && feeResult.breakdown.length > 0 && (
-                    <div className="space-y-2 pt-1">
-                      {feeResult.breakdown.map((item: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="flex justify-between items-start text-xs py-1.5 border-b border-[#d4e7d6]/40"
-                        >
-                          <span style={{ color: "rgba(27,43,32,0.7)", maxWidth: "75%" }}>
-                            {item.item || item.description}
-                          </span>
-                          <span style={{ fontWeight: 600, color: "#1B2B20" }}>
-                            ₹{Number(item.fee_inr ?? 0).toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Subsidy badge */}
-                  {isSubsidyEligible && (
-                    <div
-                      className="flex items-center justify-between p-3 rounded-md"
-                      style={{
-                        background: "rgba(255,253,231,0.75)",
-                        border: "1px solid rgba(27,43,32,0.1)",
-                        color: "#638C6D",
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p style={{ fontSize: "12px", fontWeight: 600 }}>Startup Subsidy Applied</p>
+              <div className="p-6 flex-grow flex flex-col justify-between space-y-6">
+                <div>
+                  <h3 className="font-bold text-base text-[#1B2B20] mb-4">Fee Breakdown</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center pb-3 border-b card-border">
+                      <div>
+                        <p className="text-sm font-semibold text-[#1B2B20]">Official Registry Fee</p>
+                        <p className="text-xs text-[#727971]">
+                          {ipType === "patent" ? "Patent Application (E-filing)" : "Trademark Class 1 Application"}
+                        </p>
                       </div>
-                      <span style={{ fontSize: "12px", fontWeight: 600 }}>-80% on Official Fees</span>
+                      <span className="font-statutory font-bold text-sm text-[#1B2B20]">
+                        ₹{officialFee.toLocaleString("en-IN")}
+                      </span>
                     </div>
-                  )}
+
+                    <div className="flex justify-between items-center pb-3 border-b card-border">
+                      <div>
+                        <p className="text-sm font-semibold text-[#1B2B20]">Professional Charges</p>
+                        <p className="text-xs text-[#727971]">Drafting &amp; Filing Services</p>
+                      </div>
+                      <span className="font-statutory font-bold text-sm text-[#1B2B20]">
+                        ₹{professionalFee.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+
+                    {isSubsidyEligible && (
+                      <div className="flex justify-between items-center text-[#638C6D] bg-white p-3 rounded-lg border card-border shadow-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-sm text-[#638C6D]">
+                            check_circle
+                          </span>
+                          <p className="text-xs font-bold">Startup Subsidy Applied</p>
+                        </div>
+                        <span className="text-xs font-bold">-80% on Official Fees</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Disclaimer */}
-                <div
-                  className="p-4 rounded-lg mb-8 mt-auto flex gap-3"
-                  style={{ background: "#dff3e2" }}
-                >
-                  <svg
-                    className="mt-0.5 shrink-0"
-                    width="20"
-                    height="20"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="rgba(27,43,32,0.8)"
-                    strokeWidth="2"
+                <div className="space-y-4">
+                  <div className="bg-[#E5F9E7] p-3.5 rounded-xl flex gap-2.5 border card-border">
+                    <span className="material-symbols-outlined text-[#638C6D] text-lg shrink-0 mt-0.5">
+                      info
+                    </span>
+                    <p className="text-xs text-[#414942] leading-relaxed">
+                      Professional fees are estimates based on standard IP-SAKTI partner rates. Final quotation will be generated on official letterhead.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleGenerateQuote}
+                    className="w-full bg-[#638C6D] hover:bg-[#557E60] text-white py-3.5 px-6 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(27,43,32,0.8)", lineHeight: "1.5" }}>
-                    Professional fees are estimates based on standard IP-SAKTI partner rates.
-                  </p>
+                    <span className="material-symbols-outlined text-base">receipt_long</span>
+                    <span>Generate Formal Quote</span>
+                  </button>
                 </div>
-
-                <button
-                  onClick={calculateFees}
-                  style={{
-                    width: "100%",
-                    background: "#638C6D",
-                    color: "#ffffff",
-                    padding: "16px 24px",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                    border: "none",
-                    cursor: "pointer",
-                    transition: "background 0.15s",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                  }}
-                  onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#DF6D2D"; }}
-                  onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#638C6D"; }}
-                >
-                  Generate Formal Quote
-                </button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          TAB 2 — AM I PATENTABLE? WIZARD VIEW
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* ── View 2: "Am I Patentable?" Wizard ─────────────────────────── */}
       {activeTab === "wizard" && (
-        <div className="max-w-3xl mx-auto space-y-8" id="view-patent-wizard">
-          <div
-            className="rounded-xl p-6 md:p-8 space-y-6"
-            style={{
-              background: "rgba(255,253,231,0.75)",
-              border: "1px solid rgba(27,43,32,0.1)",
-              boxShadow: "0px 4px 20px rgba(61,100,72,0.04)",
-            }}
-          >
-            {/* Quick Test Samples */}
-            <div className="flex flex-wrap items-center gap-2 pb-2">
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#638C6D", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Quick Test Samples:
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setWizTitle("Synergistic Curcumin & Piperine Solid Lipid Nanoparticle Formulation");
-                  setWizDesc("A novel therapeutic formulation combining Curcumin with Piperine at a 10:1 ratio, showing a 340% increase in bioavailability and statistically significant synergistic anti-inflammatory efficacy (CI < 0.65).");
-                  setCheckAyush(true);
-                  setCheckAdmixture(false);
-                  setCheckSynergism(true);
-                  setCheckBioResources(true);
-                  setCheckTreatment(false);
-                  setCheckDisclosed(false);
-                }}
-                className="px-3 py-1 rounded-md text-xs font-semibold bg-[#E5F9E7] text-[#3D6448] border border-[#638C6D]/30 hover:bg-[#638C6D] hover:text-white transition cursor-pointer"
-              >
-                🌿 Curcumin Synergy (High Score)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setWizTitle("Herbal Powder Composition of Haldi, Tulsi, and Ginger");
-                  setWizDesc("A traditional powdered herbal remedy mixing turmeric, tulsi, and ginger in equal parts for relieving common cold symptoms.");
-                  setCheckAyush(true);
-                  setCheckAdmixture(true);
-                  setCheckSynergism(false);
-                  setCheckBioResources(true);
-                  setCheckTreatment(true);
-                  setCheckDisclosed(false);
-                }}
-                className="px-3 py-1 rounded-md text-xs font-semibold bg-[#FFDAD6] text-[#BA1A1A] border border-[#BA1A1A]/30 hover:bg-[#BA1A1A] hover:text-white transition cursor-pointer"
-              >
-                ⚠️ Classical Admixture (Section 3p Risk)
-              </button>
-            </div>
-
-            {/* Invention Title */}
+        <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
+          <div className="bg-[#FFFDE7]/75 rounded-2xl p-6 md:p-8 card-border ambient-shadow space-y-6">
+            {/* Title */}
             <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  color: "rgba(27,43,32,0.8)",
-                  marginBottom: "8px",
-                }}
-              >
+              <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
                 Invention Title
               </label>
               <input
@@ -655,298 +459,248 @@ export default function FeeCalculatorView() {
                 value={wizTitle}
                 onChange={(e) => setWizTitle(e.target.value)}
                 placeholder="e.g. Synergistic Herbal Formulation for Blood Glucose Management"
-                style={{
-                  width: "100%",
-                  background: "#ffffff",
-                  border: "1px solid rgba(27,43,32,0.1)",
-                  borderRadius: "8px",
-                  padding: "12px 16px",
-                  fontSize: "16px",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
+                className="w-full bg-white border card-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
               />
             </div>
 
-            {/* Technical Description */}
+            {/* Description */}
             <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  color: "rgba(27,43,32,0.8)",
-                  marginBottom: "8px",
-                }}
-              >
+              <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
                 Brief Technical Description
               </label>
               <textarea
+                rows={4}
                 value={wizDesc}
                 onChange={(e) => setWizDesc(e.target.value)}
-                rows={4}
                 placeholder="Explain the composition, active ingredients, or novel extraction process..."
-                style={{
-                  width: "100%",
-                  background: "#ffffff",
-                  border: "1px solid rgba(27,43,32,0.1)",
-                  borderRadius: "8px",
-                  padding: "12px 16px",
-                  fontSize: "16px",
-                  outline: "none",
-                  resize: "vertical",
-                  boxSizing: "border-box",
-                }}
+                className="w-full bg-white border card-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
               />
             </div>
 
             {/* Statutory Checklist */}
-            <div style={{ paddingTop: "24px", borderTop: "1px solid rgba(27,43,32,0.1)" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  color: "rgba(27,43,32,0.8)",
-                  marginBottom: "16px",
-                }}
-              >
+            <div className="pt-6 border-t card-border">
+              <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-4">
                 Statutory Criteria Checklist
               </label>
+              <div className="space-y-3.5 bg-white p-6 rounded-xl border card-border">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkAyush}
+                    onChange={(e) => setCheckAyush(e.target.checked)}
+                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                  />
+                  <span className="text-xs md:text-sm text-[#414942]">
+                    Is the invention based on traditional Ayurvedic, Unani, Siddha, or herbal knowledge? (Section 3(p))
+                  </span>
+                </label>
 
-              <div
-                className="space-y-4 p-6 rounded-xl"
-                style={{ background: "#e5f9e7", border: "1px solid rgba(99,140,109,0.1)" }}
-              >
-                {[
-                  {
-                    key: "ayush",
-                    checked: checkAyush,
-                    set: setCheckAyush,
-                    label: "Is the invention based on traditional Ayurvedic, Unani, Siddha, or herbal knowledge? (Section 3(p))",
-                  },
-                  {
-                    key: "admixture",
-                    checked: checkAdmixture,
-                    set: setCheckAdmixture,
-                    label: "Is it an admixture or combination of known herbs/chemical substances? (Section 3(e))",
-                  },
-                  {
-                    key: "synergism",
-                    checked: checkSynergism,
-                    set: setCheckSynergism,
-                    label: "Do you possess experimental laboratory proof of synergistic therapeutic efficacy?",
-                  },
-                  {
-                    key: "bio",
-                    checked: checkBioResources,
-                    set: setCheckBioResources,
-                    label: "Does it utilize biological resources (plants, herbs, seeds) sourced from India? (Section 6 NBA)",
-                  },
-                  {
-                    key: "treatment",
-                    checked: checkTreatment,
-                    set: setCheckTreatment,
-                    label: "Is the primary invention drafted as a method of treating a disease? (Section 3(i))",
-                  },
-                  {
-                    key: "disclosed",
-                    checked: checkDisclosed,
-                    set: setCheckDisclosed,
-                    label: "Has this formulation/process already been published in journals, presented publicly, or sold?",
-                  },
-                ].map(({ key, checked, set, label }) => (
-                  <label key={key} className="flex items-start gap-3 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => set(e.target.checked)}
-                      style={{
-                        marginTop: "4px",
-                        width: "16px",
-                        height: "16px",
-                        borderRadius: "4px",
-                        accentColor: "#638C6D",
-                        flexShrink: 0,
-                        cursor: "pointer",
-                      }}
-                    />
-                    <span style={{ fontSize: "16px", lineHeight: "24px", color: "rgba(27,43,32,0.8)" }}>
-                      {label}
-                    </span>
-                  </label>
-                ))}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkAdmixture}
+                    onChange={(e) => setCheckAdmixture(e.target.checked)}
+                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                  />
+                  <span className="text-xs md:text-sm text-[#414942]">
+                    Is it an admixture or combination of known herbs/chemical substances? (Section 3(e))
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkSynergism}
+                    onChange={(e) => setCheckSynergism(e.target.checked)}
+                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                  />
+                  <span className="text-xs md:text-sm text-[#414942]">
+                    Do you possess experimental laboratory proof of synergistic therapeutic efficacy?
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkBioResources}
+                    onChange={(e) => setCheckBioResources(e.target.checked)}
+                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                  />
+                  <span className="text-xs md:text-sm text-[#414942]">
+                    Does it utilize biological resources (plants, herbs, seeds) sourced from India? (Section 6 NBA)
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkTreatment}
+                    onChange={(e) => setCheckTreatment(e.target.checked)}
+                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                  />
+                  <span className="text-xs md:text-sm text-[#414942]">
+                    Is the primary invention drafted as a method of treating a disease? (Section 3(i))
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkDisclosed}
+                    onChange={(e) => setCheckDisclosed(e.target.checked)}
+                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                  />
+                  <span className="text-xs md:text-sm text-[#414942]">
+                    Has this formulation/process already been published in journals, presented publicly, or sold?
+                  </span>
+                </label>
               </div>
             </div>
 
-            {/* Evaluate Button */}
             <button
               onClick={evaluatePatentability}
               disabled={wizLoading || !wizTitle.trim()}
-              style={{
-                width: "100%",
-                background: wizLoading || !wizTitle.trim() ? "#a0b8a8" : "#638C6D",
-                color: "#ffffff",
-                padding: "16px 24px",
-                borderRadius: "8px",
-                fontSize: "12px",
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                border: "none",
-                cursor: wizLoading || !wizTitle.trim() ? "not-allowed" : "pointer",
-                transition: "background 0.15s",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-              onMouseOver={(e) => {
-                if (!wizLoading && wizTitle.trim())
-                  (e.currentTarget as HTMLButtonElement).style.background = "#DF6D2D";
-              }}
-              onMouseOut={(e) => {
-                if (!wizLoading && wizTitle.trim())
-                  (e.currentTarget as HTMLButtonElement).style.background = "#638C6D";
-              }}
+              className="w-full bg-[#638C6D] hover:bg-[#557E60] disabled:opacity-50 text-white py-4 px-6 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               {wizLoading ? (
-                "Evaluating Statutory Criteria..."
+                <>
+                  <span className="material-symbols-outlined animate-spin text-lg">sync</span>
+                  <span>Evaluating Statutory Corpus...</span>
+                </>
               ) : (
                 <>
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  Evaluate Patentability Risk
+                  <span className="material-symbols-outlined text-lg">rocket_launch</span>
+                  <span>Evaluate Patentability Risk</span>
                 </>
               )}
             </button>
           </div>
 
-          {/* ── Result Card ──────────────────────────────────────────── */}
+          {/* Wizard Result Display */}
           {wizResult && (
-            <div
-              className="rounded-xl p-6 md:p-8 space-y-6"
-              style={{
-                background: "rgba(255,253,231,0.75)",
-                border: "1px solid rgba(27,43,32,0.1)",
-                boxShadow: "0px 4px 20px rgba(61,100,72,0.04)",
-              }}
-            >
-              {/* Score + Risk badge */}
-              <div className="flex items-center gap-6">
-                <div
-                  className="flex-shrink-0 flex items-center justify-center rounded-full shadow-sm"
-                  style={{
-                    width: "84px",
-                    height: "84px",
-                    background: scoreBg,
-                    color: "#ffffff",
-                    fontSize: "26px",
-                    fontWeight: 800,
-                  }}
+            <div className="bg-white rounded-2xl p-6 md:p-8 card-border ambient-shadow space-y-6 animate-in fade-in">
+              <div className="flex items-center justify-between border-b card-border pb-4">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-2xl text-[#638C6D]">verified</span>
+                  <h3 className="text-lg font-bold text-[#1B2B20]">Patentability Evaluation Result</h3>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                    wizResult.patentability_score >= 70
+                      ? "bg-[#E7FBB4] text-[#5A6A32] border border-[#638C6D]"
+                      : "bg-[#FFDAD6] text-[#BA1A1A] border border-[#BA1A1A]/30"
+                  }`}
                 >
-                  {score}
-                </div>
-                <div>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      color: "rgba(27,43,32,0.8)",
-                    }}
-                  >
-                    Patentability Score
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "24px",
-                      fontWeight: 700,
-                      color: scoreBg,
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {wizResult.risk_level ?? (score >= 80 ? "High" : score >= 50 ? "Moderate" : "Low")}
-                  </p>
-                  {wizResult.summary && (
-                    <p style={{ fontSize: "14px", color: "rgba(27,43,32,0.8)", marginTop: "6px" }}>
-                      {wizResult.summary}
-                    </p>
-                  )}
-                </div>
+                  Score: {wizResult.patentability_score}% ({wizResult.risk_level} Risk)
+                </span>
               </div>
 
-              {/* Statutory Hurdles */}
-              {wizResult.statutory_hurdles && wizResult.statutory_hurdles.length > 0 && (
-                <div>
-                  <h4
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      color: "rgba(27,43,32,0.8)",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Statutory Hurdles Identified
+              {/* Objections / Warnings */}
+              {wizResult.objections && wizResult.objections.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-[#BA1A1A] uppercase tracking-wider">
+                    Statutory Objections Identified:
                   </h4>
-                  <ul className="space-y-2">
-                    {wizResult.statutory_hurdles.map((h: any, i: number) => {
-                      const text = typeof h === "string" ? h : `${h.section ? `[${h.section}] ` : ""}${h.issue || ""}`;
-                      return (
-                        <li
-                          key={i}
-                          className="flex items-start gap-3 p-3 rounded-lg"
-                          style={{ background: "#ffdad6", border: "1px solid rgba(186,26,26,0.2)" }}
-                        >
-                          <span style={{ color: "#ba1a1a", fontWeight: 700, flexShrink: 0 }}>⚠</span>
-                          <span style={{ fontSize: "14px", color: "#1B2B20" }}>{text}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <div className="space-y-2">
+                    {wizResult.objections.map((obj: string, i: number) => (
+                      <div key={i} className="p-3 bg-[#FFDAD6]/40 rounded-xl border border-[#BA1A1A]/20 text-xs text-[#BA1A1A]">
+                        ⚠️ {obj}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Strategic Recommendations */}
-              {wizResult.strategic_recommendations && wizResult.strategic_recommendations.length > 0 && (
-                <div>
-                  <h4
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      color: "rgba(27,43,32,0.8)",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Strategic Recommendations
+              {/* Recommendations */}
+              {wizResult.recommendations && (
+                <div className="space-y-2 bg-[#FFFDE7]/75 p-5 rounded-xl border card-border">
+                  <h4 className="text-xs font-bold text-[#638C6D] uppercase tracking-wider">
+                    Recommended Statutory Drafting Strategy:
                   </h4>
-                  <ul className="space-y-2">
-                    {wizResult.strategic_recommendations.map((r: string, i: number) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-3 p-3 rounded-lg"
-                        style={{ background: "#e5f9e7", border: "1px solid rgba(99,140,109,0.2)" }}
-                      >
-                        <span style={{ color: "#638C6D", fontWeight: 700, flexShrink: 0 }}>✓</span>
-                        <span style={{ fontSize: "14px", color: "#1B2B20" }}>{r}</span>
-                      </li>
+                  <ul className="text-xs text-[#414942] space-y-1.5 list-disc pl-5">
+                    {wizResult.recommendations.map((rec: string, i: number) => (
+                      <li key={i}>{rec}</li>
                     ))}
                   </ul>
                 </div>
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Formal Quote Modal ────────────────────────────────────────── */}
+      {isQuoteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-6 card-border ambient-shadow animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b card-border pb-4">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-2xl text-[#638C6D]">receipt_long</span>
+                <div>
+                  <h3 className="font-bold text-base text-[#1B2B20]">Official Formal Quotation</h3>
+                  <p className="text-xs text-[#727971]">{quoteId}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsQuoteModalOpen(false)}
+                className="p-1 rounded-md text-[#727971] hover:text-[#1B2B20] text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-[#414942]">
+              <div className="flex justify-between py-1.5 border-b card-border">
+                <span>IP Filing Type:</span>
+                <span className="font-bold text-[#1B2B20] capitalize">{ipType} (India E-filing)</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b card-border">
+                <span>Applicant Category:</span>
+                <span className="font-bold text-[#1B2B20]">
+                  {applicantType === "startup"
+                    ? "Startup / MSME"
+                    : applicantType === "natural"
+                    ? "Natural Person"
+                    : "Large Entity"}
+                </span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b card-border">
+                <span>Official Government Fee:</span>
+                <span className="font-statutory font-bold text-[#1B2B20]">₹{officialFee.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b card-border">
+                <span>Professional Partner Services:</span>
+                <span className="font-statutory font-bold text-[#1B2B20]">₹{professionalFee.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="flex justify-between py-2 bg-[#E7FBB4] p-3 rounded-lg text-sm">
+                <span className="font-bold text-[#5A6A32]">Total Payable:</span>
+                <span className="font-bold text-[#638C6D]">₹{estimatedTotal.toLocaleString("en-IN")} INR</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsQuoteModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border card-border text-xs font-semibold text-[#414942] hover:bg-[#FAFAF5]"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleDownloadQuotePDF}
+                disabled={isDownloadingPdf}
+                className="flex-1 py-2.5 rounded-xl bg-[#638C6D] hover:bg-[#557E60] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+              >
+                {isDownloadingPdf ? (
+                  <span>Generating PDF...</span>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-sm">download</span>
+                    <span>Download PDF Quote</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
