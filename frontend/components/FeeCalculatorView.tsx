@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const apiBaseUrl = "";
 
 export default function FeeCalculatorView() {
   const [activeTab, setActiveTab] = useState<"calculator" | "wizard">("calculator");
@@ -11,6 +11,8 @@ export default function FeeCalculatorView() {
   const [ipType, setIpType] = useState<"patent" | "trademark">("patent");
   const [applicantType, setApplicantType] = useState<"startup" | "natural" | "other">("startup");
   const [filingStage, setFilingStage] = useState("new");
+  const [pagesCount, setPagesCount] = useState<number>(30);
+  const [claimsCount, setClaimsCount] = useState<number>(10);
   const [isSubsidyEligible, setIsSubsidyEligible] = useState(true);
   const [isExpedited, setIsExpedited] = useState(false);
   const [feeResult, setFeeResult] = useState<any>(null);
@@ -82,8 +84,8 @@ export default function FeeCalculatorView() {
           applicant_type: appCategory,
           filing_mode: "online",
           is_provisional: isProv,
-          pages_count: 30,
-          claims_count: 10,
+          pages_count: Number(pagesCount) || 30,
+          claims_count: Number(claimsCount) || 10,
           include_early_publication: isEarlyPub,
           request_examination: reqExam,
           trademark_classes_count: 1,
@@ -99,7 +101,7 @@ export default function FeeCalculatorView() {
     } finally {
       setLoading(false);
     }
-  }, [ipType, applicantType, filingStage, isSubsidyEligible, isExpedited]);
+  }, [ipType, applicantType, filingStage, pagesCount, claimsCount, isSubsidyEligible, isExpedited]);
 
   useEffect(() => {
     void calculateFees();
@@ -112,7 +114,7 @@ export default function FeeCalculatorView() {
     setIsQuoteModalOpen(true);
   }
 
-  const officialFee = feeResult?.total_official_fee_inr ?? (isSubsidyEligible ? 1600 : 8000);
+  const officialFee = feeResult?.total_fee_inr ?? feeResult?.total_official_fee_inr ?? (isSubsidyEligible ? 1600 : 8000);
   const professionalFee = ipType === "patent" ? 13000 : 7000;
   const estimatedTotal = officialFee + professionalFee;
 
@@ -321,6 +323,49 @@ export default function FeeCalculatorView() {
                 </select>
               </div>
 
+              {/* Patent Pages & Claims Count Inputs */}
+              {ipType === "patent" && (
+                <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
+                      Total Pages (Base: 30)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={1}
+                        max={500}
+                        value={pagesCount}
+                        onChange={(e) => setPagesCount(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#414942]/60 font-medium">
+                        {pagesCount > 30 ? `+${pagesCount - 30} extra` : "Included"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
+                      Total Claims (Base: 10)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={claimsCount}
+                        onChange={(e) => setClaimsCount(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#414942]/60 font-medium">
+                        {claimsCount > 10 ? `+${claimsCount - 10} extra` : "Included"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Toggles */}
               <div className="space-y-4 pt-4 border-t card-border">
                 {/* Startup 80% Subsidy Switch */}
@@ -396,6 +441,24 @@ export default function FeeCalculatorView() {
                         ₹{officialFee.toLocaleString("en-IN")}
                       </span>
                     </div>
+
+                    {/* Surcharge breakdown items */}
+                    {ipType === "patent" && (pagesCount > 30 || claimsCount > 10) && (
+                      <div className="space-y-1.5 pl-2 border-l-2 border-[#638C6D]/40 text-xs text-[#414942]">
+                        {pagesCount > 30 && (
+                          <div className="flex justify-between">
+                            <span>Extra Pages ({pagesCount - 30} pages @ {isSubsidyEligible ? "₹160" : "₹800"}/page)</span>
+                            <span className="font-semibold">₹{((pagesCount - 30) * (isSubsidyEligible ? 160 : 800)).toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                        {claimsCount > 10 && (
+                          <div className="flex justify-between">
+                            <span>Extra Claims ({claimsCount - 10} claims @ {isSubsidyEligible ? "₹320" : "₹1,600"}/claim)</span>
+                            <span className="font-semibold">₹{((claimsCount - 10) * (isSubsidyEligible ? 320 : 1600)).toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex justify-between items-center pb-3 border-b card-border">
                       <div>

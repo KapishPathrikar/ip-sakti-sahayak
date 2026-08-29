@@ -25,7 +25,7 @@ interface ChatInterfaceProps {
   currentUser?: any;
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const apiBaseUrl = "";
 
 export default function ChatInterface({ initialQuestion, authToken, currentUser }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([

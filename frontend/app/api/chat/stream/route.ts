@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -9,6 +11,7 @@ export async function POST(req: NextRequest) {
     
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      "Accept": "text/event-stream",
     };
     
     const authHeader = req.headers.get("authorization");
@@ -20,6 +23,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers,
       body: JSON.stringify(body),
+      cache: "no-store",
     });
 
     if (!response.ok) {

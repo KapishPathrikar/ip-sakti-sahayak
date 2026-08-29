@@ -31,7 +31,7 @@ interface SavedSession {
   updated_at: string;
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const apiBaseUrl = "";
 
 function formatTimestamp(isoString?: string): string {
   if (!isoString) return "";
@@ -109,7 +109,7 @@ export default function Home() {
     if (token) {
       setAuthToken(token);
       // Fetch fresh profile data
-      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${apiBaseUrl}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => res.json())
         .then(data => {
           if (!data.detail) {
@@ -213,6 +213,7 @@ export default function Home() {
         headers["Authorization"] = `Bearer ${authToken}`;
       }
 
+      console.log("Sending chat request to: ", `${apiBaseUrl}/api/chat/stream`);
       const response = await fetch(`${apiBaseUrl}/api/chat/stream`, {
         method: "POST",
         headers,
@@ -371,6 +372,11 @@ export default function Home() {
     setCurrentUser(null);
     setMySessions([]);
   }
+
+  const switchView = (view: typeof currentView) => {
+    setCurrentView(view);
+    setIsSidebarOpen(false);
+  };
 
   const isChatEmpty = messages.length === 0;
 
@@ -579,7 +585,7 @@ export default function Home() {
       <main className="flex-1 flex flex-col relative w-full md:ml-[280px] bg-[#FAFAF5] transition-all duration-300 h-screen overflow-hidden">
         {/* Dynamic Views Container */}
         <div 
-          className="flex-1 overflow-y-auto w-full px-4 md:px-10 pt-6 md:pt-10 pb-36 flex flex-col items-center"
+          className="flex-1 overflow-y-auto w-full px-4 md:px-10 pt-6 md:pt-10 pb-48 md:pb-36 flex flex-col items-center"
           onScroll={handleScroll}
         >
           {currentView === "research" && (
@@ -848,7 +854,7 @@ export default function Home() {
         </div>
 
         {/* ── Floating Prompt Bar (Design 3 & Design 1 Unified) ───────────── */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-[#FAFAF5] via-[#FAFAF5]/90 to-transparent pointer-events-none z-20">
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-20 md:p-6 md:pb-6 bg-gradient-to-t from-[#FAFAF5] via-[#FAFAF5]/90 to-transparent pointer-events-none z-20">
           <div className="max-w-[800px] mx-auto pointer-events-auto">
             <form
               onSubmit={(e) => {

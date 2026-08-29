@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const apiBaseUrl = "";
 
 export default function PatentabilityWizardWidget() {
   const [title, setTitle] = useState("");

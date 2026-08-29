@@ -47,14 +47,17 @@ def detect_language(text: str) -> str:
 
 
 def translate_text(text: str, target_lang: str = "en", source_lang: str = "auto") -> str:
-    """Translate text between languages using deep-translator."""
+    """Translate text between languages using deep-translator with error string sanitization."""
     if not text or not text.strip() or target_lang == source_lang:
         return text
     try:
         if source_lang == "en" and target_lang == "en":
             return text
         translator = GoogleTranslator(source=source_lang, target=target_lang)
-        return translator.translate(text)
+        result = translator.translate(text)
+        if not result or "Error 500" in result or "That's an error" in result or "That’s an error" in result or "Server Error" in result:
+            return text
+        return result
     except Exception as err:
         print(f"[Warning] Translation error ({source_lang} -> {target_lang}): {err}")
         return text

@@ -18,6 +18,40 @@ from reportlab.platypus import (
 	KeepTogether,
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
+
+MAIN_FONT = "Helvetica"
+BOLD_FONT = "Helvetica-Bold"
+ITALIC_FONT = "Helvetica-Oblique"
+
+# Register high-quality TrueType Indic Font for Hindi, Marathi, and Devanagari script support
+FONT_CANDIDATES = [
+	("C:/Windows/Fonts/Nirmala.ttf", "C:/Windows/Fonts/NirmalaB.ttf", "C:/Windows/Fonts/NirmalaS.ttf"),
+	("C:/Windows/Fonts/nirmala.ttf", "C:/Windows/Fonts/nirmalab.ttf", "C:/Windows/Fonts/nirmalas.ttf"),
+	("C:/Windows/Fonts/mangal.ttf", "C:/Windows/Fonts/mangalb.ttf", "C:/Windows/Fonts/mangal.ttf"),
+	("/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf", "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf", "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf"),
+]
+
+for reg_font, bold_font, semibold_font in FONT_CANDIDATES:
+	if os.path.exists(reg_font):
+		try:
+			pdfmetrics.registerFont(TTFont("IndicFont", reg_font))
+			if os.path.exists(bold_font):
+				pdfmetrics.registerFont(TTFont("IndicFont-Bold", bold_font))
+			else:
+				pdfmetrics.registerFont(TTFont("IndicFont-Bold", reg_font))
+			if os.path.exists(semibold_font):
+				pdfmetrics.registerFont(TTFont("IndicFont-Oblique", semibold_font))
+			else:
+				pdfmetrics.registerFont(TTFont("IndicFont-Oblique", reg_font))
+			MAIN_FONT = "IndicFont"
+			BOLD_FONT = "IndicFont-Bold"
+			ITALIC_FONT = "IndicFont-Oblique"
+			break
+		except Exception as font_err:
+			print(f"[PDF Exporter Font Warning] {font_err}")
 
 
 def sanitize_text(text: str) -> str:
@@ -235,7 +269,7 @@ def generate_consultation_pdf(
 	title_style = ParagraphStyle(
 		"DocTitle",
 		parent=styles["Heading1"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=20,
 		leading=24,
 		textColor=herbal_green,
@@ -245,7 +279,7 @@ def generate_consultation_pdf(
 	subtitle_style = ParagraphStyle(
 		"DocSubtitle",
 		parent=styles["Normal"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=10.5,
 		leading=14,
 		textColor=earth_brown,
@@ -255,7 +289,7 @@ def generate_consultation_pdf(
 	meta_label = ParagraphStyle(
 		"MetaLabel",
 		parent=styles["Normal"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=8.5,
 		leading=11,
 		textColor=earth_brown,
@@ -264,7 +298,7 @@ def generate_consultation_pdf(
 	meta_val = ParagraphStyle(
 		"MetaVal",
 		parent=styles["Normal"],
-		fontName="Helvetica",
+		fontName=MAIN_FONT,
 		fontSize=8.5,
 		leading=11,
 		textColor=colors.HexColor("#182C22"),
@@ -273,7 +307,7 @@ def generate_consultation_pdf(
 	q_style = ParagraphStyle(
 		"QuestionStyle",
 		parent=styles["Heading3"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=11,
 		leading=15,
 		textColor=herbal_green,
@@ -282,7 +316,7 @@ def generate_consultation_pdf(
 	body_style = ParagraphStyle(
 		"BodyStyle",
 		parent=styles["Normal"],
-		fontName="Helvetica",
+		fontName=MAIN_FONT,
 		fontSize=9.5,
 		leading=13.5,
 		textColor=colors.HexColor("#182C22"),
@@ -291,7 +325,7 @@ def generate_consultation_pdf(
 	h1_style = ParagraphStyle(
 		"H1Style",
 		parent=styles["Heading1"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=13,
 		leading=17,
 		textColor=herbal_green,
@@ -300,7 +334,7 @@ def generate_consultation_pdf(
 	h2_style = ParagraphStyle(
 		"H2Style",
 		parent=styles["Heading2"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=11,
 		leading=15,
 		textColor=herbal_green,
@@ -309,7 +343,7 @@ def generate_consultation_pdf(
 	h3_style = ParagraphStyle(
 		"H3Style",
 		parent=styles["Heading3"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=10,
 		leading=13,
 		textColor=earth_brown,
@@ -318,7 +352,7 @@ def generate_consultation_pdf(
 	th_style = ParagraphStyle(
 		"THStyle",
 		parent=styles["Normal"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=8.5,
 		leading=11,
 		textColor=colors.white,
@@ -327,7 +361,7 @@ def generate_consultation_pdf(
 	td_style = ParagraphStyle(
 		"TDStyle",
 		parent=styles["Normal"],
-		fontName="Helvetica",
+		fontName=MAIN_FONT,
 		fontSize=8,
 		leading=11,
 		textColor=colors.HexColor("#182C22"),
@@ -336,7 +370,7 @@ def generate_consultation_pdf(
 	bullet_style = ParagraphStyle(
 		"BulletStyle",
 		parent=styles["Normal"],
-		fontName="Helvetica",
+		fontName=MAIN_FONT,
 		fontSize=9,
 		leading=13,
 		leftIndent=12,
@@ -346,7 +380,7 @@ def generate_consultation_pdf(
 	citation_style = ParagraphStyle(
 		"CitationStyle",
 		parent=styles["Normal"],
-		fontName="Helvetica",
+		fontName=MAIN_FONT,
 		fontSize=8,
 		leading=11,
 		textColor=colors.HexColor("#285943"),
@@ -355,7 +389,7 @@ def generate_consultation_pdf(
 	disclaimer_style = ParagraphStyle(
 		"DisclaimerStyle",
 		parent=styles["Normal"],
-		fontName="Helvetica-Oblique",
+		fontName=ITALIC_FONT,
 		fontSize=7.5,
 		leading=10,
 		textColor=colors.HexColor("#7A5135"),
@@ -504,7 +538,7 @@ def generate_fee_quote_pdf(quote_data: dict[str, Any]) -> io.BytesIO:
 	title_style = ParagraphStyle(
 		"QuoteTitle",
 		parent=styles["Normal"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=18,
 		leading=22,
 		textColor=sage_green,
@@ -512,7 +546,7 @@ def generate_fee_quote_pdf(quote_data: dict[str, Any]) -> io.BytesIO:
 	subtitle_style = ParagraphStyle(
 		"QuoteSubtitle",
 		parent=styles["Normal"],
-		fontName="Helvetica",
+		fontName=MAIN_FONT,
 		fontSize=10,
 		leading=13,
 		textColor=terracotta,
@@ -520,14 +554,14 @@ def generate_fee_quote_pdf(quote_data: dict[str, Any]) -> io.BytesIO:
 	header_cell = ParagraphStyle(
 		"QHeaderCell",
 		parent=styles["Normal"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=9,
 		textColor=colors.white,
 	)
 	body_cell = ParagraphStyle(
 		"QBodyCell",
 		parent=styles["Normal"],
-		fontName="Helvetica",
+		fontName=MAIN_FONT,
 		fontSize=9,
 		leading=12,
 		textColor=text_dark,
@@ -535,7 +569,7 @@ def generate_fee_quote_pdf(quote_data: dict[str, Any]) -> io.BytesIO:
 	bold_cell = ParagraphStyle(
 		"QBoldCell",
 		parent=styles["Normal"],
-		fontName="Helvetica-Bold",
+		fontName=BOLD_FONT,
 		fontSize=9,
 		leading=12,
 		textColor=text_dark,
@@ -543,7 +577,7 @@ def generate_fee_quote_pdf(quote_data: dict[str, Any]) -> io.BytesIO:
 	disclaimer_style = ParagraphStyle(
 		"QDisclaimer",
 		parent=styles["Normal"],
-		fontName="Helvetica-Oblique",
+		fontName=ITALIC_FONT,
 		fontSize=7.5,
 		leading=10,
 		textColor=colors.HexColor("#555555"),
@@ -649,10 +683,10 @@ def generate_fee_quote_pdf(quote_data: dict[str, Any]) -> io.BytesIO:
 		Paragraph(f"<b>INR {official_fee:,.2f}</b>", bold_cell),
 	])
 	table_data.append([
-		Paragraph("<b>TOTAL ESTIMATED QUOTATION:</b>", ParagraphStyle("BigTot", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, textColor=sage_green)),
+		Paragraph("<b>TOTAL ESTIMATED QUOTATION:</b>", ParagraphStyle("BigTot", parent=styles["Normal"], fontName=BOLD_FONT, fontSize=10, textColor=sage_green)),
 		Paragraph("", body_cell),
 		Paragraph("", body_cell),
-		Paragraph(f"<b>INR {total_fee:,.2f}</b>", ParagraphStyle("BigTotVal", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, textColor=sage_green)),
+		Paragraph(f"<b>INR {total_fee:,.2f}</b>", ParagraphStyle("BigTotVal", parent=styles["Normal"], fontName=BOLD_FONT, fontSize=10, textColor=sage_green)),
 	])
 
 	fee_table = Table(table_data, colWidths=[200, 110, 120, 100])

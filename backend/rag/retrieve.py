@@ -16,7 +16,7 @@ except (ImportError, ValueError):
 	from ingest import COLLECTION_NAME, EMBEDDING_MODEL_NAME
 
 DEFAULT_MAX_DISTANCE = 0.5
-
+DEFAULT_CHROMA_DB = str(Path(__file__).resolve().parent.parent.parent / "chroma_db")
 
 @dataclass(frozen=True)
 class RetrievedChunk:
@@ -34,14 +34,17 @@ _EMBEDDING_FUNCTION: Any = None
 def _get_embedding_function() -> Any:
 	global _EMBEDDING_FUNCTION
 	if _EMBEDDING_FUNCTION is None:
+		print("DEBUG: Initializing SentenceTransformer embedding function (this may take a moment)...")
 		from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 		_EMBEDDING_FUNCTION = SentenceTransformerEmbeddingFunction(model_name=EMBEDDING_MODEL_NAME)
+		print("DEBUG: Embedding function loaded successfully.")
 	return _EMBEDDING_FUNCTION
 
 
 
-def _get_collection(persist_dir: str | Path = "chroma_db") -> Any:
+def _get_collection(persist_dir: str | Path = DEFAULT_CHROMA_DB) -> Any:
 	key = str(persist_dir)
+	print(f"DEBUG: Connecting to ChromaDB at {key}")
 	if key not in _COLLECTION_CACHE:
 		import chromadb
 		client = chromadb.PersistentClient(path=key)
@@ -55,7 +58,7 @@ def _get_collection(persist_dir: str | Path = "chroma_db") -> Any:
 
 def retrieve(
 	query: str,
-	persist_dir: str | Path = "chroma_db",
+	persist_dir: str | Path = DEFAULT_CHROMA_DB,
 	limit: int = 5,
 	max_distance: float = DEFAULT_MAX_DISTANCE,
 ) -> list[RetrievedChunk]:

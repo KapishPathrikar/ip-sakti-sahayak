@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Any
 
 try:
-	from .retrieve import retrieve
+	from .retrieve import retrieve, DEFAULT_CHROMA_DB
 except (ImportError, ValueError):
 	import sys
 	from pathlib import Path
 	sys.path.insert(0, str(Path(__file__).resolve().parent))
-	from retrieve import retrieve
+	from retrieve import retrieve, DEFAULT_CHROMA_DB
 
 try:
 	from .translation import translate_text, detect_language
@@ -70,7 +70,7 @@ def _call_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str =
 	}
 	
 	max_retries = 2
-	timeout = 15  # Fast detection if Ollama is not running
+	timeout = 90  # Allow sufficient time for 13GB+ local model to load weights into memory
 	
 	for attempt in range(1, max_retries + 1):
 		try:
@@ -108,7 +108,7 @@ def _call_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str =
 
 def answer_question(
 	query: str,
-	persist_dir: str | Path = "chroma_db",
+	persist_dir: str | Path = DEFAULT_CHROMA_DB,
 	limit: int = 5,
 	model: str = DEFAULT_OLLAMA_MODEL,
 	session_id: str | None = None,
@@ -159,8 +159,10 @@ def answer_question(
 			"from_faq": True,
 		}
 
-	# 3. Off-topic relevance validation
+	# 3. Off-topic relevance validation (check both translated and original text)
 	is_safe, reason = is_safe_query(english_query)
+	if not is_safe:
+		is_safe, reason = is_safe_query(query)
 	if not is_safe:
 		safety_response = get_safety_response(reason, lang=detected_lang)
 		if active_session_id:
@@ -242,7 +244,13 @@ If the context does not provide sufficient information, clarify what is known an
 - Answer directly and professionally."""
 
 
-	if detected_lang == "hinglish":
+	if detected_lang == "hi":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Hindi (हिन्दी) using standard Devanagari script."""
+	elif detected_lang == "mr":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Marathi (मराठी) using standard Devanagari script."""
+	elif detected_lang == "hinglish":
 		system_prompt += """
 - CRITICAL: You must write the entire response in Hinglish (Hindi language written using English/Latin alphabet characters. E.g., 'Aapka patent file karne ke liye form submit karna hoga'). Do not use Devnagari characters."""
 	elif detected_lang == "marathish":
@@ -258,11 +266,6 @@ If the context does not provide sufficient information, clarify what is known an
 		llm_answer = "Relevant information from the available sources:\n\n" + "\n\n".join(
 			f"[{i}] {c.text}" for i, c in enumerate(chunks, start=1)
 		)
-
-	# Translate the final answer back to Devnagari Hindi or Marathi if needed
-	if detected_lang in {"hi", "mr"}:
-		print(f"[Translation] Translating answer back to Devnagari ({detected_lang})...")
-		llm_answer = translate_text(llm_answer, target_lang=detected_lang, source_lang="en")
 
 	if active_session_id:
 		session_manager.add_message(active_session_id, "user", query, user_id=user_id)
@@ -292,7 +295,7 @@ def _stream_llm(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = 
 		headers={"Content-Type": "application/json"},
 	)
 	try:
-		with urllib.request.urlopen(req, timeout=10) as response:
+		with urllib.request.urlopen(req, timeout=90) as response:
 			for line in response:
 				if line:
 					try:
@@ -311,7 +314,7 @@ def _stream_llm(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = 
 
 def answer_question_stream(
 	query: str,
-	persist_dir: str | Path = "chroma_db",
+	persist_dir: str | Path = DEFAULT_CHROMA_DB,
 	limit: int = 5,
 	model: str = DEFAULT_OLLAMA_MODEL,
 	session_id: str | None = None,
@@ -365,8 +368,10 @@ def answer_question_stream(
 		yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'from_faq': True})}\n\n"
 		return
 
-	# 3. Off-topic relevance validation
+	# 3. Off-topic relevance validation (check both translated and original text)
 	is_safe, reason = is_safe_query(english_query)
+	if not is_safe:
+		is_safe, reason = is_safe_query(query)
 	if not is_safe:
 		safety_response = get_safety_response(reason, lang=detected_lang)
 		if active_session_id:
@@ -452,7 +457,13 @@ If the context does not provide sufficient information, clarify what is known an
 - Answer directly and professionally."""
 
 
-	if detected_lang == "hinglish":
+	if detected_lang == "hi":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Hindi (हिन्दी) using standard Devanagari script."""
+	elif detected_lang == "mr":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Marathi (मराठी) using standard Devanagari script."""
+	elif detected_lang == "hinglish":
 		system_prompt += """
 - CRITICAL: You must write the entire response in Hinglish (Hindi language written using English/Latin alphabet characters. E.g., 'Aapka patent file karne ke liye form submit karna hoga'). Do not use Devnagari characters."""
 	elif detected_lang == "marathish":
@@ -463,27 +474,19 @@ If the context does not provide sufficient information, clarify what is known an
 
 	full_answer = []
 
-	if detected_lang in {"en", "hinglish", "marathish"}:
-		# Stream tokens live
-		try:
-			for token in _stream_llm(system_prompt, model=model):
-				full_answer.append(token)
-				yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
+	# Stream tokens live across all languages
+	try:
+		for token in _stream_llm(system_prompt, model=model):
+			full_answer.append(token)
+			yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
 
-		except Exception as err:
-			print(f"[Warning] Streaming error: {err}")
-			fallback_ans = "Relevant information from the available sources:\n\n" + "\n\n".join(
-				f"[{i}] {c.text}" for i, c in enumerate(chunks, start=1)
-			)
-			full_answer = [fallback_ans]
-			yield f"data: {json.dumps({'type': 'token', 'token': fallback_ans})}\n\n"
-	else:
-		# For Devnagari Hindi or Marathi, generate English then translate
-		yield f"data: {json.dumps({'type': 'thinking', 'message': f'🌐 Synthesizing and translating response to {detected_lang.upper()}...'})}\n\n"
-		llm_answer = _call_ollama(system_prompt, model=model) or ""
-		translated_answer = translate_text(llm_answer, target_lang=detected_lang, source_lang="en")
-		full_answer = [translated_answer]
-		yield f"data: {json.dumps({'type': 'token', 'token': translated_answer})}\n\n"
+	except Exception as err:
+		print(f"[Warning] Streaming error: {err}")
+		fallback_ans = "Relevant information from the available sources:\n\n" + "\n\n".join(
+			f"[{i}] {c.text}" for i, c in enumerate(chunks, start=1)
+		)
+		full_answer = [fallback_ans]
+		yield f"data: {json.dumps({'type': 'token', 'token': fallback_ans})}\n\n"
 
 	final_text = "".join(full_answer)
 
