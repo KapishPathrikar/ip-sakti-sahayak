@@ -111,6 +111,7 @@ class ChatRequest(BaseModel):
     session_id: str | None = Field(default=None, description="Optional session ID for memory context")
     limit: int = Field(default=4, ge=1, le=10, description="Max source chunks to retrieve")
     model: str | None = Field(default=None, description="Optional Ollama model override")
+    allow_cloud: bool = Field(default=False, description="Explicit consent to use Cloud LLM fallback")
 
 
 class ChatResponse(BaseModel):
@@ -399,6 +400,7 @@ def chat_stream_endpoint(
             model=model_name,
             session_id=payload.session_id,
             user_id=current_user.id if current_user else None,
+            allow_cloud=payload.allow_cloud,
         )
         return StreamingResponse(
             generator, 

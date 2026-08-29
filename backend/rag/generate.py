@@ -284,8 +284,8 @@ If the context does not provide sufficient information, clarify what is known an
 
 
 
-def _stream_llm(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL):
-	"""Yield individual token chunks from Ollama, with automatic fallback to Cloud LLM."""
+def _stream_llm(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL, allow_cloud: bool = False):
+	"""Yield individual token chunks from Ollama, with conditional fallback to Cloud LLM."""
 	url = f"{base_url.rstrip('/')}/api/generate"
 	payload = {
 		"model": model,
@@ -311,8 +311,14 @@ def _stream_llm(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = 
 						continue
 			return
 	except Exception as err:
-		print(f"[Notice] Ollama local stream not available ({err}). Routing to Cloud LLM stream...")
-		yield "\n\n*[System: The local model is not currently active... querying cloud model (Gemini 3.5 Flash Lite)]*\n\n"
+		print(f"[Notice] Ollama local stream not available ({err}).")
+		if not allow_cloud:
+			print("[Notice] Cloud LLM consent needed. Requesting user permission.")
+			yield f"data: {json.dumps({'type': 'action_required', 'action': 'cloud_consent_needed'})}\n\n"
+			return
+		
+		print("[Notice] User granted cloud access. Routing to Cloud LLM stream...")
+		yield "\n\n*[System: The local model is not currently active... securely querying cloud model (Gemini 3.5 Flash Lite)]*\n\n"
 		yield from _stream_cloud_llm(prompt)
 
 
@@ -324,6 +330,7 @@ def answer_question_stream(
 	model: str = DEFAULT_OLLAMA_MODEL,
 	session_id: str | None = None,
 	user_id: int | None = None,
+	allow_cloud: bool = False,
 ):
 	"""Stream RAG response token-by-token via Server-Sent Events (SSE)."""
 	active_session_id = session_manager.get_or_create_session(session_id, user_id=user_id) if session_id is not None else None
@@ -481,7 +488,11 @@ If the context does not provide sufficient information, clarify what is known an
 
 	# Stream tokens live across all languages
 	try:
-		for token in _stream_llm(system_prompt, model=model):
+		for token in _stream_llm(system_prompt, model=model, allow_cloud=allow_cloud):
+			if token.startswith("data: "):
+				yield token
+				return
+			
 			full_answer.append(token)
 			yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
 

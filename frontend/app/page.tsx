@@ -83,7 +83,9 @@ export default function Home() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [lastAttemptedQuery, setLastAttemptedQuery] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [cloudConsentPending, setCloudConsentPending] = useState(false);
   const [thinkingState, setThinkingState] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>("sess-new");
   const [feedbackGiven, setFeedbackGiven] = useState<{ [msgId: string]: number }>({});
@@ -189,21 +191,26 @@ export default function Home() {
     setIsAutoScrollEnabled(isAtBottom);
   }
 
-  async function sendMessage(textToSend?: string) {
-    const text = textToSend || input.trim();
+  async function sendMessage(textToSend?: string, allowCloud: boolean = false) {
+    const text = textToSend || (allowCloud ? lastAttemptedQuery : input.trim());
     if (!text || isStreaming) return;
 
     setCurrentView("chat");
     setIsAutoScrollEnabled(true);
-    setInput("");
-    const userMsgId = "user-" + Date.now();
+    
+    if (!allowCloud) {
+        setInput("");
+        setLastAttemptedQuery(text);
+        const userMsgId = "user-" + Date.now();
+        
+        setMessages((prev) => [
+          ...prev,
+          { id: userMsgId, role: "user", content: text },
+        ]);
+    }
+    
     const assistantMsgId = "asst-" + Date.now();
-
-    setMessages((prev) => [
-      ...prev,
-      { id: userMsgId, role: "user", content: text },
-    ]);
-
+    setCloudConsentPending(false);
     setIsStreaming(true);
     setThinkingState("Analyzing Indian Patents Act 1970 & TKDL...");
     let partialText = "";
@@ -221,6 +228,7 @@ export default function Home() {
         body: JSON.stringify({
           query: text,
           session_id: sessionId,
+          allow_cloud: allowCloud,
         }),
       });
 
@@ -259,6 +267,12 @@ export default function Home() {
               const event = JSON.parse(rawData);
               if (event.type === "thinking") {
                 setThinkingState(event.message);
+              } else if (event.type === "action_required" && event.action === "cloud_consent_needed") {
+                setThinkingState(null);
+                setCloudConsentPending(true);
+                setIsStreaming(false);
+                setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
+                return;
               } else if (event.type === "token") {
                 setThinkingState(null);
                 partialText += event.token;
@@ -862,6 +876,37 @@ export default function Home() {
                   <div className="flex items-center gap-2.5 text-[#727971] text-xs font-semibold pulse-animation bg-[#FFFDE7] px-4 py-2 rounded-full border card-border">
                     <span className="material-symbols-outlined animate-spin text-sm text-[#638C6D]">sync</span>
                     <span>{thinkingState}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Cloud Privacy Consent Box */}
+              {cloudConsentPending && (
+                <div className="w-full max-w-[800px] mx-auto mt-4 px-4">
+                  <div className="flex flex-col gap-3 rounded-[20px] border border-[#BF5515]/30 bg-[#FFFDE7] p-5 ambient-shadow shadow-md">
+                    <div className="flex items-center gap-2 text-[#C84C05]">
+                      <span className="material-symbols-outlined text-xl">warning</span>
+                      <h3 className="font-bold text-sm tracking-wide">Local Privacy Model Offline</h3>
+                    </div>
+                    <p className="text-[13px] text-[#414942] leading-relaxed">
+                      Your query requires an AI model to synthesize a response. The local offline model is currently unavailable. Do you want to securely route this query to a Cloud Model (Google Gemini)?
+                      <br/><br/>
+                      <strong>Note: Data privacy is reduced when using external cloud services, and strict biopiracy protection is best maintained locally.</strong>
+                    </p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <button
+                        onClick={() => sendMessage(undefined, true)}
+                        className="rounded-full bg-[#C84C05] px-5 py-2.5 text-xs font-bold tracking-wide text-white hover:bg-[#A33D04] transition-colors shadow-sm cursor-pointer"
+                      >
+                        Proceed to Cloud
+                      </button>
+                      <button
+                        onClick={() => setCloudConsentPending(false)}
+                        className="rounded-full bg-white px-5 py-2.5 text-xs font-bold tracking-wide text-[#414942] border border-[#C84C05]/30 hover:bg-[#FAFAF5] transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

@@ -37,7 +37,9 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
     },
   ]);
   const [input, setInput] = useState("");
+  const [lastAttemptedQuery, setLastAttemptedQuery] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [cloudConsentPending, setCloudConsentPending] = useState(false);
   const [thinkingState, setThinkingState] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>(() => "sess-" + Math.random().toString(36).substring(2, 9));
   const [feedbackGiven, setFeedbackGiven] = useState<{ [msgId: string]: number }>({});
@@ -54,19 +56,23 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
     }
   }, [initialQuestion]);
 
-  async function sendMessage(textToSend?: string) {
-    const text = textToSend || input.trim();
+  async function sendMessage(textToSend?: string, allowCloud: boolean = false) {
+    const text = textToSend || (allowCloud ? lastAttemptedQuery : input.trim());
     if (!text || isStreaming) return;
 
-    setInput("");
-    const userMsgId = "user-" + Date.now();
+    if (!allowCloud) {
+        setInput("");
+        setLastAttemptedQuery(text);
+        const userMsgId = "user-" + Date.now();
+        
+        setMessages((prev) => [
+          ...prev,
+          { id: userMsgId, role: "user", content: text },
+        ]);
+    }
+    
     const assistantMsgId = "asst-" + Date.now();
-
-    setMessages((prev) => [
-      ...prev,
-      { id: userMsgId, role: "user", content: text },
-    ]);
-
+    setCloudConsentPending(false);
     setIsStreaming(true);
     setThinkingState("🧠 Analyzing Indian IP statutes & legal corpus...");
 
@@ -82,6 +88,7 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
         body: JSON.stringify({
           query: text,
           session_id: sessionId,
+          allow_cloud: allowCloud,
         }),
       });
 
@@ -123,6 +130,12 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
 
               if (event.type === "thinking") {
                 setThinkingState(event.message);
+              } else if (event.type === "action_required" && event.action === "cloud_consent_needed") {
+                setThinkingState(null);
+                setCloudConsentPending(true);
+                setIsStreaming(false);
+                setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
+                return;
               } else if (event.type === "token") {
                 setThinkingState(null);
                 partialAssistantText += event.token;
@@ -297,6 +310,35 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
           <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/70 px-3.5 py-2.5 text-xs font-medium text-blue-800 animate-pulse">
             <span className="animate-spin">⚙️</span>
             <span>{thinkingState}</span>
+          </div>
+        )}
+
+        {/* Cloud Privacy Consent Box */}
+        {cloudConsentPending && (
+          <div className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-amber-900">
+              <span className="text-xl">⚠️</span>
+              <h3 className="font-semibold text-sm">Local Privacy Model Offline</h3>
+            </div>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Your query requires an AI model to answer. The local offline model is currently unavailable. Do you want to securely route this query to a Cloud Model (Google Gemini)?
+              <br/><br/>
+              <strong>Note: Data privacy is reduced when using external cloud services, and biopiracy protection is best maintained locally.</strong>
+            </p>
+            <div className="flex items-center gap-3 mt-1">
+              <button
+                onClick={() => sendMessage(undefined, true)}
+                className="rounded-md bg-amber-600 px-4 py-2 text-xs font-medium text-white hover:bg-amber-700 transition-colors shadow-sm"
+              >
+                Proceed to Cloud
+              </button>
+              <button
+                onClick={() => setCloudConsentPending(false)}
+                className="rounded-md bg-white px-4 py-2 text-xs font-medium text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 
