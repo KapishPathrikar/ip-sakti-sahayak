@@ -19,9 +19,9 @@ except (ImportError, ValueError):
 	from translation import translate_text, detect_language
 
 try:
-	from .safety import is_safe_query, is_injection_query, get_safety_response
+	from .safety import is_safe_query, is_injection_query, get_safety_response, is_greeting_query
 except (ImportError, ValueError):
-	from safety import is_safe_query, is_injection_query, get_safety_response
+	from safety import is_safe_query, is_injection_query, get_safety_response, is_greeting_query
 
 
 try:
@@ -172,7 +172,7 @@ def answer_question(
 
 
 	chunks = retrieve(english_query, persist_dir, limit)
-	if not chunks:
+	if not chunks and not is_greeting_query(english_query):
 		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
@@ -208,7 +208,7 @@ def answer_question(
 	# Check if live web search is needed for real-time links/updates
 	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
 	web_section = ""
-	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist):
+	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist) and not is_greeting_query(english_query):
 		print(f"[Web Search] Live web search triggered for: '{english_query}'")
 		web_results = search_web(english_query, max_results=2)
 		if web_results:
@@ -384,7 +384,7 @@ def answer_question_stream(
 
 
 	chunks = retrieve(english_query, persist_dir, limit)
-	if not chunks:
+	if not chunks and not is_greeting_query(english_query):
 		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query)
@@ -420,7 +420,7 @@ def answer_question_stream(
 	# Check if live web search is needed for real-time links/updates
 	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
 	web_section = ""
-	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist):
+	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist) and not is_greeting_query(english_query):
 		yield f"data: {json.dumps({'type': 'thinking', 'message': '🌐 Searching official live government portals (ipindia.gov.in / ayush.gov.in)...'})}\n\n"
 		print(f"[Web Search Stream] Live web search triggered for: '{english_query}'")
 		web_results = search_web(english_query, max_results=2)

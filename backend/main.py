@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from fastapi import FastAPI, HTTPException, Request, Response, Depends, status
+from fastapi import FastAPI, HTTPException, Request, Response, Depends, status, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -23,6 +23,7 @@ try:
         create_access_token,
         get_current_user,
         get_optional_current_user,
+        get_current_admin,
     )
     from schemas import (
         UserRegister,
@@ -43,6 +44,7 @@ except (ImportError, ValueError):
         create_access_token,
         get_current_user,
         get_optional_current_user,
+        get_current_admin,
     )
     from backend.schemas import (
         UserRegister,
@@ -619,7 +621,95 @@ def export_fee_quote_pdf_endpoint(payload: dict[str, Any]):
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
+# ==========================================
+# ADMIN ENDPOINTS
+# ==========================================
+
+import os
+import shutil
+from pathlib import Path
+try:
+    from rag.ingest import ingest_sources
+except (ImportError, ValueError):
+    from backend.rag.ingest import ingest_sources
+
+CORPUS_ROOT = Path(__file__).resolve().parent.parent / "corpus"
+UPLOADS_DIR = CORPUS_ROOT / "uploads"
+
+@app.get("/api/admin/corpus", tags=["admin"])
+def list_corpus_files(current_admin: User = Depends(get_current_admin)):
+    """List all PDF files in the corpus directory."""
+    if not CORPUS_ROOT.exists():
+        return {"files": []}
+        
+    files = []
+    for path in CORPUS_ROOT.rglob("*.pdf"):
+        if path.is_file():
+            # Get path relative to corpus root
+            rel_path = path.relative_to(CORPUS_ROOT).as_posix()
+            files.append({
+                "filename": path.name,
+                "filepath": rel_path,
+                "size": path.stat().st_size,
+                "mtime": path.stat().st_mtime
+            })
+    return {"files": files}
 
 
+@app.post("/api/admin/corpus/upload", tags=["admin"])
+async def upload_corpus_file(
+    file: UploadFile = File(...),
+    current_admin: User = Depends(get_current_admin)
+):
+    """Upload a new PDF to the corpus uploads directory."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+        
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    
+    file_path = UPLOADS_DIR / file.filename
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"message": "File uploaded successfully.", "filename": file.filename}
 
 
+class DeleteFileRequest(BaseModel):
+    filepath: str
+
+@app.delete("/api/admin/corpus", tags=["admin"])
+def delete_corpus_file(
+    payload: DeleteFileRequest,
+    current_admin: User = Depends(get_current_admin)
+):
+    """Delete a PDF file from the corpus."""
+    file_path = CORPUS_ROOT / payload.filepath
+    
+    # Security check to prevent path traversal
+    if not file_path.resolve().is_relative_to(CORPUS_ROOT.resolve()):
+        raise HTTPException(status_code=403, detail="Invalid file path.")
+        
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found.")
+        
+    os.remove(file_path)
+    return {"message": "File deleted successfully.", "filepath": payload.filepath}
+
+
+def _background_ingest():
+    """Background task to run the ingestion pipeline."""
+    try:
+        print("[Admin] Starting background RAG ingestion...")
+        ingest_sources(source_dir=CORPUS_ROOT, persist_dir=Path(__file__).resolve().parent.parent / "chroma_db", reset=True)
+        print("[Admin] RAG ingestion completed successfully.")
+    except Exception as e:
+        print(f"[Admin] Error during ingestion: {e}")
+
+@app.post("/api/admin/ingest", tags=["admin"])
+def trigger_ingestion(
+    background_tasks: BackgroundTasks,
+    current_admin: User = Depends(get_current_admin)
+):
+    """Trigger the RAG ingestion pipeline in the background."""
+    background_tasks.add_task(_background_ingest)
+    return {"message": "Knowledge base rebuild started in the background. This may take a few minutes."}

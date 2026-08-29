@@ -6,6 +6,7 @@ import FeeCalculatorView from "../components/FeeCalculatorView";
 import LegalResearchView from "../components/LegalResearchView";
 import AccountSettingsView from "../components/AccountSettingsView";
 import MarkdownRenderer from "../components/MarkdownRenderer";
+import AdminPanelView from "../components/AdminPanelView";
 
 interface Citation {
   source: string;
@@ -78,7 +79,7 @@ const QUICK_SUGGESTIONS = [
 ];
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools">("chat");
+  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools" | "admin">("chat");
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -501,6 +502,19 @@ export default function Home() {
             <span className="text-sm font-medium truncate">IP Tools &amp; Calculator</span>
           </button>
 
+          {currentUser?.role === "admin" && (
+            <button
+              onClick={() => switchView("admin")}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "admin"
+                  ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
+                  : "text-[#414942] hover:bg-[#DAEDDC]/60"
+                }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+              <span className="text-sm font-medium truncate">Admin Panel</span>
+            </button>
+          )}
+
           {/* Search History */}
           <div className="mt-4 px-1">
             <div className="relative">
@@ -612,6 +626,10 @@ export default function Home() {
                 handleResetChat();
               }}
             />
+          )}
+
+          {currentView === "admin" && currentUser && authToken && (
+            <AdminPanelView user={currentUser} token={authToken} />
           )}
 
           {currentView === "history" && (

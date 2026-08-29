@@ -141,12 +141,31 @@ def is_injection_query(query: str) -> bool:
     return any(kw in clean for kw in INJECTION_KEYWORDS)
 
 
+GREETING_KEYWORDS = [
+    "hi", "hello", "hey", "namaste", "pranam", 
+    "who are you", "what are you", "what can you do", "help", 
+    "ip shakti", "ip sakti", "sahayak", "greetings", "good morning", "good evening", "good afternoon"
+]
+
+def is_greeting_query(query: str) -> bool:
+    """Check if the query is a greeting or bot-identity question."""
+    clean_query = query.lower().strip()
+    for greeting in GREETING_KEYWORDS:
+        if re.search(r'\b' + re.escape(greeting) + r'\b', clean_query):
+            return True
+    return False
+
 def is_safe_query(query: str) -> tuple[bool, str]:
     """Validate query against prompt injections and off-topic requests."""
     clean_query = query.lower().strip()
 
     if is_injection_query(clean_query):
         return False, "prompt_injection"
+
+    # Allow basic greetings and bot identity questions using word boundaries
+    for greeting in GREETING_KEYWORDS:
+        if re.search(r'\b' + re.escape(greeting) + r'\b', clean_query):
+            return True, "safe"
 
     # Relevance check (off-topic guardrail)
     has_ip_keyword = any(keyword in clean_query for keyword in IP_KEYWORDS)
