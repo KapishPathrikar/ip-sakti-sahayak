@@ -36,7 +36,7 @@ Important implementation details:
 Updated [backend/rag/retrieve.py](backend/rag/retrieve.py) to:
 
 - connect to the persistent Chroma collection
-- generate embeddings using `all-MiniLM-L6-v2`
+- generate embeddings using `all-mpnet-base-v2`
 - query the vector database for the top matching chunks
 - filter out results above the configured threshold
 - return structured results with source, page, distance, and text
