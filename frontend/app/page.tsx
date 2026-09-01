@@ -7,6 +7,10 @@ import LegalResearchView from "../components/LegalResearchView";
 import AccountSettingsView from "../components/AccountSettingsView";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 import AdminPanelView from "../components/AdminPanelView";
+import PatentabilityWizardWidget from "../components/PatentabilityWizardWidget";
+import dynamic from 'next/dynamic';
+
+const PdfViewerWidget = dynamic(() => import("../components/PdfViewerWidget"), { ssr: false });
 
 interface Citation {
   source: string;
@@ -79,18 +83,19 @@ const QUICK_SUGGESTIONS = [
 ];
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools" | "admin">("chat");
+  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools" | "admin" | "wizard">("chat");
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [lastAttemptedQuery, setLastAttemptedQuery] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [cloudConsentPending, setCloudConsentPending] = useState(false);
   const [thinkingState, setThinkingState] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>("sess-new");
   const [feedbackGiven, setFeedbackGiven] = useState<{ [msgId: string]: number }>({});
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [jurisdiction, setJurisdiction] = useState<"india" | "international">("india");
+  const [activePdfUrl, setActivePdfUrl] = useState<{url: string, page: number, title: string, searchQuery?: string} | null>(null);
 
   // Saved sessions state
   const [mySessions, setMySessions] = useState<SavedSession[]>([]);
@@ -210,7 +215,6 @@ export default function Home() {
     }
     
     const assistantMsgId = "asst-" + Date.now();
-    setCloudConsentPending(false);
     setIsStreaming(true);
     setThinkingState("Analyzing Indian Patents Act 1970 & TKDL...");
     let partialText = "";
@@ -228,7 +232,7 @@ export default function Home() {
         body: JSON.stringify({
           query: text,
           session_id: sessionId,
-          allow_cloud: allowCloud,
+          jurisdiction: jurisdiction,
         }),
       });
 
@@ -267,12 +271,6 @@ export default function Home() {
               const event = JSON.parse(rawData);
               if (event.type === "thinking") {
                 setThinkingState(event.message);
-              } else if (event.type === "action_required" && event.action === "cloud_consent_needed") {
-                setThinkingState(null);
-                setCloudConsentPending(true);
-                setIsStreaming(false);
-                setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
-                return;
               } else if (event.type === "token") {
                 setThinkingState(null);
                 partialText += event.token;
@@ -516,6 +514,17 @@ export default function Home() {
             <span className="text-sm font-medium truncate">IP Tools &amp; Calculator</span>
           </button>
 
+          <button
+            onClick={() => switchView("wizard")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "wizard"
+                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
+                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">psychology</span>
+            <span className="text-sm font-medium truncate">Patentability Wizard</span>
+          </button>
+
           {currentUser?.role === "admin" && (
             <button
               onClick={() => switchView("admin")}
@@ -610,7 +619,11 @@ export default function Home() {
       </aside>
 
       {/* ── Main Content Area ─────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col relative w-full md:ml-[280px] bg-[#FAFAF5] transition-all duration-300 h-screen overflow-hidden">
+      <main className="flex-1 flex flex-row relative w-full md:ml-[280px] bg-[#FAFAF5] transition-all duration-300 h-screen overflow-hidden">
+        
+        {/* LEFT PANE: Chat & Views */}
+        <div className={`relative flex flex-col h-full transition-all duration-300 ${activePdfUrl ? "hidden md:flex md:w-1/2" : "w-full flex-1"}`}>
+
         {/* Dynamic Views Container */}
         <div 
           className="flex-1 overflow-y-auto w-full px-4 md:px-10 pt-6 md:pt-10 pb-48 md:pb-36 flex flex-col items-center"
@@ -625,6 +638,12 @@ export default function Home() {
           )}
 
           {currentView === "tools" && <FeeCalculatorView />}
+
+          {currentView === "wizard" && (
+            <div className="w-full max-w-[900px]">
+               <PatentabilityWizardWidget />
+            </div>
+          )}
 
           {currentView === "settings" && (
             <AccountSettingsView
@@ -797,45 +816,71 @@ export default function Home() {
                                     {msg.isFaq ? "Statutory Guidance (Verified FAQ)" : "Section 3 & Statutory Guidance"}
                                   </h3>
                                 </div>
-                                <button
-                                  onClick={() => handleExportPDF()}
-                                  className="text-xs font-bold text-[#638C6D] hover:underline cursor-pointer flex items-center gap-1"
-                                >
-                                  <span>Export PDF</span>
-                                  <span className="material-symbols-outlined text-xs">open_in_new</span>
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleExportPDF()}
+                                    className="px-2 py-1 bg-amber-50 border border-slate-300 rounded text-amber-800 text-[10px] font-bold hover:bg-amber-100 transition-colors shadow-sm"
+                                    title="Export Attorney Brief PDF"
+                                  >
+                                    📄 Attorney Brief
+                                  </button>
+                                  <button
+                                    onClick={() => navigator.clipboard.writeText(msg.content)}
+                                    className="p-1 text-[#638C6D] hover:bg-[#DAEDDC] rounded-md transition-colors"
+                                    title="Copy Response"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">content_copy</span>
+                                  </button>
+                                </div>
                               </div>
 
                               {/* Card Body */}
                               <div className="p-6 space-y-5 bg-white">
                                 <MarkdownRenderer content={msg.content} />
-
-                                {/* Official Citations */}
-                                {msg.citations && msg.citations.length > 0 && (
-                                  <div className="mt-4 border-t card-border pt-4 text-xs">
-                                    <div className="flex items-center gap-1.5 font-bold text-[#C84C05] mb-2">
-                                      <span className="material-symbols-outlined text-sm">menu_book</span>
-                                      <span>Official Statutory Citations:</span>
-                                    </div>
-                                    <ul className="space-y-1.5 text-[12px] text-[#414942]">
-                                      {msg.citations.map((c, i) => (
-                                        <li key={i} className="flex items-start gap-2">
-                                          <span className="text-[#638C6D] font-bold">•</span>
-                                          <div>
-                                            <span className="font-semibold text-[#1B2B20]">{c.source}</span>
-                                            <span className="text-[#727971] ml-1">(Page {c.page})</span>
-                                            {c.confidence && (
-                                              <span className="ml-2 rounded bg-[#FFFDE7] border border-[#BF5515]/30 px-1.5 py-0.5 text-[10px] font-bold text-[#BF5515]">
-                                                {c.confidence}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
                               </div>
+
+                              {/* Citations Section - Trust UI */}
+                              {msg.citations && msg.citations.length > 0 && (
+                                <div className="bg-white px-6 py-4 border-t card-border flex flex-col gap-2">
+                                  <span className="font-bold flex items-center gap-1 text-emerald-800 mb-2 text-xs">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    Verified Statutory Citations
+                                  </span>
+                                  <div className="flex flex-wrap gap-2 text-xs">
+                                    {msg.citations.map((c, i) => (
+                                      <div 
+                                        key={i} 
+                                        onClick={() => {
+                                          let url = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}#page=${c.page}`;
+                                          if (c.snippet && !c.source.startsWith("Live Web:")) {
+                                              url += `&search=${encodeURIComponent(c.snippet)}`;
+                                          }
+                                          if (c.source.startsWith("Live Web:")) {
+                                              const match = c.source.match(/\((https?:\/\/[^\)]+)\)/);
+                                              if (match) {
+                                                  window.open(match[1], '_blank');
+                                              }
+                                          } else {
+                                              const fileUrl = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}`;
+                                              setActivePdfUrl({ url: fileUrl, page: c.page, title: c.source, searchQuery: c.snippet });
+                                          }
+                                        }}
+                                        className="flex items-center gap-2 rounded-md bg-emerald-50 px-2.5 py-1.5 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors"
+                                      >
+                                        <span className="font-semibold text-emerald-900">{c.source}</span>
+                                        <span className="text-emerald-700">| Pg {c.page}</span>
+                                        {c.confidence && (
+                                          <span className="ml-1 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                                            {c.confidence}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
 
                               {/* Card Footer (Feedback) */}
                               <div className="bg-[#FAFAF5] px-6 py-2.5 border-t card-border flex items-center justify-between text-xs text-[#727971]">
@@ -880,36 +925,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Cloud Privacy Consent Box */}
-              {cloudConsentPending && (
-                <div className="w-full max-w-[800px] mx-auto mt-4 px-4">
-                  <div className="flex flex-col gap-3 rounded-[20px] border border-[#BF5515]/30 bg-[#FFFDE7] p-5 ambient-shadow shadow-md">
-                    <div className="flex items-center gap-2 text-[#C84C05]">
-                      <span className="material-symbols-outlined text-xl">warning</span>
-                      <h3 className="font-bold text-sm tracking-wide">Local Privacy Model Offline</h3>
-                    </div>
-                    <p className="text-[13px] text-[#414942] leading-relaxed">
-                      Your query requires an AI model to synthesize a response. The local offline model is currently unavailable. Do you want to securely route this query to a Cloud Model (Google Gemini)?
-                      <br/><br/>
-                      <strong>Note: Data privacy is reduced when using external cloud services, and strict biopiracy protection is best maintained locally.</strong>
-                    </p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <button
-                        onClick={() => sendMessage(undefined, true)}
-                        className="rounded-full bg-[#C84C05] px-5 py-2.5 text-xs font-bold tracking-wide text-white hover:bg-[#A33D04] transition-colors shadow-sm cursor-pointer"
-                      >
-                        Proceed to Cloud
-                      </button>
-                      <button
-                        onClick={() => setCloudConsentPending(false)}
-                        className="rounded-full bg-white px-5 py-2.5 text-xs font-bold tracking-wide text-[#414942] border border-[#C84C05]/30 hover:bg-[#FAFAF5] transition-colors cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+
 
               <div ref={messagesEndRef} />
             </div>
@@ -919,6 +935,30 @@ export default function Home() {
         {/* ── Floating Prompt Bar (Design 3 & Design 1 Unified) ───────────── */}
         <div className="absolute bottom-0 left-0 right-0 p-4 pb-20 md:p-6 md:pb-6 bg-gradient-to-t from-[#FAFAF5] via-[#FAFAF5]/90 to-transparent pointer-events-none z-20">
           <div className="max-w-[800px] mx-auto pointer-events-auto">
+            {/* Jurisdiction Toggle - Static Above Input */}
+            {currentView === "chat" && (
+              <div className="flex justify-center mb-3">
+                <div className="flex items-center gap-1 rounded-full bg-[#E5F9E7]/80 p-1 border card-border backdrop-blur-md shadow-sm">
+                  <button
+                    onClick={() => setJurisdiction("india")}
+                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                      jurisdiction === "india" ? "bg-white shadow-sm text-emerald-800" : "text-[#414942] hover:text-[#1B2B20]"
+                    }`}
+                  >
+                    🇮🇳 India
+                  </button>
+                  <button
+                    onClick={() => setJurisdiction("international")}
+                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                      jurisdiction === "international" ? "bg-white shadow-sm text-blue-800" : "text-[#414942] hover:text-[#1B2B20]"
+                    }`}
+                  >
+                    🌐 International
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -964,6 +1004,21 @@ export default function Home() {
             </div>
           </div>
         </div>
+        </div>
+
+        {/* RIGHT PANE: PDF Viewer */}
+        {activePdfUrl && (
+          <div className="w-full md:w-1/2 h-full z-30 relative animate-in slide-in-from-right duration-300 shadow-[-10px_0_30px_rgba(0,0,0,0.05)]">
+            <PdfViewerWidget 
+              url={activePdfUrl.url} 
+              initialPage={activePdfUrl.page} 
+              title={activePdfUrl.title}
+              searchQuery={activePdfUrl.searchQuery}
+              onClose={() => setActivePdfUrl(null)} 
+            />
+          </div>
+        )}
+
       </main>
 
       {/* ── Bottom Navigation (Mobile Only - Exact Stitch Layout) ─────── */}

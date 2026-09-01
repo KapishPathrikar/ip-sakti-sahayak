@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request, Response, Depends, status, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -91,6 +92,7 @@ class Citation(BaseModel):
     source: str
     page: int
     confidence: str | None = None
+    snippet: str | None = None
 
 
 class AskRequest(BaseModel):
@@ -112,6 +114,7 @@ class ChatRequest(BaseModel):
     limit: int = Field(default=4, ge=1, le=10, description="Max source chunks to retrieve")
     model: str | None = Field(default=None, description="Optional Ollama model override")
     allow_cloud: bool = Field(default=False, description="Explicit consent to use Cloud LLM fallback")
+    jurisdiction: str = Field(default="india", description="Jurisdiction filtering: 'india' or 'international'")
 
 
 class ChatResponse(BaseModel):
@@ -142,6 +145,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from pathlib import Path
+CORPUS_ROOT_DIR = Path(__file__).resolve().parent.parent / "corpus"
+app.mount("/corpus", StaticFiles(directory=str(CORPUS_ROOT_DIR)), name="corpus")
 
 
 
@@ -371,6 +378,7 @@ def chat_endpoint(
             model=model_name,
             session_id=payload.session_id,
             user_id=user_id,
+            jurisdiction=payload.jurisdiction,
         )
         return ChatResponse(
             answer=result["answer"],
@@ -401,6 +409,7 @@ def chat_stream_endpoint(
             session_id=payload.session_id,
             user_id=current_user.id if current_user else None,
             allow_cloud=payload.allow_cloud,
+            jurisdiction=payload.jurisdiction,
         )
         return StreamingResponse(
             generator, 
@@ -587,6 +596,7 @@ def patentability_check_endpoint(payload: PatentabilityCheckRequest) -> dict[str
 
 
 @app.get("/api/chat/export/{session_id}", tags=["chat"])
+@app.get("/api/export-dossier/{session_id}", tags=["chat"])
 def export_chat_session_pdf(
     session_id: str,
     current_user: User | None = Depends(get_optional_current_user),

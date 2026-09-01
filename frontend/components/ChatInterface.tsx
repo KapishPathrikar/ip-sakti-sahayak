@@ -39,10 +39,10 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
   const [input, setInput] = useState("");
   const [lastAttemptedQuery, setLastAttemptedQuery] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [cloudConsentPending, setCloudConsentPending] = useState(false);
   const [thinkingState, setThinkingState] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>(() => "sess-" + Math.random().toString(36).substring(2, 9));
   const [feedbackGiven, setFeedbackGiven] = useState<{ [msgId: string]: number }>({});
+  const [jurisdiction, setJurisdiction] = useState<"india" | "international">("india");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -56,23 +56,20 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
     }
   }, [initialQuestion]);
 
-  async function sendMessage(textToSend?: string, allowCloud: boolean = false) {
-    const text = textToSend || (allowCloud ? lastAttemptedQuery : input.trim());
+  async function sendMessage(textToSend?: string) {
+    const text = textToSend || input.trim();
     if (!text || isStreaming) return;
 
-    if (!allowCloud) {
-        setInput("");
-        setLastAttemptedQuery(text);
-        const userMsgId = "user-" + Date.now();
-        
-        setMessages((prev) => [
-          ...prev,
-          { id: userMsgId, role: "user", content: text },
-        ]);
-    }
+    setInput("");
+    setLastAttemptedQuery(text);
+    const userMsgId = "user-" + Date.now();
+    
+    setMessages((prev) => [
+      ...prev,
+      { id: userMsgId, role: "user", content: text },
+    ]);
     
     const assistantMsgId = "asst-" + Date.now();
-    setCloudConsentPending(false);
     setIsStreaming(true);
     setThinkingState("🧠 Analyzing Indian IP statutes & legal corpus...");
 
@@ -88,7 +85,7 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
         body: JSON.stringify({
           query: text,
           session_id: sessionId,
-          allow_cloud: allowCloud,
+          jurisdiction: jurisdiction,
         }),
       });
 
@@ -130,12 +127,6 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
 
               if (event.type === "thinking") {
                 setThinkingState(event.message);
-              } else if (event.type === "action_required" && event.action === "cloud_consent_needed") {
-                setThinkingState(null);
-                setCloudConsentPending(true);
-                setIsStreaming(false);
-                setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
-                return;
               } else if (event.type === "token") {
                 setThinkingState(null);
                 partialAssistantText += event.token;
@@ -203,7 +194,7 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
   }
 
   function handleExportPDF() {
-    window.open(`${apiBaseUrl}/api/chat/export/${sessionId}`, "_blank");
+    window.open(`${apiBaseUrl}/api/export-dossier/${sessionId}`, "_blank");
   }
 
   function handleResetChat() {
@@ -227,17 +218,35 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
             Live IP Legal Assistant
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 rounded-full bg-slate-100 p-1">
+            <button
+              onClick={() => setJurisdiction("india")}
+              className={`rounded-full px-3 py-1 text-xs font-bold transition-all ${
+                jurisdiction === "india" ? "bg-white shadow-sm text-emerald-700" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              🇮🇳 India
+            </button>
+            <button
+              onClick={() => setJurisdiction("international")}
+              className={`rounded-full px-3 py-1 text-xs font-bold transition-all ${
+                jurisdiction === "international" ? "bg-white shadow-sm text-blue-700" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              🌐 International
+            </button>
+          </div>
           <button
             onClick={handleExportPDF}
-            className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            title="Download consultation summary in PDF"
+            className="rounded-lg border border-slate-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100 shadow-sm"
+            title="Download full attorney brief PDF"
           >
-            📄 Export PDF
+            📄 Generate Attorney Brief
           </button>
           <button
             onClick={handleResetChat}
-            className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
           >
             🔄 New Chat
           </button>
@@ -265,16 +274,26 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
 
                 {/* Citations block */}
                 {msg.citations && msg.citations.length > 0 && (
-                  <div className="mt-3 border-t border-slate-200/60 pt-2 text-xs text-emerald-800">
-                    <span className="font-bold">Official Statutory Citations:</span>
-                    <ul className="mt-1 list-inside list-disc space-y-0.5 text-[11px]">
+                  <div className="mt-4 border-t border-slate-200/60 pt-3 text-xs">
+                    <span className="font-bold flex items-center gap-1 text-emerald-800 mb-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      Verified Statutory Citations
+                    </span>
+                    <div className="flex flex-wrap gap-2">
                       {msg.citations.map((c, i) => (
-                        <li key={i}>
-                          {c.source} (Page {c.page})
-                          {c.confidence ? ` · ${c.confidence}` : ""}
-                        </li>
+                        <div key={i} className="flex items-center gap-2 rounded-md bg-emerald-50 px-2.5 py-1.5 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors">
+                          <span className="font-semibold text-emerald-900">{c.source}</span>
+                          <span className="text-emerald-700">| Pg {c.page}</span>
+                          {c.confidence && (
+                            <span className="ml-1 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                              {c.confidence}
+                            </span>
+                          )}
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
               </div>
@@ -313,34 +332,7 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
           </div>
         )}
 
-        {/* Cloud Privacy Consent Box */}
-        {cloudConsentPending && (
-          <div className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-amber-900">
-              <span className="text-xl">⚠️</span>
-              <h3 className="font-semibold text-sm">Local Privacy Model Offline</h3>
-            </div>
-            <p className="text-xs text-amber-800 leading-relaxed">
-              Your query requires an AI model to answer. The local offline model is currently unavailable. Do you want to securely route this query to a Cloud Model (Google Gemini)?
-              <br/><br/>
-              <strong>Note: Data privacy is reduced when using external cloud services, and biopiracy protection is best maintained locally.</strong>
-            </p>
-            <div className="flex items-center gap-3 mt-1">
-              <button
-                onClick={() => sendMessage(undefined, true)}
-                className="rounded-md bg-amber-600 px-4 py-2 text-xs font-medium text-white hover:bg-amber-700 transition-colors shadow-sm"
-              >
-                Proceed to Cloud
-              </button>
-              <button
-                onClick={() => setCloudConsentPending(false)}
-                className="rounded-md bg-white px-4 py-2 text-xs font-medium text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+
 
         <div ref={messagesEndRef} />
       </div>

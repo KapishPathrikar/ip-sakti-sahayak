@@ -58,58 +58,7 @@ NO_ANSWER = "I could not find sufficient information in the available IP sources
 DEFAULT_OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
 
-
-def _call_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL) -> str | None:
-	"""Send prompt to local Ollama instance, falling back to Cloud LLM if Ollama is offline."""
-	url = f"{base_url.rstrip('/')}/api/generate"
-	payload = {
-		"model": model,
-		"prompt": prompt,
-		"stream": False,
-		"keep_alive": "1h",  # Keep model in GPU memory for 1 hour to prevent reload delays
-	}
-	
-	max_retries = 2
-	timeout = 90  # Allow sufficient time for 13GB+ local model to load weights into memory
-	
-	for attempt in range(1, max_retries + 1):
-		try:
-			req = urllib.request.Request(
-				url,
-				data=json.dumps(payload).encode("utf-8"),
-				headers={"Content-Type": "application/json"},
-			)
-			with urllib.request.urlopen(req, timeout=timeout) as response:
-				data = json.loads(response.read().decode("utf-8"))
-				return data.get("response", "").strip()
-				
-		except urllib.error.HTTPError as http_err:
-			error_detail = ""
-			try:
-				error_detail = http_err.read().decode("utf-8")
-			except Exception:
-				pass
-			
-			print(f"[Warning] Ollama HTTP {http_err.code} on attempt {attempt}/{max_retries}: {error_detail or http_err.reason}")
-			if attempt < max_retries:
-				time.sleep(3)
-				
-		except Exception as err:
-			print(f"[Notice] Ollama local query attempt {attempt}/{max_retries} not available: {err}")
-			if attempt < max_retries:
-				time.sleep(2)
-				
-	print("[LLM Router] Local Ollama unavailable. Seamlessly routing to Cloud LLM fallback...")
-	fallback_msg = "\n\n*[System: The local model is not currently active... querying cloud model (Gemini 3.5 Flash Lite)]*\n\n"
-	cloud_response = _call_cloud_llm(prompt)
-	if cloud_response:
-		return fallback_msg + cloud_response
-	return None
-
-
-
-
-
+MOCK_TKDL_KEYWORDS = ["turmeric", "neem", "triphala", "amla", "ashwagandha", "tulsi", "haldi", "brahmi", "shatavari", "haritaki", "bibhitaki"]
 def answer_question(
 	query: str,
 	persist_dir: str | Path = DEFAULT_CHROMA_DB,
@@ -117,6 +66,7 @@ def answer_question(
 	model: str = DEFAULT_OLLAMA_MODEL,
 	session_id: str | None = None,
 	user_id: int | None = None,
+	jurisdiction: str = "india",
 ) -> dict[str, Any]:
 	"""Retrieve context and generate an accurate, grounded answer with session history support."""
 	# Ensure session exists if requested
@@ -196,6 +146,7 @@ def answer_question(
 				"source": chunk.source,
 				"page": chunk.page,
 				"confidence": f"{calibrated}%",
+				"snippet": " ".join(chunk.text.split()[:8])
 			})
 			seen_citations.add(citation_key)
 		evidence_parts.append(f"[Source {index}: {chunk.source} (Page {chunk.page})]\n{chunk.text}")
@@ -225,7 +176,8 @@ def answer_question(
 					"confidence": "Live Web",
 				})
 
-	system_prompt = f"""You are IP Shakti Sahayak, an expert Indian Intellectual Property and Patent law assistant.
+	# Adjust instructions based on Jurisdiction
+	system_prompt = f"""You are IP Shakti Sahayak, an expert Intellectual Property and Patent law assistant.
 Answer the user's question accurately, concisely, and strictly based on the provided legal reference context and live web sources.
 If the context does not provide sufficient information, clarify what is known and note the limitations.{history_section}
 === REFERENCE CONTEXT ===
@@ -235,17 +187,27 @@ If the context does not provide sufficient information, clarify what is known an
 {english_query}
 
 === INSTRUCTIONS ===
-- Provide a clear, well-structured, and helpful explanation.
-- Reference relevant sections, rules, or guidelines where applicable.
-- If referencing official portals or search engines, ONLY use verified canonical URLs:
+- Provide a clear, well-structured, and helpful explanation."""
+
+	if jurisdiction == "international":
+		system_prompt += """
+- Focus on International treaties, WIPO, Nagoya Protocol, PCT, and Madrid systems.
+- If referencing official portals, use:
+  * WIPO: https://www.wipo.int
+  * European Medicines Agency: https://www.ema.europa.eu
+  * FDA: https://www.fda.gov
+- Ensure the advice reflects cross-border export realities."""
+	else:
+		system_prompt += """
+- Focus strictly on Indian domestic law (Patents Act 1970, Biological Diversity Act 2002, D&C Act).
+- If referencing official portals, use:
   * Official IP India Portal: https://ipindia.gov.in
   * InPASS Patent Search: https://ipindiaservices.gov.in/publicsearch
   * Traditional Knowledge Digital Library (TKDL): https://www.tkdl.res.in
   * Ministry of AYUSH: https://ayush.gov.in
-  * WIPO: https://www.wipo.int
-  * CDSCO: https://cdsco.gov.in
-- Never generate relative, incomplete, or speculative URLs.
-- Answer directly and professionally."""
+  * CDSCO: https://cdsco.gov.in"""
+
+	system_prompt += "\n- Never generate relative, incomplete, or speculative URLs.\n- Answer directly and professionally."
 
 
 	if detected_lang == "hi":
@@ -263,10 +225,10 @@ If the context does not provide sufficient information, clarify what is known an
 
 	system_prompt += "\n\nHelpful Answer:"
 
-	llm_answer = _call_ollama(system_prompt, model=model)
+	llm_answer = _call_cloud_llm(system_prompt)
 
 	if not llm_answer:
-		# Fallback if Ollama is unreachable
+		# Fallback if cloud is unreachable
 		llm_answer = "Relevant information from the available sources:\n\n" + "\n\n".join(
 			f"[{i}] {c.text}" for i, c in enumerate(chunks, start=1)
 		)
@@ -284,44 +246,6 @@ If the context does not provide sufficient information, clarify what is known an
 
 
 
-def _stream_llm(prompt: str, model: str = DEFAULT_OLLAMA_MODEL, base_url: str = DEFAULT_OLLAMA_URL, allow_cloud: bool = False):
-	"""Yield individual token chunks from Ollama, with conditional fallback to Cloud LLM."""
-	url = f"{base_url.rstrip('/')}/api/generate"
-	payload = {
-		"model": model,
-		"prompt": prompt,
-		"stream": True,
-		"keep_alive": "1h",  # Keep model in GPU memory for 1 hour
-	}
-	req = urllib.request.Request(
-		url,
-		data=json.dumps(payload).encode("utf-8"),
-		headers={"Content-Type": "application/json"},
-	)
-	try:
-		with urllib.request.urlopen(req, timeout=90) as response:
-			for line in response:
-				if line:
-					try:
-						data = json.loads(line.decode("utf-8"))
-						token = data.get("response", "")
-						if token:
-							yield token
-					except Exception:
-						continue
-			return
-	except Exception as err:
-		print(f"[Notice] Ollama local stream not available ({err}).")
-		if not allow_cloud:
-			print("[Notice] Cloud LLM consent needed. Requesting user permission.")
-			yield f"data: {json.dumps({'type': 'action_required', 'action': 'cloud_consent_needed'})}\n\n"
-			return
-		
-		print("[Notice] User granted cloud access. Routing to Cloud LLM stream...")
-		yield "\n\n*[System: The local model is not currently active... securely querying cloud model (Gemini 3.5 Flash Lite)]*\n\n"
-		yield from _stream_cloud_llm(prompt)
-
-
 
 def answer_question_stream(
 	query: str,
@@ -331,6 +255,7 @@ def answer_question_stream(
 	session_id: str | None = None,
 	user_id: int | None = None,
 	allow_cloud: bool = False,
+	jurisdiction: str = "india",
 ):
 	"""Stream RAG response token-by-token via Server-Sent Events (SSE)."""
 	active_session_id = session_manager.get_or_create_session(session_id, user_id=user_id) if session_id is not None else None
@@ -380,6 +305,8 @@ def answer_question_stream(
 		yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'from_faq': True})}\n\n"
 		return
 
+
+
 	# 3. Off-topic relevance validation (check both translated and original text)
 	is_safe, reason = is_safe_query(english_query)
 	if not is_safe:
@@ -417,6 +344,7 @@ def answer_question_stream(
 				"source": chunk.source,
 				"page": chunk.page,
 				"confidence": f"{calibrated}%",
+				"snippet": " ".join(chunk.text.split()[:8])
 			})
 			seen_citations.add(citation_key)
 		evidence_parts.append(f"[Source {index}: {chunk.source} (Page {chunk.page})]\n{chunk.text}")
@@ -446,7 +374,8 @@ def answer_question_stream(
 					"confidence": "Live Web",
 				})
 
-	system_prompt = f"""You are IP Shakti Sahayak, an expert Indian Intellectual Property and Patent law assistant.
+	# Adjust instructions based on Jurisdiction
+	system_prompt = f"""You are IP Shakti Sahayak, an expert Intellectual Property and Patent law assistant.
 Answer the user's question accurately, concisely, and strictly based on the provided legal reference context and live web sources.
 If the context does not provide sufficient information, clarify what is known and note the limitations.{history_section}
 === REFERENCE CONTEXT ===
@@ -456,17 +385,27 @@ If the context does not provide sufficient information, clarify what is known an
 {english_query}
 
 === INSTRUCTIONS ===
-- Provide a clear, well-structured, and helpful explanation.
-- Reference relevant sections, rules, or guidelines where applicable.
-- If referencing official portals or search engines, ONLY use verified canonical URLs:
+- Provide a clear, well-structured, and helpful explanation."""
+
+	if jurisdiction == "international":
+		system_prompt += """
+- Focus on International treaties, WIPO, Nagoya Protocol, PCT, and Madrid systems.
+- If referencing official portals, use:
+  * WIPO: https://www.wipo.int
+  * European Medicines Agency: https://www.ema.europa.eu
+  * FDA: https://www.fda.gov
+- Ensure the advice reflects cross-border export realities."""
+	else:
+		system_prompt += """
+- Focus strictly on Indian domestic law (Patents Act 1970, Biological Diversity Act 2002, D&C Act).
+- If referencing official portals, use:
   * Official IP India Portal: https://ipindia.gov.in
   * InPASS Patent Search: https://ipindiaservices.gov.in/publicsearch
   * Traditional Knowledge Digital Library (TKDL): https://www.tkdl.res.in
   * Ministry of AYUSH: https://ayush.gov.in
-  * WIPO: https://www.wipo.int
-  * CDSCO: https://cdsco.gov.in
-- Never generate relative, incomplete, or speculative URLs.
-- Answer directly and professionally."""
+  * CDSCO: https://cdsco.gov.in"""
+
+	system_prompt += "\n- Never generate relative, incomplete, or speculative URLs.\n- Answer directly and professionally. NEVER introduce yourself or say 'Hello' or 'I am IP Shakti Sahayak'. Start answering the question immediately without any pleasantries."
 
 
 	if detected_lang == "hi":
@@ -488,7 +427,7 @@ If the context does not provide sufficient information, clarify what is known an
 
 	# Stream tokens live across all languages
 	try:
-		for token in _stream_llm(system_prompt, model=model, allow_cloud=allow_cloud):
+		for token in _stream_cloud_llm(system_prompt):
 			if token.startswith("data: "):
 				yield token
 				return
@@ -503,6 +442,20 @@ If the context does not provide sufficient information, clarify what is known an
 		)
 		full_answer = [fallback_ans]
 		yield f"data: {json.dumps({'type': 'token', 'token': fallback_ans})}\n\n"
+
+	# 2.5 Mock TKDL Interception Logic
+	tkdl_hits = [k for k in MOCK_TKDL_KEYWORDS if k in english_query.lower()]
+	if tkdl_hits and not is_greeting_query(english_query):
+		warning_msg = f"\n\n> 🚨 **TKDL PRIOR ART WARNING**: The ingredients mentioned ({', '.join(tkdl_hits)}) are documented as Traditional Knowledge. Under Section 3(p) of the Patents Act, this formulation may face strict patentability bars unless significant synergistic efficacy is proven. Please consult the TKDL database.\n\n"
+		if detected_lang in {"hi", "mr"}:
+			warning_msg = translate_text(warning_msg, target_lang=detected_lang, source_lang="en")
+		
+		# Stream the warning at the end
+		for word in warning_msg.split(" "):
+			yield f"data: {json.dumps({'type': 'token', 'token': word + ' '})}\n\n"
+			full_answer.append(word + ' ')
+			import time
+			time.sleep(0.02)
 
 	final_text = "".join(full_answer)
 
