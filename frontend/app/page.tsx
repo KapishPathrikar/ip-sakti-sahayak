@@ -8,6 +8,7 @@ import AccountSettingsView from "../components/AccountSettingsView";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 import AdminPanelView from "../components/AdminPanelView";
 import PatentabilityWizardWidget from "../components/PatentabilityWizardWidget";
+import FormulationClassifierWidget from "../components/FormulationClassifierWidget";
 import dynamic from 'next/dynamic';
 
 const PdfViewerWidget = dynamic(() => import("../components/PdfViewerWidget"), { ssr: false });
@@ -83,7 +84,7 @@ const QUICK_SUGGESTIONS = [
 ];
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools" | "admin" | "wizard">("chat");
+  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools" | "admin" | "wizard" | "classifier">("chat");
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -525,6 +526,17 @@ export default function Home() {
             <span className="text-sm font-medium truncate">Patentability Wizard</span>
           </button>
 
+          <button
+            onClick={() => switchView("classifier")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "classifier"
+                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
+                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">account_tree</span>
+            <span className="text-sm font-medium truncate">Formulation Classifier</span>
+          </button>
+
           {currentUser?.role === "admin" && (
             <button
               onClick={() => switchView("admin")}
@@ -642,6 +654,12 @@ export default function Home() {
           {currentView === "wizard" && (
             <div className="w-full max-w-[900px]">
                <PatentabilityWizardWidget />
+            </div>
+          )}
+
+          {currentView === "classifier" && (
+            <div className="w-full max-w-[900px] h-full">
+               <FormulationClassifierWidget />
             </div>
           )}
 

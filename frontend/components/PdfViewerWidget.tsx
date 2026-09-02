@@ -96,6 +96,11 @@ export default function PdfViewerWidget({ url, initialPage, onClose, title = "Do
     [searchQuery]
   );
 
+  const pdfOptions = React.useMemo(() => ({
+    disableRange: true,
+    disableStream: true,
+  }), []);
+
   return (
     <div className="w-full h-full flex flex-col bg-[#F3F4F0] relative overflow-hidden">
       {/* ── Top Bar (Clean Gemini Style) ── */}
@@ -125,6 +130,7 @@ export default function PdfViewerWidget({ url, initialPage, onClose, title = "Do
         <div className="py-6 px-4 min-h-full flex items-center justify-center transition-transform duration-200">
           <Document
             file={url}
+            options={pdfOptions}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={
               <div className="flex flex-col items-center gap-3 text-[#727971]">
