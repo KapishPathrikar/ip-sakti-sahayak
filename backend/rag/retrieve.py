@@ -67,7 +67,14 @@ def retrieve(
 		return []
 
 	collection = _get_collection(persist_dir)
-	result = collection.query(query_texts=[query], n_results=limit)
+	try:
+		result = collection.query(query_texts=[query], n_results=limit)
+	except Exception as err:
+		print(f"[Retrieve Warning] Query failed with cached collection: {err}. Refreshing connection...")
+		_COLLECTION_CACHE.pop(str(persist_dir), None)
+		_CLIENT_CACHE.pop(str(persist_dir), None)
+		collection = _get_collection(persist_dir)
+		result = collection.query(query_texts=[query], n_results=limit)
 
 	documents = result.get("documents", [[]])[0]
 	metadatas = result.get("metadatas", [[]])[0]

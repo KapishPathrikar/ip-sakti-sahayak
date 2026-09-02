@@ -147,22 +147,107 @@ const DECISION_TREE: QuestionNode = {
 
 export default function FormulationClassifierWidget() {
   const [history, setHistory] = useState<(QuestionNode | CategoryResult)[]>([DECISION_TREE]);
+  const [doubtQuestion, setDoubtQuestion] = useState<QuestionNode | null>(null);
+  const [chatMessages, setChatMessages] = useState<{role: string, content: string}[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatting, setIsChatting] = useState(false);
+  const chatEndRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isChatting]);
+
+  const sendDoubtMessage = async () => {
+    if (!chatInput.trim() || !doubtQuestion) return;
+    
+    const userMsg = chatInput;
+    setChatInput("");
+    setChatMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    setIsChatting(true);
+
+    try {
+      const response = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          query: `Regarding the regulatory question: "${doubtQuestion.text}"\nUser asks: ${userMsg}\nPlease keep the answer very brief (1-3 sentences) and focused strictly on explaining the regulatory context of this specific question to help the user choose an option.`,
+          session_id: "classifier-session",
+          jurisdiction: "india",
+          allow_cloud: true
+        })
+      });
+
+      if (!response.body) throw new Error("No body in response");
+
+      setChatMessages(prev => [...prev, { role: "assistant", content: "" }]);
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let currentAiText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n\n");
+        
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const dataStr = line.slice(6).trim();
+            if (dataStr === "[DONE]") {
+              break;
+            }
+            try {
+              const event = JSON.parse(dataStr);
+              if (event.type === "token" && event.token) {
+                currentAiText += event.token;
+                setChatMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1].content = currentAiText;
+                  return updated;
+                });
+              }
+            } catch (e) {
+              // Ignore parse errors on partial chunks
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      setChatMessages(prev => {
+        const updated = [...prev];
+        if (updated[updated.length - 1].role === "assistant" && !updated[updated.length - 1].content) {
+            updated[updated.length - 1].content = "Sorry, I couldn't reach the server. Please try again.";
+        } else {
+            updated.push({ role: "assistant", content: "Sorry, I couldn't reach the server. Please try again." });
+        }
+        return updated;
+      });
+    } finally {
+      setIsChatting(false);
+    }
+  };
 
   const handleOptionClick = (nextNode: QuestionNode | CategoryResult) => {
     setHistory([...history, nextNode]);
+    setDoubtQuestion(null); // Close chat if moving forward
   };
 
   const reset = () => {
     setHistory([DECISION_TREE]);
+    setDoubtQuestion(null);
   };
 
   const goBack = () => {
     if (history.length > 1) {
       setHistory(history.slice(0, -1));
+      setDoubtQuestion(null);
     }
   };
 
-  return (
+  const classifierContent = (
     <div className="rounded-2xl border border-[#E5DCBF] bg-[#FFFEFA] p-6 text-[#182C22] shadow-sm flex flex-col h-full max-h-[600px]">
       <div className="border-b border-[#E5DCBF] pb-4 shrink-0 flex items-center justify-between">
         <div>
@@ -199,7 +284,7 @@ export default function FormulationClassifierWidget() {
                   <div className="bg-[#285943] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                     Q
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-semibold text-sm">{node.text}</h3>
                     {isCurrent && (
                       <div className="mt-4 flex flex-col sm:flex-row gap-2">
@@ -215,6 +300,20 @@ export default function FormulationClassifierWidget() {
                       </div>
                     )}
                   </div>
+                  {/* Doubt Button */}
+                  {isCurrent && (
+                    <button
+                      onClick={() => setDoubtQuestion(node)}
+                      className={`shrink-0 p-2 rounded-full border transition-colors ${
+                        doubtQuestion?.id === node.id 
+                          ? "bg-[#285943] text-white border-[#285943]" 
+                          : "bg-white text-[#7A5135] border-[#E5DCBF] hover:bg-[#E5DCBF]/30"
+                      }`}
+                      title="Need help understanding this?"
+                    >
+                      <span className="material-symbols-outlined text-lg">help</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -255,6 +354,97 @@ export default function FormulationClassifierWidget() {
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Go Back
           </button>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="h-full w-full relative">
+      {/* Main Classifier (Always Full Width) */}
+      <div className="h-full w-full">
+        {classifierContent}
+      </div>
+
+      {/* Side Chatbox for Doubts (Floating outside on the right) */}
+      {doubtQuestion && (
+        <div className="absolute top-0 left-[calc(100%+16px)] h-full w-[300px] bg-[#FFFEFA] border border-[#E5DCBF] rounded-2xl shadow-2xl flex flex-col animate-in slide-in-from-left-4 fade-in duration-300 overflow-hidden z-20">
+          <div className="bg-[#FAF6ED] px-4 py-3 border-b border-[#E5DCBF] flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#7A5135]">support_agent</span>
+              <h3 className="font-bold text-[#7A5135] text-sm">Question Assistant</h3>
+            </div>
+            <button 
+              onClick={() => {
+                setDoubtQuestion(null);
+                setChatMessages([]); // Clear chat when closing
+              }}
+              className="text-[#7A5135] hover:text-red-700 p-1 rounded-full hover:bg-white transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm bg-white/95 backdrop-blur-sm custom-scrollbar">
+            <div className="bg-[#FAFAF5] p-3 rounded-xl border border-[#E5DCBF] text-[#414942]">
+              <p className="font-medium mb-1 text-xs uppercase tracking-wider text-[#7A5135]">Context</p>
+              <p className="italic">"{doubtQuestion.text}"</p>
+            </div>
+            
+            {chatMessages.length === 0 && (
+              <div className="text-center text-[#727971] text-xs py-4">
+                Confused by this question? Ask me to explain it or give you an example!
+              </div>
+            )}
+
+            {chatMessages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`p-3 max-w-[85%] rounded-xl ${
+                  msg.role === 'user' 
+                    ? 'bg-[#DAEDDC] text-[#1B2B20] rounded-tr-sm' 
+                    : 'bg-[#FAFAF5] border border-[#E5DCBF] text-[#1B2B20] rounded-tl-sm shadow-sm'
+                }`}>
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            
+            {isChatting && (
+              <div className="flex justify-start">
+                <div className="p-3 bg-[#FAFAF5] border border-[#E5DCBF] rounded-xl rounded-tl-sm text-[#727971] flex items-center gap-2 shadow-sm">
+                  <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                  Thinking...
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className="p-3 bg-[#FAF6ED] border-t border-[#E5DCBF] shrink-0">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendDoubtMessage();
+              }}
+              className="flex items-center gap-2 bg-white rounded-full px-3 py-1.5 border border-[#E5DCBF] focus-within:border-[#285943] transition-colors shadow-sm"
+            >
+              <input 
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                placeholder="Ask for clarification..."
+                className="flex-1 text-sm bg-transparent outline-none py-1"
+                disabled={isChatting}
+              />
+              <button 
+                type="submit"
+                disabled={!chatInput.trim() || isChatting}
+                className="w-7 h-7 rounded-full bg-[#285943] text-white flex items-center justify-center disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">send</span>
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

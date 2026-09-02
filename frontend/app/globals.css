@@ -104,3 +104,23 @@ body {
   background: #638C6D;
 }
 
+/* ── react-pdf Text Layer Overrides ──────────────────────── */
+/* Force text layer spans to be invisible so only highlights show */
+.react-pdf__Page__textContent {
+  user-select: none;
+  pointer-events: none;
+}
+
+.react-pdf__Page__textContent span {
+  color: transparent !important;
+  background: transparent !important;
+  opacity: 1 !important;
+}
+
+/* Keep <mark> highlights visible inside the text layer */
+.react-pdf__Page__textContent mark {
+  color: transparent !important;
+  background-color: rgba(253, 224, 71, 0.55) !important;
+  border-radius: 2px !important;
+  box-shadow: 0 0 0 1px rgba(253, 224, 71, 0.4) !important;
+}

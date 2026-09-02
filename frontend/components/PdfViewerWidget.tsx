@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
 
 // Set up the PDF.js worker from CDN to avoid Next.js build configuration issues
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -63,35 +65,15 @@ export default function PdfViewerWidget({ url, initialPage, onClose, title = "Do
       
       const words = searchQuery
         .split(/\s+/)
-        .map(w => w.replace(/[^\w\s]/g, '')) // strip punctuation
-        .filter(w => w.length > 4);
+        .map(w => w.replace(/[^\w\s]/g, ''))
+        .filter(w => w.length > 3);
 
       if (words.length === 0) return textItem.str;
 
-      const regex = new RegExp(`(${words.join('|')})`, 'gi');
-      const parts = textItem.str.split(regex);
+      const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
       
-      return (
-        <React.Fragment>
-          {parts.map((part, index) => 
-            index % 2 !== 0 ? (
-              <mark 
-                key={index} 
-                style={{
-                  backgroundColor: 'rgba(253, 224, 71, 0.5)',
-                  color: 'transparent',
-                  borderRadius: '2px',
-                  boxShadow: '0 0 2px rgba(253, 224, 71, 0.8)'
-                }}
-              >
-                {part}
-              </mark>
-            ) : (
-              <span key={index}>{part}</span>
-            )
-          )}
-        </React.Fragment>
-      );
+      return textItem.str.replace(regex, '<mark style="background-color: rgba(253, 224, 71, 0.6); border-radius: 2px; padding: 1px 0;">$1</mark>');
     },
     [searchQuery]
   );
