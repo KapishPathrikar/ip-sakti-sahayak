@@ -8,6 +8,7 @@ import AccountSettingsView from "../components/AccountSettingsView";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 import AdminPanelView from "../components/AdminPanelView";
 import FormulationClassifierWidget from "../components/FormulationClassifierWidget";
+import NBAComplianceWidget from "../components/NBAComplianceWidget";
 import dynamic from 'next/dynamic';
 
 const PdfViewerWidget = dynamic(() => import("../components/PdfViewerWidget"), { ssr: false });
@@ -16,6 +17,7 @@ interface Citation {
   source: string;
   page: number;
   confidence?: string;
+  snippet?: string;
 }
 
 interface Message {
@@ -83,7 +85,7 @@ const QUICK_SUGGESTIONS = [
 ];
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools" | "admin" | "classifier">("chat");
+  const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools" | "admin" | "classifier" | "nba-helper">("chat");
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -108,6 +110,8 @@ export default function Home() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     setSessionId("sess-" + Math.random().toString(36).substring(2, 9));
@@ -197,7 +201,11 @@ export default function Home() {
   }
 
   async function sendMessage(textToSend?: string, allowCloud: boolean = false) {
-    const text = textToSend || (allowCloud ? lastAttemptedQuery : input.trim());
+    let text = textToSend || (allowCloud ? lastAttemptedQuery : input.trim());
+    if (!text && selectedFile) {
+      text = "Please analyze the attached document.";
+    }
+    
     if (!text || isStreaming) return;
 
     setCurrentView("chat");
@@ -208,9 +216,14 @@ export default function Home() {
         setLastAttemptedQuery(text);
         const userMsgId = "user-" + Date.now();
         
+        let displayContent = text;
+        if (selectedFile) {
+           displayContent = `[Attached: ${selectedFile.name}]\n${text}`;
+        }
+        
         setMessages((prev) => [
           ...prev,
-          { id: userMsgId, role: "user", content: text },
+          { id: userMsgId, role: "user", content: displayContent },
         ]);
     }
     
@@ -220,6 +233,33 @@ export default function Home() {
     let partialText = "";
 
     try {
+      let contextDocumentText = null;
+      if (selectedFile) {
+        setThinkingState(`Reading ${selectedFile.name}...`);
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        
+        const uploadHeaders: Record<string, string> = {};
+        if (authToken) {
+          uploadHeaders["Authorization"] = `Bearer ${authToken}`;
+        }
+        
+        const uploadResponse = await fetch(`${apiBaseUrl}/api/chat/extract-text`, {
+          method: "POST",
+          headers: uploadHeaders,
+          body: formData
+        });
+        
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          contextDocumentText = uploadData.text;
+        } else {
+          console.error("Failed to extract text from file");
+        }
+        setSelectedFile(null);
+      }
+
+      setThinkingState("Analyzing Indian Patents Act 1970 & TKDL...");
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (authToken) {
         headers["Authorization"] = `Bearer ${authToken}`;
@@ -233,6 +273,7 @@ export default function Home() {
           query: text,
           session_id: sessionId,
           jurisdiction: jurisdiction,
+          context_document: contextDocumentText,
         }),
       });
 
@@ -478,7 +519,7 @@ export default function Home() {
               }`}
           >
             <span className="material-symbols-outlined text-[20px]">chat</span>
-            <span className="text-sm font-medium truncate">New Chat</span>
+            <span className="text-sm font-medium truncate">Current chat</span>
           </button>
 
           <button
@@ -511,7 +552,7 @@ export default function Home() {
               }`}
           >
             <span className="material-symbols-outlined text-[20px]">calculate</span>
-            <span className="text-sm font-medium truncate">IP Tools &amp; Calculator</span>
+            <span className="text-sm font-medium truncate">IP Calculator</span>
           </button>
 
 
@@ -524,6 +565,17 @@ export default function Home() {
           >
             <span className="material-symbols-outlined text-[20px]">account_tree</span>
             <span className="text-sm font-medium truncate">Formulation Classifier</span>
+          </button>
+
+          <button
+            onClick={() => switchView("nba-helper")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "nba-helper"
+                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
+                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">policy</span>
+            <span className="text-sm font-medium truncate">NBA ABS Compliance</span>
           </button>
 
           {currentUser?.role === "admin" && (
@@ -642,8 +694,21 @@ export default function Home() {
 
 
           {currentView === "classifier" && (
-            <div className="w-full max-w-[900px] h-full">
+            <div className="w-full max-w-[900px]">
                <FormulationClassifierWidget />
+            </div>
+          )}
+
+          {currentView === "nba-helper" && (
+            <div className="w-full max-w-[900px]">
+               <NBAComplianceWidget 
+                 onGenerateMemo={(prompt) => {
+                   switchView("chat");
+                   setInput(prompt);
+                   // Give a tiny delay for React to switch the view before focusing
+                   setTimeout(() => inputRef.current?.focus(), 100);
+                 }} 
+               />
             </div>
           )}
 
@@ -822,9 +887,9 @@ export default function Home() {
                                   <button
                                     onClick={() => handleExportPDF()}
                                     className="px-2 py-1 bg-amber-50 border border-slate-300 rounded text-amber-800 text-[10px] font-bold hover:bg-amber-100 transition-colors shadow-sm"
-                                    title="Export Attorney Brief PDF"
+                                    title="Extract PDF"
                                   >
-                                    📄 Attorney Brief
+                                    📄 Extract Pdf
                                   </button>
                                   <button
                                     onClick={() => navigator.clipboard.writeText(msg.content)}
@@ -887,26 +952,6 @@ export default function Home() {
                               {/* Card Footer (Feedback) */}
                               <div className="bg-[#FAFAF5] px-6 py-2.5 border-t card-border flex items-center justify-between text-xs text-[#727971]">
                                 <span className="text-[11px]">IP-SAKTI Verified Statutory Corpus</span>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    aria-label="Helpful"
-                                    onClick={() => handleFeedback(msg.id, 1)}
-                                    className={`p-1.5 rounded-lg hover:bg-white transition-colors cursor-pointer flex items-center gap-1 ${feedbackGiven[msg.id] === 1 ? "text-[#638C6D] font-bold bg-white" : ""
-                                      }`}
-                                  >
-                                    <span className="material-symbols-outlined text-sm">thumb_up</span>
-                                    <span>Helpful</span>
-                                  </button>
-                                  <button
-                                    aria-label="Not Helpful"
-                                    onClick={() => handleFeedback(msg.id, -1)}
-                                    className={`p-1.5 rounded-lg hover:bg-white transition-colors cursor-pointer flex items-center gap-1 ${feedbackGiven[msg.id] === -1 ? "text-red-700 font-bold bg-white" : ""
-                                      }`}
-                                  >
-                                    <span className="material-symbols-outlined text-sm">thumb_down</span>
-                                    <span>Report</span>
-                                  </button>
-                                </div>
                               </div>
                             </div>
                           </div>
@@ -966,39 +1011,65 @@ export default function Home() {
                 e.preventDefault();
                 void sendMessage();
               }}
-              className="bg-[#FFFDE7] backdrop-blur-md rounded-full p-2 flex items-center gap-2 ambient-shadow border card-border shadow-lg"
+              className="bg-[#FFFDE7] backdrop-blur-md rounded-[24px] p-2 flex flex-col gap-2 ambient-shadow border card-border shadow-lg"
             >
-              {/* Left Tools / Attach */}
-              <button
-                type="button"
-                onClick={() => setCurrentView("research")}
-                title="Browse Statutory FAQs & Repository"
-                className="p-2.5 text-[#5A6A32] hover:bg-white/60 rounded-full transition-colors shrink-0 flex items-center justify-center cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-xl">menu_book</span>
-              </button>
+              {selectedFile && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-[#E5F9E7] rounded-full border border-[#638C6D] self-start ml-2 mt-1">
+                  <span className="text-xs text-[#1B2B20] font-medium truncate max-w-[200px]">{selectedFile.name}</span>
+                  <button type="button" onClick={() => setSelectedFile(null)} className="text-[#638C6D] hover:text-red-600 transition-colors cursor-pointer">
+                    <span className="material-symbols-outlined text-sm flex items-center justify-center">close</span>
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-2 w-full">
+                {/* Left Tools / Attach */}
+                <button
+                  type="button"
+                  onClick={() => setCurrentView("research")}
+                  title="Browse Statutory FAQs & Repository"
+                  className="p-2.5 text-[#5A6A32] hover:bg-white/60 rounded-full transition-colors shrink-0 flex items-center justify-center cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-xl">menu_book</span>
+                </button>
 
-              {/* Input */}
-              <div className="flex-1 py-1 px-2">
                 <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  disabled={isStreaming}
-                  placeholder="Ask about IP law, TKDL, or fee rebates..."
-                  className="w-full bg-transparent border-none focus:ring-0 text-sm text-[#1B2B20] placeholder:text-[#414942]/60 outline-none block"
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  accept=".pdf"
+                  className="hidden"
                 />
-              </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach PDF Document"
+                  className="p-2.5 text-[#5A6A32] hover:bg-white/60 rounded-full transition-colors shrink-0 flex items-center justify-center cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-xl">attach_file</span>
+                </button>
 
-              {/* Send Action */}
-              <button
-                type="submit"
-                disabled={isStreaming || !input.trim()}
-                className="p-3 bg-[#DF6D2D] hover:bg-[#C84C05] disabled:opacity-50 text-white rounded-full transition-colors shrink-0 flex items-center justify-center shadow-md cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-lg">send</span>
-              </button>
+                {/* Input */}
+                <div className="flex-1 py-1 px-2">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    disabled={isStreaming}
+                    placeholder="Ask in English, Hindi, Marathi, Tamil, Telugu, Sanskrit..."
+                    className="w-full bg-transparent border-none focus:ring-0 text-sm text-[#1B2B20] placeholder:text-[#414942]/60 outline-none block"
+                  />
+                </div>
+
+                {/* Send Action */}
+                <button
+                  type="submit"
+                  disabled={isStreaming || (!input.trim() && !selectedFile)}
+                  className="p-3 bg-[#DF6D2D] hover:bg-[#C84C05] disabled:opacity-50 text-white rounded-full transition-colors shrink-0 flex items-center justify-center shadow-md cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-lg">send</span>
+                </button>
+              </div>
             </form>
 
             <div className="text-center mt-2.5 text-[11px] text-[#414942]/70 font-medium">

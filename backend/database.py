@@ -11,7 +11,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 # Environment variable for database connection
 # In production on Render/Railway/Supabase: postgresql://user:pass@host:5432/dbname
 # In local development: sqlite:///./ip_shakti.db
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ip_shakti.db")
+ROOT_DIR = Path(__file__).resolve().parent.parent
+default_db_path = ROOT_DIR / "ip_shakti.db"
+# Use absolute path for sqlite so it works regardless of cwd
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{default_db_path}")
 
 # Fix for Render / Heroku postgres:// prefix
 if DATABASE_URL.startswith("postgres://"):

@@ -5,7 +5,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Generator
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 # Try to load the .env.local file from the frontend directory
@@ -16,9 +17,7 @@ if env_path.exists():
 # Setup Gemini Fallback Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-else:
+if not GEMINI_API_KEY:
     print("[Warning] GEMINI_API_KEY not found in environment. Cloud fallback will fail if triggered.")
 
 # The user requested 'Gemini 3.5 Flash Lite'. 
@@ -33,15 +32,16 @@ def _call_cloud_llm(prompt: str, model: str = DEFAULT_CLOUD_MODEL) -> str | None
         return _get_mock_response(prompt)
 
     try:
-        genai_model = genai.GenerativeModel(model)
+        client = genai.Client(api_key=GEMINI_API_KEY)
         system_instruction = "You are a helpful legal assistant specializing in Indian Intellectual Property law. Provide accurate, cited answers based on the provided context."
         
         # Combine system instruction and prompt since basic generate_content is easiest this way
         full_prompt = f"{system_instruction}\n\n{prompt}"
         
-        response = genai_model.generate_content(
-            full_prompt,
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content(
+            model=model,
+            contents=full_prompt,
+            config=types.GenerateContentConfig(
                 temperature=0.1,
                 max_output_tokens=1000,
             )
@@ -63,17 +63,17 @@ def _stream_cloud_llm(prompt: str, model: str = DEFAULT_CLOUD_MODEL) -> Generato
         return
 
     try:
-        genai_model = genai.GenerativeModel(model)
+        client = genai.Client(api_key=GEMINI_API_KEY)
         system_instruction = "You are a helpful legal assistant for Indian IP law."
         full_prompt = f"{system_instruction}\n\n{prompt}"
         
-        response = genai_model.generate_content(
-            full_prompt,
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content_stream(
+            model=model,
+            contents=full_prompt,
+            config=types.GenerateContentConfig(
                 temperature=0.1,
                 max_output_tokens=1000,
-            ),
-            stream=True
+            )
         )
 
         for chunk in response:

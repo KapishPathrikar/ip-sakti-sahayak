@@ -199,6 +199,18 @@ def get_safety_response(reason: str, lang: str = "en") -> str:
             "prompt_injection": "Request reject keli ahe karanki he instruction override diste ahe.",
             "off_topic": "Mi ek Indian Intellectual Property (IP) sahayyak ahe. Mi fakt patents, trademarks, copyrights ani kaydeshir niyamanchya prashnanchi uttare deu shakto.",
         },
+        "ta": {
+            "prompt_injection": "பாதுகாப்பற்ற உள்ளடக்கம் அல்லது அறிவுறுத்தல்களை மீறும் முயற்சி காரணமாக கோரிக்கை நிராகரிக்கப்பட்டது.",
+            "off_topic": "நான் ஒரு இந்திய அறிவுசார் சொத்துரிமை (IP) உதவியாளர். காப்புரிமை, வர்த்தக முத்திரை, பதிப்புரிமை மற்றும் IP சட்டங்கள் தொடர்பான கேள்விகளுக்கு மட்டுமே என்னால் உதவ முடியும்.",
+        },
+        "te": {
+            "prompt_injection": "అసురక్షిత కంటెంట్ లేదా సూచనలను ఉల్లంఘించే ప్రయత్నం కారణంగా అభ్యర్థన తిరస్కరించబడింది.",
+            "off_topic": "నేను భారతీయ మేధో సంపత్తి (IP) సహాయకుడిని. నేను పేటెంట్లు, ట్రేడ్‌మార్క్‌లు, కాపీరైట్‌లు మరియు సంబంధిత IP చట్టాలకు సంబంధించిన ప్రశ్నలకు మాత్రమే సహాయం చేయగలను.",
+        },
+        "sa": {
+            "prompt_injection": "असुरक्षित-सामग्री अथवा निर्देश-उल्लङ्घन-प्रयासकारणात् निवेदनं अस्वीकृतम्।",
+            "off_topic": "अहं भारतीय-बौद्धिक-सम्पदा (IP) सहायकः अस्मि। अहं केवलं एकस्व (Patent), व्यापारचिह्न (Trademark), प्रतिलिप्यधिकार (Copyright) तथा IP-सम्बद्ध-विधिप्रश्नेषु एव साहाय्यं कर्तुं शक्नोमि।",
+        },
     }
 
     lang_code = lang if lang in responses else "en"

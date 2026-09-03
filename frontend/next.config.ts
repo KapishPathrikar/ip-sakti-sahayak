@@ -1,10 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  devIndicators: {
-    appIsrStatus: false,
-    buildActivity: false,
-  },
+  devIndicators: false,
   // Allow Ngrok tunneling during development
   allowedDevOrigins: ['moneyless-hypertext-likely.ngrok-free.dev', 'localhost:3000'],
   async rewrites() {

@@ -204,42 +204,15 @@ export default function FeeCalculatorView() {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-6 py-6 md:py-10 animate-in fade-in">
-      {/* ── Header (Stitch IP Tools) ─────────────────────────────────── */}
-      <div className="mb-10 max-w-3xl mx-auto text-center md:text-left">
-        <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-[#FFFDE7]/80 text-[#638C6D] font-bold text-2xl uppercase tracking-wider mb-4 border card-border">
-          <span className="material-symbols-outlined text-3xl">calculate</span>
-          <span>Tools</span>
-        </div>
-        <p className="text-base text-[#414942] leading-relaxed">
-          Estimate official registry fees and professional charges for Patents and Trademarks in India.{" "}
-          <br className="hidden md:block" />
-          Includes special provisions for Startups, MSMEs, and Educational Institutions.
+      {/* ── Header ───────────────────────────────────────────────────── */}
+      <div className="mb-8 max-w-5xl mx-auto text-center md:text-left">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#1B2B20] mb-2 flex items-center justify-center md:justify-start gap-3">
+          <span className="material-symbols-outlined text-3xl text-[#638C6D]">calculate</span>
+          Official IP Fee Calculator
+        </h1>
+        <p className="text-sm sm:text-base text-[#414942] leading-relaxed">
+          Estimate official registry fees and professional charges for Patents and Trademarks in India. Includes special provisions for Startups, MSMEs, and Educational Institutions.
         </p>
-
-        {/* Segmented Toggle Bar */}
-        <div className="mt-8 flex gap-2 p-1.5 bg-[#E5F9E7] rounded-xl w-fit mx-auto md:mx-0 border card-border">
-          <button
-            onClick={() => setActiveTab("calculator")}
-            className={`px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-              activeTab === "calculator"
-                ? "bg-[#638C6D] text-white shadow-sm"
-                : "text-[#1B2B20]/80 hover:bg-[#DAEDDC]"
-            }`}
-          >
-            Official Fee Calculator
-          </button>
-          {/* Hiding the wizard feature as requested by the user */}
-          <button
-            onClick={() => setActiveTab("wizard")}
-            className={`hidden px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-              activeTab === "wizard"
-                ? "bg-[#638C6D] text-white shadow-sm"
-                : "text-[#1B2B20]/80 hover:bg-[#DAEDDC]"
-            }`}
-          >
-            Am I Patentable?
-          </button>
-        </div>
       </div>
 
       {/* ── View 1: Fee Calculator Grid ───────────────────────────────── */}

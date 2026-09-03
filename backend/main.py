@@ -115,6 +115,7 @@ class ChatRequest(BaseModel):
     model: str | None = Field(default=None, description="Optional Ollama model override")
     allow_cloud: bool = Field(default=False, description="Explicit consent to use Cloud LLM fallback")
     jurisdiction: str = Field(default="india", description="Jurisdiction filtering: 'india' or 'international'")
+    context_document: str | None = Field(default=None, description="Optional text extracted from an uploaded document")
 
 
 class ChatResponse(BaseModel):
@@ -379,6 +380,7 @@ def chat_endpoint(
             session_id=payload.session_id,
             user_id=user_id,
             jurisdiction=payload.jurisdiction,
+            context_document=payload.context_document,
         )
         return ChatResponse(
             answer=result["answer"],
@@ -410,6 +412,7 @@ def chat_stream_endpoint(
             user_id=current_user.id if current_user else None,
             allow_cloud=payload.allow_cloud,
             jurisdiction=payload.jurisdiction,
+            context_document=payload.context_document,
         )
         return StreamingResponse(
             generator, 
@@ -424,6 +427,29 @@ def chat_stream_endpoint(
         raise
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Streaming failed: {str(err)}")
+
+
+import io
+from pypdf import PdfReader
+
+@app.post("/api/chat/extract-text", tags=["chat"])
+async def extract_pdf_text(file: UploadFile = File(...)):
+    """Extract text from uploaded PDF document for inline chat context."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+    try:
+        content = await file.read()
+        reader = PdfReader(io.BytesIO(content))
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        # truncate to avoid massive payloads
+        text = text[:15000]
+        return {"text": text, "filename": file.filename}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract text: {e}")
 
 
 @app.get("/api/chat/history/{session_id}", tags=["chat"])

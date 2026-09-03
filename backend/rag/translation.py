@@ -17,17 +17,31 @@ MARATHISH_LATIN_MARKERS = {
     "kiti", "kadhi", "kay", "ahe", "karayche", "mahiti", "sathi", "madhye", "karave"
 }
 
+SANSKRIT_MARKERS = {
+    "अस्ति", "भवति", "इति", "कथम्", "किम्", "कुत्र", "तत्र", "यत्र", "च", "तत्", "तथा", "यथा"
+}
 
 def detect_language(text: str) -> str:
-    """Detect if the query is English ('en'), Hindi ('hi'), Marathi ('mr'), Hinglish ('hinglish'), or Marathish ('marathish')."""
+    """Detect if the query is English ('en'), Hindi ('hi'), Marathi ('mr'), Tamil ('ta'), Telugu ('te'), Sanskrit ('sa'), Hinglish ('hinglish'), or Marathish ('marathish')."""
     lower_text = text.lower()
     words = set(re.findall(r"\b\w+\b", lower_text))
 
-    # 1. Devnagari Script Check (Hindi vs Marathi)
+    # Tamil Script Check
+    if any("\u0B80" <= char <= "\u0BFF" for char in text):
+        return "ta"
+        
+    # Telugu Script Check
+    if any("\u0C00" <= char <= "\u0C7F" for char in text):
+        return "te"
+
+    # Devnagari Script Check (Hindi vs Marathi vs Sanskrit)
     if any("\u0900" <= char <= "\u097f" for char in text):
         # Check for characteristic Marathi words
         if any(marker in text for marker in MARATHI_DEVNAGARI_MARKERS):
             return "mr"
+        # Check for characteristic Sanskrit words
+        if any(marker in text for marker in SANSKRIT_MARKERS):
+            return "sa"
         return "hi"
 
     # 2. Latin script Marathi (Marathish) check

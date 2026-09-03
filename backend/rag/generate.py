@@ -67,6 +67,7 @@ def answer_question(
 	session_id: str | None = None,
 	user_id: int | None = None,
 	jurisdiction: str = "india",
+	context_document: str | None = None,
 ) -> dict[str, Any]:
 	"""Retrieve context and generate an accurate, grounded answer with session history support."""
 	# Ensure session exists if requested
@@ -78,8 +79,7 @@ def answer_question(
 	# Translate query to English for semantic search and prompt if it's Hindi, Marathi, Hinglish, or Marathish
 	english_query = query
 	if detected_lang != "en":
-		translation_source = "auto" if detected_lang in {"hinglish", "marathish"} else detected_lang
-		english_query = translate_text(query, target_lang="en", source_lang=translation_source)
+		english_query = translate_text(query, target_lang="en", source_lang="auto")
 		print(f"[Translation] Detected '{detected_lang}' query. Translated to English: '{english_query}'")
 
 	# 1. Prompt injection defense
@@ -95,7 +95,7 @@ def answer_question(
 	if matched_faq is not None:
 		print(f"[FAQ Cache] High-confidence match ({faq_score:.2f}): {matched_faq['id']} - {matched_faq['question']}")
 		ans_text = matched_faq["answer"]
-		if detected_lang in {"hi", "mr"}:
+		if detected_lang != "en" and detected_lang not in {"hinglish", "marathish"}:
 			ans_text = translate_text(ans_text, target_lang=detected_lang, source_lang="en")
 		citations = [{
 			"source": matched_faq["source"],
@@ -114,7 +114,11 @@ def answer_question(
 		}
 
 	# 3. Off-topic relevance validation (check both translated and original text)
-	is_safe, reason = is_safe_query(english_query)
+	text_to_check = english_query
+	if context_document:
+		text_to_check += " " + context_document[:2000] # Check first 2000 chars of doc for keywords
+
+	is_safe, reason = is_safe_query(text_to_check)
 	if not is_safe:
 		is_safe, reason = is_safe_query(query)
 	if not is_safe:
@@ -150,6 +154,9 @@ def answer_question(
 			})
 			seen_citations.add(citation_key)
 		evidence_parts.append(f"[Source {index}: {chunk.source} (Page {chunk.page})]\n{chunk.text}")
+
+	if context_document:
+		evidence_parts.append(f"[Uploaded Document Context]\n{context_document}")
 
 	context_text = "\n\n".join(evidence_parts)
 
@@ -216,6 +223,15 @@ If the context does not provide sufficient information, clarify what is known an
 	elif detected_lang == "mr":
 		system_prompt += """
 - CRITICAL: You must write your entire response in clear, fluent, and professional Marathi (मराठी) using standard Devanagari script."""
+	elif detected_lang == "ta":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Tamil (தமிழ்) using standard Tamil script."""
+	elif detected_lang == "te":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Telugu (తెలుగు) using standard Telugu script."""
+	elif detected_lang == "sa":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Sanskrit (संस्कृतम्) using standard Devanagari script."""
 	elif detected_lang == "hinglish":
 		system_prompt += """
 - CRITICAL: You must write the entire response in Hinglish (Hindi language written using English/Latin alphabet characters. E.g., 'Aapka patent file karne ke liye form submit karna hoga'). Do not use Devnagari characters."""
@@ -256,8 +272,9 @@ def answer_question_stream(
 	user_id: int | None = None,
 	allow_cloud: bool = False,
 	jurisdiction: str = "india",
+	context_document: str | None = None,
 ):
-	"""Stream RAG response token-by-token via Server-Sent Events (SSE)."""
+	"""Yield token stream for real-time UI rendering."""
 	active_session_id = session_manager.get_or_create_session(session_id, user_id=user_id) if session_id is not None else None
 	detected_lang = detect_language(query)
 
@@ -270,8 +287,7 @@ def answer_question_stream(
 	# Translate query to English if non-English
 	english_query = query
 	if detected_lang != "en":
-		translation_source = "auto" if detected_lang in {"hinglish", "marathish"} else detected_lang
-		english_query = translate_text(query, target_lang="en", source_lang=translation_source)
+		english_query = translate_text(query, target_lang="en", source_lang="auto")
 
 	# 1. Prompt injection defense
 	if is_injection_query(english_query):
@@ -288,7 +304,7 @@ def answer_question_stream(
 	if matched_faq is not None:
 		print(f"[FAQ Cache Stream] High-confidence match ({faq_score:.2f}): {matched_faq['id']} - {matched_faq['question']}")
 		ans_text = matched_faq["answer"]
-		if detected_lang in {"hi", "mr"}:
+		if detected_lang != "en" and detected_lang not in {"hinglish", "marathish"}:
 			ans_text = translate_text(ans_text, target_lang=detected_lang, source_lang="en")
 		citations = [{
 			"source": matched_faq["source"],
@@ -308,7 +324,11 @@ def answer_question_stream(
 
 
 	# 3. Off-topic relevance validation (check both translated and original text)
-	is_safe, reason = is_safe_query(english_query)
+	text_to_check = english_query
+	if context_document:
+		text_to_check += " " + context_document[:2000] # Check first 2000 chars of doc for keywords
+
+	is_safe, reason = is_safe_query(text_to_check)
 	if not is_safe:
 		is_safe, reason = is_safe_query(query)
 	if not is_safe:
@@ -348,6 +368,9 @@ def answer_question_stream(
 			})
 			seen_citations.add(citation_key)
 		evidence_parts.append(f"[Source {index}: {chunk.source} (Page {chunk.page})]\n{chunk.text}")
+
+	if context_document:
+		evidence_parts.append(f"[Uploaded Document Context]\n{context_document}")
 
 	context_text = "\n\n".join(evidence_parts)
 
@@ -414,6 +437,15 @@ If the context does not provide sufficient information, clarify what is known an
 	elif detected_lang == "mr":
 		system_prompt += """
 - CRITICAL: You must write your entire response in clear, fluent, and professional Marathi (मराठी) using standard Devanagari script."""
+	elif detected_lang == "ta":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Tamil (தமிழ்) using standard Tamil script."""
+	elif detected_lang == "te":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Telugu (తెలుగు) using standard Telugu script."""
+	elif detected_lang == "sa":
+		system_prompt += """
+- CRITICAL: You must write your entire response in clear, fluent, and professional Sanskrit (संस्कृतम्) using standard Devanagari script."""
 	elif detected_lang == "hinglish":
 		system_prompt += """
 - CRITICAL: You must write the entire response in Hinglish (Hindi language written using English/Latin alphabet characters. E.g., 'Aapka patent file karne ke liye form submit karna hoga'). Do not use Devnagari characters."""

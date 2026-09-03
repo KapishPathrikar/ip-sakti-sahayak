@@ -124,7 +124,7 @@ export default function AccountSettingsView({
   <div class="container">
     <div class="header">
       <div class="title">🌿 IP-SAKTI Legal Research Archive</div>
-      <p><strong>Researcher:</strong> ${fullName} (${displayEmail}) | <strong>Organization:</strong> ${organization}</p>
+      <p><strong>Researcher:</strong> ${fullName} (${displayEmail}) | <strong>Location:</strong> ${location}</p>
     </div>
 `;
 

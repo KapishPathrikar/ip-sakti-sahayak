@@ -33,7 +33,7 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
       id: "welcome",
       role: "assistant",
       content:
-        "Namaste! I am IP Shakti Sahayak, your India-first intellectual property intelligence assistant.\n\nAsk me anything about Indian patent filing procedures, trademark rules, traditional knowledge (TKDL), or biodiversity approvals in English, Hindi, or Marathi.",
+        "Namaste! I am IP Shakti Sahayak, your India-first intellectual property intelligence assistant.\n\nAsk me anything about Indian patent filing procedures, trademark rules, traditional knowledge (TKDL), or biodiversity approvals in English, Hindi, Marathi, Tamil, Telugu, or Sanskrit.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -349,7 +349,7 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask in English, Hindi (उदा. पेटेंट कसे करायचे?), or Marathi..."
+          placeholder="Ask in English, Hindi, Marathi, Tamil, Telugu, or Sanskrit..."
           disabled={isStreaming}
           className="flex-1 rounded-lg border border-slate-300 p-2.5 text-sm outline-none focus:border-blue-600 disabled:opacity-50"
         />
