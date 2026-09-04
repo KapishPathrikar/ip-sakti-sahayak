@@ -15,7 +15,9 @@ except (ImportError, ValueError):
 	sys.path.insert(0, str(Path(__file__).resolve().parent))
 	from ingest import COLLECTION_NAME, EMBEDDING_MODEL_NAME
 
-DEFAULT_MAX_DISTANCE = 0.5
+HIGH_SIMILARITY_MAX_DISTANCE = 0.32
+HIGH_SIMILARITY_MIN_CONFIDENCE = 80
+DEFAULT_MAX_DISTANCE = 0.65
 DEFAULT_CHROMA_DB = str(Path(__file__).resolve().parent.parent.parent / "chroma_db")
 
 @dataclass(frozen=True)
@@ -24,6 +26,18 @@ class RetrievedChunk:
 	source: str
 	page: int
 	distance: float
+
+def is_within_corpus_boundary(chunks: list[RetrievedChunk], threshold: float = HIGH_SIMILARITY_MAX_DISTANCE) -> bool:
+	"""Check if at least one retrieved chunk satisfies the high-similarity corpus boundary."""
+	if not chunks:
+		return False
+	return min(c.distance for c in chunks) <= threshold
+
+def calculate_chunk_confidence(distance: float) -> int:
+	"""Calculate calibrated percentage confidence from distance (0-99%)."""
+	raw_sim = max(0.0, 1.0 - distance)
+	return max(0, min(99, round((raw_sim ** 0.6) * 100)))
+
 
 
 _CLIENT_CACHE: dict[str, Any] = {}

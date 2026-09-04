@@ -45,7 +45,7 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-	"""Initialize database tables."""
+	"""Initialize database tables and ensure schema migrations."""
 	try:
 		from . import models  # noqa: F401
 	except (ImportError, ValueError):
@@ -54,4 +54,18 @@ def init_db() -> None:
 		except ImportError:
 			import models  # noqa: F401
 	Base.metadata.create_all(bind=engine)
+
+	# Lightweight SQLite schema migration
+	if DATABASE_URL.startswith("sqlite"):
+		try:
+			from sqlalchemy import text
+			with engine.connect() as conn:
+				result = conn.execute(text("PRAGMA table_info(chat_messages)")).fetchall()
+				cols = [r[1] for r in result]
+				if cols and "is_low_confidence" not in cols:
+					conn.execute(text("ALTER TABLE chat_messages ADD COLUMN is_low_confidence BOOLEAN DEFAULT 0"))
+					conn.commit()
+		except Exception as err:
+			print(f"[DB Migration Notice] {err}")
+
 

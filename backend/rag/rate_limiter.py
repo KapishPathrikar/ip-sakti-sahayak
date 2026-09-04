@@ -37,11 +37,21 @@ class SlidingWindowRateLimiter:
 		# Store timestamps of requests per client key (IP / Session)
 		self._requests: dict[str, list[float]] = defaultdict(list)
 
-	def check_and_record(self, client_id: str, is_faq_query: bool = False) -> RateLimitStatus:
+	def check_and_record(
+		self,
+		client_id: str,
+		is_faq_query: bool = False,
+		daily_limit: int | None = None,
+		burst_limit: int | None = None,
+	) -> RateLimitStatus:
 		"""
 		Check if request is allowed and record it if allowed.
 		FAQ cache queries are exempt from quotas.
+		Supports per-request daily_limit and burst_limit without mutating global state.
 		"""
+		effective_daily = daily_limit if daily_limit is not None else self.max_daily
+		effective_burst = burst_limit if burst_limit is not None else self.max_burst
+
 		now = time.time()
 		now_utc = datetime.datetime.now(datetime.timezone.utc)
 		start_of_day = datetime.datetime(now_utc.year, now_utc.month, now_utc.day, tzinfo=datetime.timezone.utc)
@@ -57,26 +67,26 @@ class SlidingWindowRateLimiter:
 		if is_faq_query:
 			return RateLimitStatus(
 				allowed=True,
-				daily_remaining=max(0, self.max_daily - len(valid_timestamps)),
-				burst_remaining=self.max_burst,
+				daily_remaining=max(0, effective_daily - len(valid_timestamps)),
+				burst_remaining=effective_burst,
 			)
 
 		# 2. Check Burst Limit (last 60 seconds)
 		cutoff_burst = now - self.burst_window_seconds
 		burst_requests = [t for t in valid_timestamps if t > cutoff_burst]
-		if len(burst_requests) >= self.max_burst:
+		if len(burst_requests) >= effective_burst:
 			oldest_burst = min(burst_requests)
 			retry_after = max(1, int(self.burst_window_seconds - (now - oldest_burst)))
 			return RateLimitStatus(
 				allowed=False,
-				reason=f"Burst limit exceeded ({self.max_burst} requests/min). Please wait {retry_after}s.",
+				reason=f"Burst limit exceeded ({effective_burst} requests/min). Please wait {retry_after}s.",
 				retry_after_seconds=retry_after,
-				daily_remaining=max(0, self.max_daily - len(valid_timestamps)),
+				daily_remaining=max(0, effective_daily - len(valid_timestamps)),
 				burst_remaining=0,
 			)
 
 		# 3. Check Daily Quota (calendar day)
-		if len(valid_timestamps) >= self.max_daily:
+		if len(valid_timestamps) >= effective_daily:
 			# Time until next midnight UTC
 			next_midnight = start_of_day + datetime.timedelta(days=1)
 			retry_after = max(1, int(next_midnight.timestamp() - now))
@@ -84,16 +94,16 @@ class SlidingWindowRateLimiter:
 			minutes = (retry_after % 3600) // 60
 			return RateLimitStatus(
 				allowed=False,
-				reason=f"Daily limit reached ({self.max_daily} queries / day). Resets in {hours}h {minutes}m.",
+				reason=f"Daily limit reached ({effective_daily} queries / day). Resets in {hours}h {minutes}m.",
 				retry_after_seconds=retry_after,
 				daily_remaining=0,
-				burst_remaining=max(0, self.max_burst - len(burst_requests)),
+				burst_remaining=max(0, effective_burst - len(burst_requests)),
 			)
 
 		# 4. Request is permitted: record current timestamp
 		valid_timestamps.append(now)
-		daily_remaining = max(0, self.max_daily - len(valid_timestamps))
-		burst_remaining = max(0, self.max_burst - (len(burst_requests) + 1))
+		daily_remaining = max(0, effective_daily - len(valid_timestamps))
+		burst_remaining = max(0, effective_burst - (len(burst_requests) + 1))
 
 		return RateLimitStatus(
 			allowed=True,

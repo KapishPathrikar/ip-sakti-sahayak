@@ -29,6 +29,7 @@ class ChatMessage:
 	citations: list[dict[str, Any]] | None = None
 	confidence: str | None = None
 	is_from_faq: bool = False
+	is_low_confidence: bool = False
 	timestamp: float = field(default_factory=time.time)
 
 	def to_dict(self) -> dict[str, Any]:
@@ -43,6 +44,8 @@ class ChatMessage:
 			data["confidence"] = self.confidence
 		if self.is_from_faq:
 			data["is_from_faq"] = self.is_from_faq
+		if self.is_low_confidence:
+			data["is_low_confidence"] = self.is_low_confidence
 		return data
 
 
@@ -80,6 +83,7 @@ class SessionManager:
 										citations=cites,
 										confidence=db_msg.confidence,
 										is_from_faq=db_msg.is_from_faq,
+										is_low_confidence=getattr(db_msg, "is_low_confidence", False) or False,
 									)
 								)
 				except Exception as err:
@@ -95,6 +99,7 @@ class SessionManager:
 		citations: list[dict[str, Any]] | None = None,
 		confidence: str | None = None,
 		is_from_faq: bool = False,
+		is_low_confidence: bool = False,
 		user_id: int | None = None,
 	) -> None:
 		"""Add a message to the in-memory cache and write permanently to the database."""
@@ -105,6 +110,7 @@ class SessionManager:
 			citations=citations,
 			confidence=confidence,
 			is_from_faq=is_from_faq,
+			is_low_confidence=is_low_confidence,
 		)
 		self._sessions[session_id].append(msg)
 
@@ -135,6 +141,7 @@ class SessionManager:
 						citations_json=cites_str,
 						confidence=confidence,
 						is_from_faq=is_from_faq,
+						is_low_confidence=is_low_confidence,
 					)
 					db.add(db_msg)
 					db.commit()

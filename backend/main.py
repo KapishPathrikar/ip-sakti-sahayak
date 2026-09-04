@@ -105,6 +105,8 @@ class AskResponse(BaseModel):
     answer: str
     citations: list[Citation]
     grounded: bool
+    confidence: str | None = None
+    is_low_confidence: bool = False
     disclaimer: str = "This service provides informational guidance on Indian IP law and does not constitute formal legal advice."
 
 
@@ -123,6 +125,8 @@ class ChatResponse(BaseModel):
     citations: list[Citation]
     grounded: bool
     session_id: str
+    confidence: str | None = None
+    is_low_confidence: bool = False
     disclaimer: str = "This service provides informational guidance on Indian IP law and does not constitute formal legal advice."
 
 
@@ -310,18 +314,28 @@ def _get_client_identifier(request: Request, current_user: User | None = None) -
 
 
 def _check_rate_limit(request: Request, query: str, current_user: User | None = None) -> None:
-    """Validate rate limit with exemption for pre-verified FAQ matches."""
+    """Validate rate limit with exemption for pre-verified FAQ matches.
+    Enforces:
+    - 5 queries per minute maximum burst limit.
+    - 25 queries total per calendar day for unsigned / guest users.
+    - 50 queries max per calendar day for signed-in users (or user.daily_query_limit).
+    """
     client_id = _get_client_identifier(request, current_user)
     
     # Check if this query matches an authoritative FAQ with high confidence (exempt from quota)
     matched_faq, faq_score = match_faq(query)
     is_faq = matched_faq is not None and faq_score >= 0.80
 
-    # If registered user, allocate higher daily limit
-    if current_user:
-        rate_limiter.max_daily = current_user.daily_query_limit
+    # Determine daily limit: 50 for registered users (or custom daily_query_limit), 25 for unsigned users
+    daily_limit = current_user.daily_query_limit if (current_user and current_user.daily_query_limit) else (50 if current_user else 25)
+    burst_limit = 5
 
-    status_limit = rate_limiter.check_and_record(client_id, is_faq_query=is_faq)
+    status_limit = rate_limiter.check_and_record(
+        client_id,
+        is_faq_query=is_faq,
+        daily_limit=daily_limit,
+        burst_limit=burst_limit,
+    )
     if not status_limit.allowed:
         raise HTTPException(
             status_code=429,
@@ -355,6 +369,8 @@ def ask_question_endpoint(
             answer=result["answer"],
             citations=[Citation(**c) for c in result.get("citations", [])],
             grounded=result.get("grounded", False),
+            confidence=result.get("confidence"),
+            is_low_confidence=result.get("is_low_confidence", False),
         )
     except HTTPException:
         raise
@@ -387,6 +403,8 @@ def chat_endpoint(
             citations=[Citation(**c) for c in result.get("citations", [])],
             grounded=result.get("grounded", False),
             session_id=result.get("session_id") or "default",
+            confidence=result.get("confidence"),
+            is_low_confidence=result.get("is_low_confidence", False),
         )
     except HTTPException:
         raise

@@ -112,6 +112,64 @@ class TestBackendAPI(unittest.TestCase):
         # Clean up
         rate_limiter.reset_client("testclient")
 
+    def test_unsigned_and_signed_daily_rate_limits(self):
+        import time
+        import uuid
+        from backend.rag.rate_limiter import rate_limiter
+
+        # 1. Unsigned / Anonymous user: strictly 25 queries per day
+        anon_ip = f"198.51.100.{uuid.uuid4().int % 250 + 1}"
+        rate_limiter.reset_client(anon_ip)
+        now = time.time()
+        # Seed 25 prior queries spaced out today
+        rate_limiter._requests[anon_ip] = [now - 3600 + i * 10 for i in range(25)]
+
+        # 26th request for unsigned user must fail with daily quota exceeded
+        resp_anon = self.client.post(
+            "/api/chat",
+            json={"query": "Tell me a cake recipe", "session_id": "anon-daily-test"},
+            headers={"X-Forwarded-For": anon_ip},
+        )
+        self.assertEqual(resp_anon.status_code, 429)
+        self.assertIn("Daily limit reached (25 queries / day)", resp_anon.json()["detail"]["message"])
+
+        # 2. Signed-in user: strictly 50 queries per day
+        test_email = f"rate_limit_{uuid.uuid4().hex[:6]}@shakti.law"
+        reg_resp = self.client.post("/api/auth/register", json={
+            "email": test_email,
+            "password": "SecurePassword123!",
+            "full_name": "Quota Tester"
+        })
+        self.assertEqual(reg_resp.status_code, 201)
+        token = reg_resp.json()["access_token"]
+        user_id = reg_resp.json()["user"]["id"]
+        client_id = f"user_{user_id}"
+
+        # Seed 49 prior queries spaced out today
+        rate_limiter.reset_client(client_id)
+        rate_limiter._requests[client_id] = [now - 3600 + i * 10 for i in range(49)]
+
+        # 50th request should succeed
+        resp_50 = self.client.post(
+            "/api/chat",
+            json={"query": "Tell me a cake recipe", "session_id": "user-daily-50"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(resp_50.status_code, 200)
+
+        # 51st request must hit the 50 queries / day limit
+        resp_51 = self.client.post(
+            "/api/chat",
+            json={"query": "Tell me a cake recipe", "session_id": "user-daily-51"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(resp_51.status_code, 429)
+        self.assertIn("Daily limit reached (50 queries / day)", resp_51.json()["detail"]["message"])
+
+        # Clean up
+        rate_limiter.reset_client(anon_ip)
+        rate_limiter.reset_client(client_id)
+
 
     def test_auth_registration_and_login(self):
         import uuid
@@ -206,6 +264,24 @@ class TestBackendAPI(unittest.TestCase):
         tm_resp = self.client.post("/api/tools/fee-calculator", json=tm_payload)
         self.assertEqual(tm_resp.status_code, 200)
         self.assertEqual(tm_resp.json()["total_fee_inr"], 9000.0)  # 2 classes @ 4500
+
+        # 3. Design fee calculation (Startup 80% subsidy vs Large Entity)
+        design_payload = {
+            "ip_type": "design",
+            "applicant_type": "startup"
+        }
+        d_resp = self.client.post("/api/tools/fee-calculator", json=design_payload)
+        self.assertEqual(d_resp.status_code, 200)
+        self.assertEqual(d_resp.json()["total_fee_inr"], 1000.0)
+        self.assertEqual(d_resp.json()["applicable_forms"][0], "Form 1 (Application for Registration of Design)")
+
+        design_corp_payload = {
+            "ip_type": "design",
+            "applicant_type": "large_entity"
+        }
+        d_corp_resp = self.client.post("/api/tools/fee-calculator", json=design_corp_payload)
+        self.assertEqual(d_corp_resp.status_code, 200)
+        self.assertEqual(d_corp_resp.json()["total_fee_inr"], 4000.0)
 
     def test_patentability_wizard_endpoint(self):
         # High risk: Ayurvedic combination without synergistic data

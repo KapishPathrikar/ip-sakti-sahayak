@@ -8,7 +8,7 @@ export default function FeeCalculatorView() {
   const [activeTab, setActiveTab] = useState<"calculator" | "wizard">("calculator");
 
   // ── Fee Calculator State ──────────────────────────────────────────────
-  const [ipType, setIpType] = useState<"patent" | "trademark">("patent");
+  const [ipType, setIpType] = useState<"patent" | "trademark" | "design">("patent");
   const [applicantType, setApplicantType] = useState<"startup" | "natural" | "other">("startup");
   const [filingStage, setFilingStage] = useState("new");
   const [pagesCount, setPagesCount] = useState<number>(30);
@@ -62,9 +62,11 @@ export default function FeeCalculatorView() {
       let reqExam = "none";
       let isEarlyPub = false;
       let isProv = false;
-      if (filingStage === "examination") reqExam = isExpedited ? "expedited" : "standard";
-      if (filingStage === "early_pub") isEarlyPub = true;
-      if (filingStage === "provisional") isProv = true;
+      if (ipType === "patent") {
+        if (filingStage === "examination") reqExam = isExpedited ? "expedited" : "standard";
+        if (filingStage === "early_pub") isEarlyPub = true;
+        if (filingStage === "provisional") isProv = true;
+      }
 
       // Determine applicant category for 80% rebate
       let appCategory = "startup";
@@ -84,8 +86,8 @@ export default function FeeCalculatorView() {
           applicant_type: appCategory,
           filing_mode: "online",
           is_provisional: isProv,
-          pages_count: Number(pagesCount) || 30,
-          claims_count: Number(claimsCount) || 10,
+          pages_count: ipType === "patent" ? (Number(pagesCount) || 30) : 30,
+          claims_count: ipType === "patent" ? (Number(claimsCount) || 10) : 10,
           include_early_publication: isEarlyPub,
           request_examination: reqExam,
           trademark_classes_count: 1,
@@ -114,8 +116,21 @@ export default function FeeCalculatorView() {
     setIsQuoteModalOpen(true);
   }
 
-  const officialFee = feeResult?.total_fee_inr ?? feeResult?.total_official_fee_inr ?? (isSubsidyEligible ? 1600 : 8000);
-  const professionalFee = ipType === "patent" ? 13000 : 7000;
+  const officialFee =
+    feeResult?.total_fee_inr ??
+    feeResult?.total_official_fee_inr ??
+    (isSubsidyEligible
+      ? ipType === "design"
+        ? 1000
+        : ipType === "trademark"
+        ? 4500
+        : 1600
+      : ipType === "design"
+      ? 4000
+      : ipType === "trademark"
+      ? 9000
+      : 8000);
+  const professionalFee = ipType === "patent" ? 13000 : ipType === "trademark" ? 7000 : 5000;
   const estimatedTotal = officialFee + professionalFee;
 
   async function handleDownloadQuotePDF() {
@@ -128,9 +143,11 @@ export default function FeeCalculatorView() {
           ? "Natural Person(s)"
           : "Other Entity (Large Corp)";
 
+      const ipTypeLabel = ipType === "patent" ? "Patent" : ipType === "trademark" ? "Trademark" : "Design";
+
       const payload = {
         quote_id: quoteId,
-        ip_type: ipType === "patent" ? "Patent" : "Trademark",
+        ip_type: ipTypeLabel,
         applicant_type: applicantLabel,
         is_subsidy_eligible: isSubsidyEligible,
         official_fee: officialFee,
@@ -138,7 +155,7 @@ export default function FeeCalculatorView() {
         total_fee: estimatedTotal,
         breakdown: feeResult?.breakdown || [
           {
-            item: `${ipType === "patent" ? "Patent" : "Trademark"} E-Filing Application Fee`,
+            item: `${ipTypeLabel} E-Filing Application Fee`,
             category: "Official Registry Fee",
             fee_inr: officialFee,
           },
@@ -210,9 +227,35 @@ export default function FeeCalculatorView() {
           <span className="material-symbols-outlined text-3xl text-[#638C6D]">calculate</span>
           Official IP Fee Calculator
         </h1>
-        <p className="text-sm sm:text-base text-[#414942] leading-relaxed">
-          Estimate official registry fees and professional charges for Patents and Trademarks in India. Includes special provisions for Startups, MSMEs, and Educational Institutions.
+        <p className="text-sm sm:text-base text-[#414942] leading-relaxed mb-6">
+          Estimate official registry fees and professional charges for Patents, Trademarks, and Industrial Designs in India. Includes statutory fee reductions for Startups, MSMEs, and Educational Institutions.
         </p>
+
+        {/* View Tab Switcher */}
+        <div className="inline-flex p-1 rounded-xl bg-[#FFFDE7] border card-border shadow-xs">
+          <button
+            onClick={() => setActiveTab("calculator")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "calculator"
+                ? "bg-[#638C6D] text-white shadow-xs"
+                : "text-[#414942] hover:text-[#1B2B20] hover:bg-white/60"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">calculate</span>
+            <span>Fee Schedule Calculator</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("wizard")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "wizard"
+                ? "bg-[#638C6D] text-white shadow-xs"
+                : "text-[#414942] hover:text-[#1B2B20] hover:bg-white/60"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
+            <span>Patentability Assessment Wizard</span>
+          </button>
+        </div>
       </div>
 
       {/* ── View 1: Fee Calculator Grid ───────────────────────────────── */}
@@ -226,36 +269,61 @@ export default function FeeCalculatorView() {
                 <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-3">
                   Select IP Type
                 </label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div
-                    onClick={() => setIpType("patent")}
+                    onClick={() => {
+                      setIpType("patent");
+                      setFilingStage("new");
+                    }}
                     className="relative cursor-pointer"
                   >
                     <div
-                      className={`p-4 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
+                      className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
                         ipType === "patent"
                           ? "bg-white border-[#638C6D] shadow-sm ring-2 ring-[#638C6D]/20 text-[#638C6D]"
                           : "bg-white/80 card-border text-[#414942] hover:bg-white"
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl">lightbulb</span>
-                      <span className="font-bold text-sm">Patent</span>
+                      <span className="font-bold text-xs sm:text-sm">Patent</span>
                     </div>
                   </div>
 
                   <div
-                    onClick={() => setIpType("trademark")}
+                    onClick={() => {
+                      setIpType("trademark");
+                      setFilingStage("new");
+                    }}
                     className="relative cursor-pointer"
                   >
                     <div
-                      className={`p-4 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
+                      className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
                         ipType === "trademark"
                           ? "bg-white border-[#638C6D] shadow-sm ring-2 ring-[#638C6D]/20 text-[#638C6D]"
                           : "bg-white/80 card-border text-[#414942] hover:bg-white"
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl">verified</span>
-                      <span className="font-bold text-sm">Trademark</span>
+                      <span className="font-bold text-xs sm:text-sm">Trademark</span>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => {
+                      setIpType("design");
+                      setFilingStage("new");
+                    }}
+                    className="relative cursor-pointer"
+                  >
+                    <div
+                      className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
+                        ipType === "design"
+                          ? "bg-white border-[#638C6D] shadow-sm ring-2 ring-[#638C6D]/20 text-[#638C6D]"
+                          : "bg-white/80 card-border text-[#414942] hover:bg-white"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-3xl">design_services</span>
+                      <span className="font-bold text-xs sm:text-sm">Design</span>
                     </div>
                   </div>
                 </div>
@@ -273,9 +341,9 @@ export default function FeeCalculatorView() {
                   }
                   className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none transition-shadow cursor-pointer"
                 >
-                  <option value="startup">Startup / MSME / Educational Inst.</option>
-                  <option value="natural">Natural Person(s)</option>
-                  <option value="other">Other Entity (Large Corp)</option>
+                  <option value="startup">Startup / MSME / Educational Inst. (80% Subsidy)</option>
+                  <option value="natural">Natural Person(s) / Solo Inventor (80% Subsidy)</option>
+                  <option value="other">Other Entity (Large Corporation / Standard Rate)</option>
                 </select>
               </div>
 
@@ -289,10 +357,24 @@ export default function FeeCalculatorView() {
                   onChange={(e) => setFilingStage(e.target.value)}
                   className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none transition-shadow cursor-pointer"
                 >
-                  <option value="new">New Application (E-filing)</option>
-                  <option value="examination">Request for Examination</option>
-                  <option value="early_pub">Early Publication</option>
-                  <option value="provisional">Provisional Application</option>
+                  {ipType === "patent" && (
+                    <>
+                      <option value="new">New Application (E-filing Form 1 &amp; 2)</option>
+                      <option value="examination">Request for Examination (Form 18 / 18A)</option>
+                      <option value="early_pub">Request for Early Publication (Form 9)</option>
+                      <option value="provisional">Provisional Specification (Form 2)</option>
+                    </>
+                  )}
+                  {ipType === "trademark" && (
+                    <>
+                      <option value="new">New Application (Form TM-A)</option>
+                    </>
+                  )}
+                  {ipType === "design" && (
+                    <>
+                      <option value="new">New Design Registration (Form 1)</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -360,24 +442,26 @@ export default function FeeCalculatorView() {
                   </label>
                 </div>
 
-                {/* Expedited Examination Switch */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#1B2B20]/10 ambient-shadow">
-                  <div className="pr-4">
-                    <p className="font-semibold text-sm text-[#1B2B20]">Expedited Examination</p>
-                    <p className="text-xs text-[#414942] mt-0.5">
-                      Accelerated patent examination under Rule 24C.
-                    </p>
+                {/* Expedited Examination Switch (Patent Only) */}
+                {ipType === "patent" && (
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#1B2B20]/10 ambient-shadow">
+                    <div className="pr-4">
+                      <p className="font-semibold text-sm text-[#1B2B20]">Expedited Examination</p>
+                      <p className="text-xs text-[#414942] mt-0.5">
+                        Accelerated patent examination under Rule 24C.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isExpedited}
+                        onChange={(e) => setIsExpedited(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-[#C1C8C0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]"></div>
+                    </label>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={isExpedited}
-                      onChange={(e) => setIsExpedited(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-[#C1C8C0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]"></div>
-                  </label>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -407,7 +491,11 @@ export default function FeeCalculatorView() {
                       <div>
                         <p className="text-sm font-semibold text-[#1B2B20]">Official Registry Fee</p>
                         <p className="text-xs text-[#727971]">
-                          {ipType === "patent" ? "Patent Application (E-filing)" : "Trademark Class 1 Application"}
+                          {ipType === "patent"
+                            ? "Patent Application (E-filing)"
+                            : ipType === "trademark"
+                            ? "Trademark Class 1 Application"
+                            : "Industrial Design Application (Form 1)"}
                         </p>
                       </div>
                       <span className="font-statutory font-bold text-sm text-[#1B2B20]">

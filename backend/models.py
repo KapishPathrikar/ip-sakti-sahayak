@@ -58,6 +58,7 @@ class ChatMessage(Base):
 	citations_json = Column(Text, nullable=True)  # Serialized list of citations
 	confidence = Column(String(50), nullable=True)
 	is_from_faq = Column(Boolean, default=False, nullable=False)
+	is_low_confidence = Column(Boolean, default=False, nullable=True)
 	created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
 	# Relationships

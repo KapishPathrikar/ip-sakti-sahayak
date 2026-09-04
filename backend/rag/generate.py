@@ -6,12 +6,26 @@ from pathlib import Path
 from typing import Any
 
 try:
-	from .retrieve import retrieve, DEFAULT_CHROMA_DB
+	from .retrieve import (
+		retrieve,
+		DEFAULT_CHROMA_DB,
+		HIGH_SIMILARITY_MAX_DISTANCE,
+		HIGH_SIMILARITY_MIN_CONFIDENCE,
+		is_within_corpus_boundary,
+		calculate_chunk_confidence,
+	)
 except (ImportError, ValueError):
 	import sys
 	from pathlib import Path
 	sys.path.insert(0, str(Path(__file__).resolve().parent))
-	from retrieve import retrieve, DEFAULT_CHROMA_DB
+	from retrieve import (
+		retrieve,
+		DEFAULT_CHROMA_DB,
+		HIGH_SIMILARITY_MAX_DISTANCE,
+		HIGH_SIMILARITY_MIN_CONFIDENCE,
+		is_within_corpus_boundary,
+		calculate_chunk_confidence,
+	)
 
 try:
 	from .translation import translate_text, detect_language
@@ -102,15 +116,18 @@ def answer_question(
 			"page": 1,
 			"confidence": f"{round(faq_score * 100)}%",
 		}]
+		faq_conf_str = f"{round(faq_score * 100)}%"
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
-			session_manager.add_message(active_session_id, "assistant", ans_text, citations=citations, confidence=f"{round(faq_score * 100)}%", is_from_faq=True, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", ans_text, citations=citations, confidence=faq_conf_str, is_from_faq=True, is_low_confidence=False, user_id=user_id)
 		return {
 			"answer": ans_text,
 			"citations": citations,
 			"grounded": True,
 			"session_id": active_session_id,
 			"from_faq": True,
+			"confidence": faq_conf_str,
+			"is_low_confidence": False,
 		}
 
 	# 3. Off-topic relevance validation (check both translated and original text)
@@ -125,8 +142,8 @@ def answer_question(
 		safety_response = get_safety_response(reason, lang=detected_lang)
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
-			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
-		return {"answer": safety_response, "citations": [], "grounded": False, "session_id": active_session_id}
+			session_manager.add_message(active_session_id, "assistant", safety_response, confidence="0%", is_low_confidence=False, user_id=user_id)
+		return {"answer": safety_response, "citations": [], "grounded": False, "session_id": active_session_id, "confidence": "0%", "is_low_confidence": False}
 
 
 	chunks = retrieve(english_query, persist_dir, limit)
@@ -134,8 +151,8 @@ def answer_question(
 		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
-			session_manager.add_message(active_session_id, "assistant", translated_no_answer, user_id=user_id)
-		return {"answer": translated_no_answer, "citations": [], "grounded": False, "session_id": active_session_id}
+			session_manager.add_message(active_session_id, "assistant", translated_no_answer, confidence="0%", is_low_confidence=True, user_id=user_id)
+		return {"answer": translated_no_answer, "citations": [], "grounded": False, "session_id": active_session_id, "confidence": "0%", "is_low_confidence": True}
 
 
 	citations = []
@@ -249,15 +266,29 @@ If the context does not provide sufficient information, clarify what is known an
 			f"[{i}] {c.text}" for i, c in enumerate(chunks, start=1)
 		)
 
+	top_calibrated = max([calculate_chunk_confidence(c.distance) for c in chunks]) if chunks else 0
+	is_low_confidence = (best_dist > HIGH_SIMILARITY_MAX_DISTANCE or top_calibrated < HIGH_SIMILARITY_MIN_CONFIDENCE) and not is_greeting_query(english_query)
+	overall_confidence = f"{top_calibrated}%" if top_calibrated > 0 else ("Live Web (55%)" if web_section else "50%")
+
 	if active_session_id:
 		session_manager.add_message(active_session_id, "user", query, user_id=user_id)
-		session_manager.add_message(active_session_id, "assistant", llm_answer, citations=citations, user_id=user_id)
+		session_manager.add_message(
+			active_session_id,
+			"assistant",
+			llm_answer,
+			citations=citations,
+			confidence=overall_confidence,
+			is_low_confidence=is_low_confidence,
+			user_id=user_id,
+		)
 
 	return {
 		"answer": llm_answer,
 		"citations": citations,
 		"grounded": True,
 		"session_id": active_session_id,
+		"confidence": overall_confidence,
+		"is_low_confidence": is_low_confidence,
 	}
 
 
@@ -294,9 +325,10 @@ def answer_question_stream(
 		safety_response = get_safety_response("prompt_injection", lang=detected_lang)
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
-			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", safety_response, confidence="0%", is_low_confidence=False, user_id=user_id)
+		yield f"data: {json.dumps({'type': 'metadata', 'confidence': '0%', 'is_low_confidence': False})}\n\n"
 		yield f"data: {json.dumps({'type': 'token', 'token': safety_response})}\n\n"
-		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id})}\n\n"
+		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id, 'confidence': '0%', 'is_low_confidence': False})}\n\n"
 		return
 
 	# 2. Check FAQ Direct Answering Cache Layer
@@ -306,19 +338,21 @@ def answer_question_stream(
 		ans_text = matched_faq["answer"]
 		if detected_lang != "en" and detected_lang not in {"hinglish", "marathish"}:
 			ans_text = translate_text(ans_text, target_lang=detected_lang, source_lang="en")
+		faq_conf_str = f"{round(faq_score * 100)}%"
 		citations = [{
 			"source": matched_faq["source"],
 			"page": 1,
-			"confidence": f"{round(faq_score * 100)}%",
+			"confidence": faq_conf_str,
 		}]
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
-			session_manager.add_message(active_session_id, "assistant", ans_text, citations=citations, confidence=f"{round(faq_score * 100)}%", is_from_faq=True, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", ans_text, citations=citations, confidence=faq_conf_str, is_from_faq=True, is_low_confidence=False, user_id=user_id)
+		yield f"data: {json.dumps({'type': 'metadata', 'confidence': faq_conf_str, 'is_low_confidence': False})}\n\n"
 		for word in ans_text.split(" "):
 			yield f"data: {json.dumps({'type': 'token', 'token': word + ' '})}\n\n"
 			import time
 			time.sleep(0.03) # Small delay to simulate live streaming
-		yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'from_faq': True})}\n\n"
+		yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'from_faq': True, 'confidence': faq_conf_str, 'is_low_confidence': False})}\n\n"
 		return
 
 
@@ -335,9 +369,10 @@ def answer_question_stream(
 		safety_response = get_safety_response(reason, lang=detected_lang)
 		if active_session_id:
 			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
-			session_manager.add_message(active_session_id, "assistant", safety_response, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", safety_response, confidence="0%", is_low_confidence=False, user_id=user_id)
+		yield f"data: {json.dumps({'type': 'metadata', 'confidence': '0%', 'is_low_confidence': False})}\n\n"
 		yield f"data: {json.dumps({'type': 'token', 'token': safety_response})}\n\n"
-		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id})}\n\n"
+		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id, 'confidence': '0%', 'is_low_confidence': False})}\n\n"
 		return
 
 
@@ -346,10 +381,11 @@ def answer_question_stream(
 	if not chunks and not is_greeting_query(english_query):
 		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
-			session_manager.add_message(active_session_id, "user", query)
-			session_manager.add_message(active_session_id, "assistant", translated_no_answer)
+			session_manager.add_message(active_session_id, "user", query, user_id=user_id)
+			session_manager.add_message(active_session_id, "assistant", translated_no_answer, confidence="0%", is_low_confidence=True, user_id=user_id)
+		yield f"data: {json.dumps({'type': 'metadata', 'confidence': '0%', 'is_low_confidence': True})}\n\n"
 		yield f"data: {json.dumps({'type': 'token', 'token': translated_no_answer})}\n\n"
-		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id})}\n\n"
+		yield f"data: {json.dumps({'type': 'done', 'citations': [], 'grounded': False, 'session_id': active_session_id, 'confidence': '0%', 'is_low_confidence': True})}\n\n"
 		return
 
 	citations = []
@@ -396,6 +432,14 @@ def answer_question_stream(
 					"page": 1,
 					"confidence": "Live Web",
 				})
+
+	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
+	top_calibrated = max([calculate_chunk_confidence(c.distance) for c in chunks]) if chunks else 0
+	is_low_confidence = (best_dist > HIGH_SIMILARITY_MAX_DISTANCE or top_calibrated < HIGH_SIMILARITY_MIN_CONFIDENCE) and not is_greeting_query(english_query)
+	overall_confidence = f"{top_calibrated}%" if top_calibrated > 0 else ("Live Web (55%)" if web_section else "50%")
+
+	# Emit early metadata for low-confidence warning banner display
+	yield f"data: {json.dumps({'type': 'metadata', 'confidence': overall_confidence, 'is_low_confidence': is_low_confidence})}\n\n"
 
 	# Adjust instructions based on Jurisdiction
 	system_prompt = f"""You are IP Shakti Sahayak, an expert Intellectual Property and Patent law assistant.
@@ -493,9 +537,17 @@ If the context does not provide sufficient information, clarify what is known an
 
 	if active_session_id:
 		session_manager.add_message(active_session_id, "user", query, user_id=user_id)
-		session_manager.add_message(active_session_id, "assistant", final_text, citations=citations, user_id=user_id)
+		session_manager.add_message(
+			active_session_id,
+			"assistant",
+			final_text,
+			citations=citations,
+			confidence=overall_confidence,
+			is_low_confidence=is_low_confidence,
+			user_id=user_id,
+		)
 
-	yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id})}\n\n"
+	yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'confidence': overall_confidence, 'is_low_confidence': is_low_confidence})}\n\n"
 
 
 

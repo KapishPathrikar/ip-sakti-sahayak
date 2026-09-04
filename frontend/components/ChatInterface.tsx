@@ -17,6 +17,7 @@ interface Message {
   citations?: Citation[];
   confidence?: string;
   isFaq?: boolean;
+  isLowConfidence?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -127,6 +128,18 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
 
               if (event.type === "thinking") {
                 setThinkingState(event.message);
+              } else if (event.type === "metadata") {
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMsgId
+                      ? {
+                          ...msg,
+                          confidence: event.confidence,
+                          isLowConfidence: event.is_low_confidence,
+                        }
+                      : msg
+                  )
+                );
               } else if (event.type === "token") {
                 setThinkingState(null);
                 partialAssistantText += event.token;
@@ -147,6 +160,11 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
                           content: partialAssistantText,
                           citations: citations,
                           isFaq: event.from_faq,
+                          confidence: event.confidence || msg.confidence,
+                          isLowConfidence:
+                            event.is_low_confidence !== undefined
+                              ? event.is_low_confidence
+                              : msg.isLowConfidence,
                         }
                       : msg
                   )
@@ -257,6 +275,21 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {messages.map((msg) => {
           const isUser = msg.role === "user";
+          const isLow = !isUser && (msg.isLowConfidence === true || (() => {
+            if (msg.id === "welcome" || msg.isFaq) return false;
+            if (msg.confidence) {
+              const num = parseInt(msg.confidence.replace(/[^0-9]/g, ""), 10);
+              if (!isNaN(num) && num < 80) return true;
+            }
+            if (msg.citations && msg.citations.length > 0) {
+              const confs = msg.citations
+                .map((c) => (c.confidence ? parseInt(c.confidence.replace(/[^0-9]/g, ""), 10) : 0))
+                .filter((n) => !isNaN(n) && n > 0);
+              if (confs.length > 0 && Math.max(...confs) < 80) return true;
+            }
+            return false;
+          })());
+
           return (
             <div
               key={msg.id}
@@ -269,6 +302,26 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
                     : "bg-slate-100 text-slate-900 rounded-bl-none"
                 }`}
               >
+                {isLow && (
+                  <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 flex items-start gap-2.5 shadow-xs">
+                    <span className="text-base select-none mt-0.5">⚠️</span>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                        <span className="font-bold text-amber-950 uppercase tracking-wide text-[10px]">
+                          Low Confidence Warning — Outside Corpus Boundaries
+                        </span>
+                        {msg.confidence && (
+                          <span className="rounded bg-amber-200/90 text-amber-950 font-bold px-1.5 py-0.2 text-[10px]">
+                            Match: {msg.confidence}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-amber-900 leading-snug">
+                        This inquiry falls outside high-similarity statutory corpus boundaries. Guidance is generated with broader legal synthesis and should be independently verified with an official patent attorney.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <MarkdownRenderer content={msg.content} isUser={isUser} />
 
 
@@ -297,29 +350,6 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
                   </div>
                 )}
               </div>
-
-              {/* Message Footer / Feedback */}
-              {!isUser && msg.id !== "welcome" && msg.content && (
-                <div className="mt-1 flex items-center gap-2 px-1 text-xs text-slate-400">
-                  <span>Was this helpful?</span>
-                  <button
-                    onClick={() => handleFeedback(msg.id, 1)}
-                    className={`hover:text-emerald-600 ${
-                      feedbackGiven[msg.id] === 1 ? "text-emerald-600 font-bold" : ""
-                    }`}
-                  >
-                    👍
-                  </button>
-                  <button
-                    onClick={() => handleFeedback(msg.id, -1)}
-                    className={`hover:text-red-600 ${
-                      feedbackGiven[msg.id] === -1 ? "text-red-600 font-bold" : ""
-                    }`}
-                  >
-                    👎
-                  </button>
-                </div>
-              )}
             </div>
           );
         })}

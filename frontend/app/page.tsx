@@ -27,6 +27,7 @@ interface Message {
   citations?: Citation[];
   confidence?: string;
   isFaq?: boolean;
+  isLowConfidence?: boolean;
 }
 
 interface SavedSession {
@@ -63,26 +64,106 @@ function formatTimestamp(isoString?: string): string {
   }
 }
 
-const QUICK_SUGGESTIONS = [
+interface LandingFaqItem {
+  title: string;
+  desc: string;
+  icon: string;
+  query: string;
+}
+
+const CURATED_LANDING_FAQS: LandingFaqItem[] = [
+  // Set 1: Traditional Knowledge & Formulations
   {
     title: "Can Haldi & Milk be patented?",
-    desc: "Traditional Knowledge Check",
+    desc: "Ayurveda & Traditional Knowledge",
     icon: "🌿",
     query: "Can an Ayurvedic formulation combining turmeric (haldi) and milk (dudh) be patented in India?",
   },
   {
     title: "80% Startup Fee Rebates",
-    desc: "Fee Calculation Guide",
+    desc: "Patent Cost & Fee Guide",
     icon: "🧮",
     query: "What are the official patent filing fees in India for DPIIT recognized startups with 80% rebate?",
   },
   {
     title: "Section 3(p) TKDL Exclusions",
-    desc: "Statutory Analysis",
+    desc: "Patent Exclusions & Prior Art",
     icon: "📜",
     query: "What are the patent exclusions for traditional medicine under Section 3(p) and TKDL guidelines?",
   },
+  // Set 2: Trademarks, Brand Protection & GIs
+  {
+    title: "Ayurvedic Brand Trademarking",
+    desc: "Class 5 & Brand Registration",
+    icon: "🏷️",
+    query: "How do I trademark an Ayurvedic brand name and product logo in Class 5 in India?",
+  },
+  {
+    title: "Geographical Indication (GI) Tags",
+    desc: "Regional Herbs & Formulations",
+    icon: "🗺️",
+    query: "Can an Ayurvedic product or medicinal plant like Navara Rice get a Geographical Indication (GI) tag?",
+  },
+  {
+    title: "Classical vs Proprietary Ayush",
+    desc: "D&C Act & Patentability",
+    icon: "💊",
+    query: "What is the difference between classical and proprietary Ayurvedic medicine under the Drugs and Cosmetics Act?",
+  },
+  // Set 3: Enforcement, Biopiracy & Searching
+  {
+    title: "Biopiracy & Turmeric Challenges",
+    desc: "Indigenous Knowledge Defense",
+    icon: "🛡️",
+    query: "What is biopiracy and how did India challenge foreign patents on Turmeric and Neem?",
+  },
+  {
+    title: "Prior Art Patent Search",
+    desc: "InPASS & Database Guide",
+    icon: "🔍",
+    query: "How do I check whether my invention is already patented using InPASS and global patent databases?",
+  },
+  {
+    title: "Product Copied / Infringement",
+    desc: "Legal Remedies & Injunctions",
+    icon: "⚖️",
+    query: "Someone copied my Ayurvedic formulation. What legal action and remedies can I pursue under Indian law?",
+  },
+  // Set 4: Approvals, International & Terms
+  {
+    title: "AYUSH & NBA Approvals",
+    desc: "Regulatory Drug Licensing",
+    icon: "🏛️",
+    query: "What approvals and drug licenses are required from AYUSH and the National Biodiversity Authority (NBA)?",
+  },
+  {
+    title: "20-Year Patent Duration",
+    desc: "Statutory Term & Renewals",
+    icon: "⏱️",
+    query: "How long does a patent last in India and what are the annual renewal fee requirements?",
+  },
+  {
+    title: "International PCT Filing",
+    desc: "WIPO & Global Protection",
+    icon: "🌐",
+    query: "Can an Indian patent protect my invention internationally and how does a PCT application work?",
+  },
 ];
+
+function getCategoryIcon(cat: string): string {
+  const c = cat.toLowerCase();
+  if (c.includes("ayurveda") || c.includes("ayush") || c.includes("tkdl")) return "🌿";
+  if (c.includes("trademark") || c.includes("brand")) return "🏷️";
+  if (c.includes("gi") || c.includes("geographical")) return "🗺️";
+  if (c.includes("fee") || c.includes("calc")) return "🧮";
+  if (c.includes("enforcement") || c.includes("infringe") || c.includes("biopiracy")) return "🛡️";
+  if (c.includes("international") || c.includes("pct") || c.includes("wipo")) return "🌐";
+  if (c.includes("search") || c.includes("prior art")) return "🔍";
+  if (c.includes("regulation") || c.includes("approval") || c.includes("nba")) return "🏛️";
+  return "📜";
+}
+
+const ITEMS_PER_SET = 3;
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<"chat" | "history" | "research" | "settings" | "tools" | "admin" | "classifier" | "nba-helper">("chat");
@@ -108,6 +189,23 @@ export default function Home() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // Rotating Landing Page FAQs state
+  const [faqPool, setFaqPool] = useState<LandingFaqItem[]>(CURATED_LANDING_FAQS);
+  const [currentFaqPage, setCurrentFaqPage] = useState(0);
+  const [isFaqPaused, setIsFaqPaused] = useState(false);
+  const [isFaqTransitioning, setIsFaqTransitioning] = useState(false);
+
+  const rotateFaqSet = (direction: number = 1) => {
+    setIsFaqTransitioning(true);
+    setTimeout(() => {
+      setCurrentFaqPage((prev) => {
+        const totalSets = Math.max(1, Math.ceil(faqPool.length / ITEMS_PER_SET));
+        return (prev + direction + totalSets) % totalSets;
+      });
+      setIsFaqTransitioning(false);
+    }, 200);
+  };
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -115,6 +213,26 @@ export default function Home() {
 
   useEffect(() => {
     setSessionId("sess-" + Math.random().toString(36).substring(2, 9));
+
+    // Randomize initial starting FAQ set on mount to keep landing page fresh
+    const totalSets = Math.max(1, Math.ceil(CURATED_LANDING_FAQS.length / ITEMS_PER_SET));
+    setCurrentFaqPage(Math.floor(Math.random() * totalSets));
+
+    // Fetch full 25 statutory FAQs from backend to expand the rotation pool
+    fetch(`${apiBaseUrl}/api/faqs`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.faqs) && data.faqs.length > 0) {
+          const mapped: LandingFaqItem[] = data.faqs.map((f: any) => ({
+            title: f.question,
+            desc: `${f.category || "Statutory Guidance"} • Verified FAQ`,
+            icon: getCategoryIcon(f.category || ""),
+            query: f.question,
+          }));
+          setFaqPool(mapped);
+        }
+      })
+      .catch(() => {});
 
     const token = localStorage.getItem("ip_shakti_token");
     const userStr = localStorage.getItem("ip_shakti_user");
@@ -138,6 +256,17 @@ export default function Home() {
       } catch { }
     }
   }, []);
+
+  // Auto-cycling timer: cycles every 9 seconds when not paused and in chat view
+  useEffect(() => {
+    if (isFaqPaused || currentView !== "chat") return;
+
+    const timer = setInterval(() => {
+      rotateFaqSet(1);
+    }, 9000);
+
+    return () => clearInterval(timer);
+  }, [isFaqPaused, currentView, faqPool.length]);
 
   useEffect(() => {
     if (authToken) {
@@ -183,6 +312,8 @@ export default function Home() {
           content: m.content,
           citations: m.citations,
           confidence: m.confidence,
+          isFaq: m.is_from_faq,
+          isLowConfidence: m.is_low_confidence,
         }));
         setMessages(formattedMessages);
       }
@@ -312,6 +443,18 @@ export default function Home() {
               const event = JSON.parse(rawData);
               if (event.type === "thinking") {
                 setThinkingState(event.message);
+              } else if (event.type === "metadata") {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          confidence: event.confidence,
+                          isLowConfidence: event.is_low_confidence,
+                        }
+                      : m
+                  )
+                );
               } else if (event.type === "token") {
                 setThinkingState(null);
                 partialText += event.token;
@@ -325,7 +468,17 @@ export default function Home() {
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMsgId
-                      ? { ...m, content: partialText, citations, isFaq: event.from_faq }
+                      ? {
+                          ...m,
+                          content: partialText,
+                          citations,
+                          isFaq: event.from_faq,
+                          confidence: event.confidence || m.confidence,
+                          isLowConfidence:
+                            event.is_low_confidence !== undefined
+                              ? event.is_low_confidence
+                              : m.isLowConfidence,
+                        }
                       : m
                   )
                 );
@@ -728,8 +881,24 @@ export default function Home() {
             />
           )}
 
-          {currentView === "admin" && currentUser && authToken && (
-            <AdminPanelView user={currentUser} token={authToken} />
+          {currentView === "admin" && (
+            currentUser?.role === "admin" && authToken ? (
+              <AdminPanelView user={currentUser} token={authToken} />
+            ) : (
+              <div className="w-full max-w-[800px] p-8 text-center bg-white rounded-2xl border card-border mt-8 animate-in fade-in">
+                <span className="material-symbols-outlined text-4xl text-[#BA1A1A] mb-2">admin_panel_settings</span>
+                <h3 className="text-lg font-bold text-[#1B2B20]">Administrator Privileges Required</h3>
+                <p className="text-xs text-[#727971] mt-1">Please sign in with an administrator account to access corpus management and knowledge base ingestion controls.</p>
+                {!currentUser && (
+                  <button
+                    onClick={() => setIsAuthOpen(true)}
+                    className="mt-4 px-4 py-2 rounded-xl bg-[#638C6D] hover:bg-[#557E60] text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    Sign In as Administrator
+                  </button>
+                )}
+              </div>
+            )
           )}
 
           {currentView === "history" && (
@@ -834,26 +1003,90 @@ export default function Home() {
                     How can IP-SAKTI assist your invention today?
                   </h2>
 
-                  {/* Suggestion Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                    {QUICK_SUGGESTIONS.map((card, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => sendMessage(card.query)}
-                        className="flex items-start gap-3 p-4 rounded-xl border border-[#638C6D]/20 transition-all duration-200 text-left ambient-shadow cursor-pointer group hover:border-[#638C6D] bg-[#FFFDE7]/75"
+                  {/* Rotating Landing Page FAQs Section */}
+                  {(() => {
+                    const totalFaqSets = Math.max(1, Math.ceil(faqPool.length / ITEMS_PER_SET));
+                    const safePage = currentFaqPage % totalFaqSets;
+                    const rawVisible = faqPool.slice(safePage * ITEMS_PER_SET, safePage * ITEMS_PER_SET + ITEMS_PER_SET);
+                    const visibleFaqs = rawVisible.length === ITEMS_PER_SET
+                      ? rawVisible
+                      : [...rawVisible, ...faqPool.slice(0, ITEMS_PER_SET - rawVisible.length)];
+
+                    return (
+                      <div
+                        className="w-full mt-2"
+                        onMouseEnter={() => setIsFaqPaused(true)}
+                        onMouseLeave={() => setIsFaqPaused(false)}
                       >
-                        <span className="text-xl shrink-0">{card.icon}</span>
-                        <div>
-                          <p className="font-semibold text-sm text-[#1B2B20] group-hover:text-[#638C6D] transition-colors leading-snug">
-                            {card.title}
-                          </p>
-                          <p className="text-xs text-[#414942] mt-1 opacity-70">
-                            {card.desc}
-                          </p>
+                        {/* Rotation controls */}
+                        <div className="flex items-center justify-end mb-3 px-1 text-xs">
+                          <div className="flex items-center gap-2.5">
+                            {/* Page Indicator Dots */}
+                            <div className="flex items-center gap-1.5 mr-0.5">
+                              {Array.from({ length: totalFaqSets }).map((_, dotIdx) => (
+                                <button
+                                  key={dotIdx}
+                                  onClick={() => {
+                                    setIsFaqTransitioning(true);
+                                    setTimeout(() => {
+                                      setCurrentFaqPage(dotIdx);
+                                      setIsFaqTransitioning(false);
+                                    }, 200);
+                                  }}
+                                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                    dotIdx === safePage
+                                      ? "w-5 bg-[#638C6D]"
+                                      : "w-1.5 bg-[#C1C8C0]/70 hover:bg-[#638C6D]/60"
+                                  }`}
+                                  title={`Switch to question set ${dotIdx + 1}`}
+                                  aria-label={`Switch to question set ${dotIdx + 1}`}
+                                />
+                              ))}
+                            </div>
+
+                            {/* Manual Rotate / Shuffle Button */}
+                            <button
+                              onClick={() => rotateFaqSet(1)}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#638C6D]/30 bg-[#E5F9E7]/60 hover:bg-[#E5F9E7] text-[#1B2B20] text-xs font-semibold transition-all cursor-pointer shadow-xs hover:border-[#638C6D] active:scale-95"
+                              title="Cycle to next featured questions"
+                            >
+                              <span className="material-symbols-outlined text-[15px] text-[#638C6D]">
+                                autorenew
+                              </span>
+                              <span>Cycle</span>
+                            </button>
+                          </div>
                         </div>
-                      </button>
-                    ))}
-                  </div>
+
+                        {/* 3 Rotated Template Cards */}
+                        <div
+                          className={`grid grid-cols-1 md:grid-cols-3 gap-4 w-full transition-all duration-300 transform ${
+                            isFaqTransitioning ? "opacity-0 translate-y-2 scale-[0.99]" : "opacity-100 translate-y-0 scale-100"
+                          }`}
+                        >
+                          {visibleFaqs.map((card, idx) => (
+                            <button
+                              key={`${safePage}-${idx}-${card.title}`}
+                              onClick={() => sendMessage(card.query)}
+                              className="flex items-start gap-3 p-4 rounded-xl border border-[#638C6D]/20 transition-all duration-200 text-left ambient-shadow cursor-pointer group hover:border-[#638C6D] hover:shadow-md hover:-translate-y-0.5 bg-[#FFFDE7]/75"
+                            >
+                              <span className="text-xl shrink-0 transition-transform group-hover:scale-110">
+                                {card.icon}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-sm text-[#1B2B20] group-hover:text-[#638C6D] transition-colors leading-snug line-clamp-2">
+                                  {card.title}
+                                </p>
+                                <p className="text-xs text-[#414942] mt-1 opacity-75 truncate">
+                                  {card.desc}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 /* ── Active Conversation Stream (Design 1: Legal Research Chat - Unified Theme) ── */
@@ -871,90 +1104,143 @@ export default function Home() {
                           </div>
                         ) : (
                           /* AI Advisory Response Card */
-                          <div className="flex justify-start w-full">
-                            <div className="bg-[#FAFAF5] border card-border rounded-xl w-full shadow-sm overflow-hidden flex flex-col relative">
-                              {/* Internal Header */}
-                              <div className="bg-[#FFFDE7] px-6 py-3.5 border-b card-border flex items-center justify-between">
-                                <div className="flex items-center gap-2.5">
-                                  <span className="material-symbols-outlined text-[#638C6D] text-lg filled">
-                                    policy
-                                  </span>
-                                  <h3 className="text-sm font-bold text-[#638C6D] m-0 tracking-wide">
-                                    {msg.isFaq ? "Statutory Guidance (Verified FAQ)" : "Section 3 & Statutory Guidance"}
-                                  </h3>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleExportPDF()}
-                                    className="px-2 py-1 bg-amber-50 border border-slate-300 rounded text-amber-800 text-[10px] font-bold hover:bg-amber-100 transition-colors shadow-sm"
-                                    title="Extract PDF"
-                                  >
-                                    📄 Extract Pdf
-                                  </button>
-                                  <button
-                                    onClick={() => navigator.clipboard.writeText(msg.content)}
-                                    className="p-1 text-[#638C6D] hover:bg-[#DAEDDC] rounded-md transition-colors"
-                                    title="Copy Response"
-                                  >
-                                    <span className="material-symbols-outlined text-sm">content_copy</span>
-                                  </button>
-                                </div>
-                              </div>
+                          (() => {
+                            const isLow = msg.isLowConfidence === true || (() => {
+                              if (msg.role !== "assistant" || msg.id === "welcome" || msg.isFaq) return false;
+                              if (msg.confidence) {
+                                const num = parseInt(msg.confidence.replace(/[^0-9]/g, ""), 10);
+                                if (!isNaN(num) && num < 80) return true;
+                              }
+                              if (msg.citations && msg.citations.length > 0) {
+                                const confs = msg.citations
+                                  .map((c) => (c.confidence ? parseInt(c.confidence.replace(/[^0-9]/g, ""), 10) : 0))
+                                  .filter((n) => !isNaN(n) && n > 0);
+                                if (confs.length > 0 && Math.max(...confs) < 80) return true;
+                              }
+                              return false;
+                            })();
 
-                              {/* Card Body */}
-                              <div className="p-6 space-y-5 bg-white">
-                                <MarkdownRenderer content={msg.content} />
-                              </div>
-
-                              {/* Citations Section - Trust UI */}
-                              {msg.citations && msg.citations.length > 0 && (
-                                <div className="bg-white px-6 py-4 border-t card-border flex flex-col gap-2">
-                                  <span className="font-bold flex items-center gap-1 text-emerald-800 mb-2 text-xs">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                    </svg>
-                                    Verified Statutory Citations
-                                  </span>
-                                  <div className="flex flex-wrap gap-2 text-xs">
-                                    {msg.citations.map((c, i) => (
-                                      <div 
-                                        key={i} 
-                                        onClick={() => {
-                                          let url = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}#page=${c.page}`;
-                                          if (c.snippet && !c.source.startsWith("Live Web:")) {
-                                              url += `&search=${encodeURIComponent(c.snippet)}`;
-                                          }
-                                          if (c.source.startsWith("Live Web:")) {
-                                              const match = c.source.match(/\((https?:\/\/[^\)]+)\)/);
-                                              if (match) {
-                                                  window.open(match[1], '_blank');
-                                              }
-                                          } else {
-                                              const fileUrl = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}`;
-                                              setActivePdfUrl({ url: fileUrl, page: c.page, title: c.source, searchQuery: c.snippet });
-                                          }
-                                        }}
-                                        className="flex items-center gap-2 rounded-md bg-emerald-50 px-2.5 py-1.5 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors"
+                            return (
+                              <div className="flex justify-start w-full">
+                                <div className="bg-[#FAFAF5] border card-border rounded-xl w-full shadow-sm overflow-hidden flex flex-col relative">
+                                  {/* Internal Header */}
+                                  <div className={`px-6 py-3.5 border-b card-border flex items-center justify-between transition-colors ${isLow ? "bg-amber-50/90 border-amber-200" : "bg-[#FFFDE7]"}`}>
+                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                      <span className={`material-symbols-outlined text-lg filled ${isLow ? "text-amber-700" : "text-[#638C6D]"}`}>
+                                        {isLow ? "warning" : "policy"}
+                                      </span>
+                                      <h3 className={`text-sm font-bold m-0 tracking-wide ${isLow ? "text-amber-900" : "text-[#638C6D]"}`}>
+                                        {msg.isFaq ? "Statutory Guidance (Verified FAQ)" : isLow ? "Corpus Boundary Advisory (Low Confidence)" : "Section 3 & Statutory Guidance"}
+                                      </h3>
+                                      {isLow && (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300/80 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 shadow-xs">
+                                          <span>⚠️</span> Outside High-Similarity Boundary
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => handleExportPDF()}
+                                        className="px-2 py-1 bg-amber-50 border border-slate-300 rounded text-amber-800 text-[10px] font-bold hover:bg-amber-100 transition-colors shadow-sm"
+                                        title="Extract PDF"
                                       >
-                                        <span className="font-semibold text-emerald-900">{c.source}</span>
-                                        <span className="text-emerald-700">| Pg {c.page}</span>
-                                        {c.confidence && (
-                                          <span className="ml-1 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
-                                            {c.confidence}
+                                        📄 Extract Pdf
+                                      </button>
+                                      <button
+                                        onClick={() => navigator.clipboard.writeText(msg.content)}
+                                        className="p-1 text-[#638C6D] hover:bg-[#DAEDDC] rounded-md transition-colors"
+                                        title="Copy Response"
+                                      >
+                                        <span className="material-symbols-outlined text-sm">content_copy</span>
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Low Confidence Warning Banner */}
+                                  {isLow && (
+                                    <div className="mx-6 mt-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/70 border-2 border-amber-300 text-amber-950 flex items-start gap-3 shadow-xs animate-in fade-in slide-in-from-top-1">
+                                      <span className="material-symbols-outlined text-amber-600 text-2xl shrink-0 select-none mt-0.5">
+                                        warning
+                                      </span>
+                                      <div className="text-xs leading-relaxed flex-1">
+                                        <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                                          <span className="font-bold text-amber-950 tracking-wide uppercase text-[11px] flex items-center gap-1.5">
+                                            Low Confidence Warning — Outside High-Similarity Corpus Boundaries
                                           </span>
-                                        )}
+                                          {msg.confidence && (
+                                            <span className="rounded-md bg-amber-200/90 border border-amber-300 text-amber-950 font-bold px-2 py-0.5 text-[10px]">
+                                              Corpus Match: {msg.confidence}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-amber-900 font-medium">
+                                          This inquiry falls outside the high-similarity statutory corpus boundaries (Patents Act 1970, Trade Marks Act 1999, Biological Diversity Act 2002, and TKDL guidelines). The guidance below is synthesized using peripheral statutory provisions or broader legal context. Please verify all information independently with a certified Indian Patent Attorney or official CGPDTM gazette.
+                                        </p>
                                       </div>
-                                    ))}
+                                    </div>
+                                  )}
+
+                                  {/* Card Body */}
+                                  <div className="p-6 space-y-5 bg-white">
+                                    <MarkdownRenderer content={msg.content} />
+                                  </div>
+
+                                  {/* Citations Section - Trust UI */}
+                                  {msg.citations && msg.citations.length > 0 && (
+                                    <div className="bg-white px-6 py-4 border-t card-border flex flex-col gap-2">
+                                      <span className="font-bold flex items-center gap-1 text-emerald-800 mb-2 text-xs">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                        Verified Statutory Citations
+                                      </span>
+                                      <div className="flex flex-wrap gap-2 text-xs">
+                                        {msg.citations.map((c, i) => (
+                                          <div 
+                                            key={i} 
+                                            onClick={() => {
+                                              let url = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}#page=${c.page}`;
+                                              if (c.snippet && !c.source.startsWith("Live Web:")) {
+                                                  url += `&search=${encodeURIComponent(c.snippet)}`;
+                                              }
+                                              if (c.source.startsWith("Live Web:")) {
+                                                  const match = c.source.match(/\((https?:\/\/[^\)]+)\)/);
+                                                  if (match) {
+                                                      window.open(match[1], '_blank');
+                                                  }
+                                              } else {
+                                                  const fileUrl = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}`;
+                                                  setActivePdfUrl({ url: fileUrl, page: c.page, title: c.source, searchQuery: c.snippet });
+                                              }
+                                            }}
+                                            className="flex items-center gap-2 rounded-md bg-emerald-50 px-2.5 py-1.5 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors"
+                                          >
+                                            <span className="font-semibold text-emerald-900">{c.source}</span>
+                                            <span className="text-emerald-700">| Pg {c.page}</span>
+                                            {c.confidence && (
+                                              <span className="ml-1 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                                                {c.confidence}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Card Footer */}
+                                  <div className="bg-[#FAFAF5] px-6 py-2.5 border-t card-border flex items-center justify-between text-xs text-[#727971]">
+                                    <span className="text-[11px]">IP-SAKTI Verified Statutory Corpus</span>
+                                    {msg.confidence && (
+                                      <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${isLow ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-900"}`}>
+                                        {isLow ? "⚠️ Low Match:" : "Statutory Match:"} {msg.confidence}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
-                              )}
-
-                              {/* Card Footer (Feedback) */}
-                              <div className="bg-[#FAFAF5] px-6 py-2.5 border-t card-border flex items-center justify-between text-xs text-[#727971]">
-                                <span className="text-[11px]">IP-SAKTI Verified Statutory Corpus</span>
                               </div>
-                            </div>
-                          </div>
+                            );
+                          })()
                         )}
                       </div>
                     );
