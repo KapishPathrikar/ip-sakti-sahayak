@@ -9,10 +9,15 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-# Try to load the .env.local file from the frontend directory
-env_path = Path(__file__).resolve().parent.parent.parent / "frontend" / ".env.local"
-if env_path.exists():
-    load_dotenv(env_path)
+# Load environment variables from various possible paths
+load_dotenv()
+for path in [
+    Path(__file__).resolve().parent.parent / ".env",
+    Path(__file__).resolve().parent.parent.parent / ".env",
+    Path(__file__).resolve().parent.parent.parent / "frontend" / ".env.local",
+]:
+    if path.exists():
+        load_dotenv(path)
 
 # Setup Gemini Fallback Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -20,13 +25,19 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if not GEMINI_API_KEY:
     print("[Warning] GEMINI_API_KEY not found in environment. Cloud fallback will fail if triggered.")
 
-# The user requested 'Gemini 3.5 Flash Lite'. 
-# The actual technical identifier for Google's Flash Lite model is 'gemini-1.5-flash-8b'.
-DEFAULT_CLOUD_MODEL = "gemini-3.5-flash-lite" 
+# Default Gemini model with fallback
+DEFAULT_CLOUD_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+def _normalize_model_name(model: str) -> str:
+    """Ensure a valid, recognized Gemini model ID is used."""
+    if not model or model == "gemini-3.5-flash-lite":
+        return os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    return model
 
 
 def _call_cloud_llm(prompt: str, model: str = DEFAULT_CLOUD_MODEL) -> str | None:
     """Call Gemini Cloud API as a fallback when Ollama is down."""
+    model = _normalize_model_name(model)
     if not GEMINI_API_KEY:
         print("[Cloud LLM] No GEMINI_API_KEY configured. Returning fallback mock response.")
         return _get_mock_response(prompt)
@@ -55,6 +66,7 @@ def _call_cloud_llm(prompt: str, model: str = DEFAULT_CLOUD_MODEL) -> str | None
 
 def _stream_cloud_llm(prompt: str, model: str = DEFAULT_CLOUD_MODEL) -> Generator[str, None, None]:
     """Stream token strings from Gemini Cloud API as a fallback."""
+    model = _normalize_model_name(model)
     if not GEMINI_API_KEY:
         print("[Cloud LLM] No GEMINI_API_KEY for streaming. Using grounded fallback.")
         mock = _get_mock_response(prompt)

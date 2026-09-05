@@ -63,7 +63,7 @@ def _get_collection(persist_dir: str | Path = DEFAULT_CHROMA_DB) -> Any:
 		import chromadb
 		client = chromadb.PersistentClient(path=key)
 		_CLIENT_CACHE[key] = client
-		_COLLECTION_CACHE[key] = client.get_collection(
+		_COLLECTION_CACHE[key] = client.get_or_create_collection(
 			COLLECTION_NAME,
 			embedding_function=_get_embedding_function(),
 		)

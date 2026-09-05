@@ -1,11 +1,11 @@
 # Backend (Python) dependencies
+fastapi
+uvicorn[standard]
+chromadb
+sentence-transformers
 langchain
 langchain-community
-chromadb
-fastapi
-uvicorn
 pypdf
-sentence-transformers
 python-dotenv
 deep-translator
 httpx
@@ -18,14 +18,5 @@ bcrypt
 pyjwt
 python-multipart
 reportlab
+google-genai
 
-
-# Frontend (Next.js) dependencies
-next
-react
-react-dom
-tailwindcss
-postcss
-autoprefixer
-eslint
-eslint-config-next
