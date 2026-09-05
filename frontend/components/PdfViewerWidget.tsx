@@ -84,11 +84,11 @@ export default function PdfViewerWidget({ url, initialPage, onClose, title = "Do
   }), []);
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#F3F4F0] relative overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-[#F1EDE6] relative overflow-hidden">
       {/* ── Top Bar (Clean Gemini Style) ── */}
       <div className="h-14 flex items-center justify-between px-6 bg-white shrink-0 shadow-sm z-10 rounded-tl-3xl">
-        <div className="flex items-center gap-3 text-[#414942]">
-          <span className="material-symbols-outlined text-[#DF6D2D]">picture_as_pdf</span>
+        <div className="flex items-center gap-3 text-[#645D56]">
+          <span className="material-symbols-outlined text-[#7D4F39]">picture_as_pdf</span>
           <span className="font-bold text-sm truncate max-w-[300px]">{title}</span>
         </div>
         <div className="flex items-center gap-4">
@@ -99,7 +99,7 @@ export default function PdfViewerWidget({ url, initialPage, onClose, title = "Do
           )}
           <button
             onClick={onClose}
-            className="p-2 hover:bg-[#F3F4F0] rounded-full text-[#727971] transition-colors cursor-pointer"
+            className="p-2 hover:bg-[#F1EDE6] rounded-full text-[#8C827A] transition-colors cursor-pointer"
             title="Close Viewer"
           >
             <span className="material-symbols-outlined text-xl">close</span>
@@ -108,14 +108,14 @@ export default function PdfViewerWidget({ url, initialPage, onClose, title = "Do
       </div>
 
       {/* ── PDF Container ── */}
-      <div className="flex-1 overflow-auto relative custom-scrollbar flex justify-center bg-[#FAFAF5]">
+      <div className="flex-1 overflow-auto relative custom-scrollbar flex justify-center bg-[#FBF9F5]">
         <div className="py-6 px-4 min-h-full flex items-center justify-center transition-transform duration-200">
           <Document
             file={url}
             options={pdfOptions}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={
-              <div className="flex flex-col items-center gap-3 text-[#727971]">
+              <div className="flex flex-col items-center gap-3 text-[#8C827A]">
                 <span className="material-symbols-outlined animate-spin text-3xl">sync</span>
                 <span className="text-sm font-semibold">Loading document...</span>
               </div>

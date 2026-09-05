@@ -223,22 +223,22 @@ export default function FeeCalculatorView() {
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-6 py-6 md:py-10 animate-in fade-in">
       {/* ── Header ───────────────────────────────────────────────────── */}
       <div className="mb-8 max-w-5xl mx-auto text-center md:text-left">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#1B2B20] mb-2 flex items-center justify-center md:justify-start gap-3">
-          <span className="material-symbols-outlined text-3xl text-[#638C6D]">calculate</span>
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#1E1B18] mb-2 flex items-center justify-center md:justify-start gap-3">
+          <span className="material-symbols-outlined text-3xl text-[#7D4F39]">calculate</span>
           Official IP Fee Calculator
         </h1>
-        <p className="text-sm sm:text-base text-[#414942] leading-relaxed mb-6">
+        <p className="text-sm sm:text-base text-[#645D56] leading-relaxed mb-6">
           Estimate official registry fees and professional charges for Patents, Trademarks, and Industrial Designs in India. Includes statutory fee reductions for Startups, MSMEs, and Educational Institutions.
         </p>
 
         {/* View Tab Switcher */}
-        <div className="inline-flex p-1 rounded-xl bg-[#FFFDE7] border card-border shadow-xs">
+        <div className="inline-flex p-1 rounded-xl bg-[#FAF7F2] border card-border shadow-xs">
           <button
             onClick={() => setActiveTab("calculator")}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === "calculator"
-                ? "bg-[#638C6D] text-white shadow-xs"
-                : "text-[#414942] hover:text-[#1B2B20] hover:bg-white/60"
+                ? "bg-[#7D4F39] text-white shadow-xs"
+                : "text-[#645D56] hover:text-[#1E1B18] hover:bg-white/60"
             }`}
           >
             <span className="material-symbols-outlined text-[18px]">calculate</span>
@@ -248,8 +248,8 @@ export default function FeeCalculatorView() {
             onClick={() => setActiveTab("wizard")}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === "wizard"
-                ? "bg-[#638C6D] text-white shadow-xs"
-                : "text-[#414942] hover:text-[#1B2B20] hover:bg-white/60"
+                ? "bg-[#7D4F39] text-white shadow-xs"
+                : "text-[#645D56] hover:text-[#1E1B18] hover:bg-white/60"
             }`}
           >
             <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
@@ -263,10 +263,10 @@ export default function FeeCalculatorView() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-5xl mx-auto">
           {/* Left Column: Calculator Configuration */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="bg-[#FFFDE7]/75 rounded-2xl p-6 md:p-8 card-border ambient-shadow">
+            <div className="bg-[#FAF7F2]/75 rounded-2xl p-6 md:p-8 card-border ambient-shadow">
               {/* Select IP Type */}
               <div className="mb-8">
-                <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-3">
+                <label className="block text-xs font-bold text-[#1E1B18]/80 uppercase tracking-wider mb-3">
                   Select IP Type
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -280,8 +280,8 @@ export default function FeeCalculatorView() {
                     <div
                       className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
                         ipType === "patent"
-                          ? "bg-white border-[#638C6D] shadow-sm ring-2 ring-[#638C6D]/20 text-[#638C6D]"
-                          : "bg-white/80 card-border text-[#414942] hover:bg-white"
+                          ? "bg-white border-[#7D4F39] shadow-sm ring-2 ring-[#7D4F39]/20 text-[#7D4F39]"
+                          : "bg-white/80 card-border text-[#645D56] hover:bg-white"
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl">lightbulb</span>
@@ -299,8 +299,8 @@ export default function FeeCalculatorView() {
                     <div
                       className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
                         ipType === "trademark"
-                          ? "bg-white border-[#638C6D] shadow-sm ring-2 ring-[#638C6D]/20 text-[#638C6D]"
-                          : "bg-white/80 card-border text-[#414942] hover:bg-white"
+                          ? "bg-white border-[#7D4F39] shadow-sm ring-2 ring-[#7D4F39]/20 text-[#7D4F39]"
+                          : "bg-white/80 card-border text-[#645D56] hover:bg-white"
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl">verified</span>
@@ -318,8 +318,8 @@ export default function FeeCalculatorView() {
                     <div
                       className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col items-center text-center gap-2 ${
                         ipType === "design"
-                          ? "bg-white border-[#638C6D] shadow-sm ring-2 ring-[#638C6D]/20 text-[#638C6D]"
-                          : "bg-white/80 card-border text-[#414942] hover:bg-white"
+                          ? "bg-white border-[#7D4F39] shadow-sm ring-2 ring-[#7D4F39]/20 text-[#7D4F39]"
+                          : "bg-white/80 card-border text-[#645D56] hover:bg-white"
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl">design_services</span>
@@ -331,7 +331,7 @@ export default function FeeCalculatorView() {
 
               {/* Applicant Status */}
               <div className="mb-6">
-                <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-[#1E1B18]/80 uppercase tracking-wider mb-2">
                   Applicant Status
                 </label>
                 <select
@@ -339,7 +339,7 @@ export default function FeeCalculatorView() {
                   onChange={(e) =>
                     handleApplicantStatusChange(e.target.value as "startup" | "natural" | "other")
                   }
-                  className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none transition-shadow cursor-pointer"
+                  className="w-full bg-white border card-border text-[#1E1B18] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#7D4F39] focus:border-[#7D4F39] outline-none transition-shadow cursor-pointer"
                 >
                   <option value="startup">Startup / MSME / Educational Inst. (80% Subsidy)</option>
                   <option value="natural">Natural Person(s) / Solo Inventor (80% Subsidy)</option>
@@ -349,13 +349,13 @@ export default function FeeCalculatorView() {
 
               {/* Filing Stage */}
               <div className="mb-8">
-                <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-[#1E1B18]/80 uppercase tracking-wider mb-2">
                   Filing Stage
                 </label>
                 <select
                   value={filingStage}
                   onChange={(e) => setFilingStage(e.target.value)}
-                  className="w-full bg-white border card-border text-[#1B2B20] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none transition-shadow cursor-pointer"
+                  className="w-full bg-white border card-border text-[#1E1B18] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#7D4F39] focus:border-[#7D4F39] outline-none transition-shadow cursor-pointer"
                 >
                   {ipType === "patent" && (
                     <>
@@ -382,7 +382,7 @@ export default function FeeCalculatorView() {
               {ipType === "patent" && (
                 <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-bold text-[#1E1B18]/80 uppercase tracking-wider mb-2">
                       Total Pages (Base: 30)
                     </label>
                     <div className="relative">
@@ -392,16 +392,16 @@ export default function FeeCalculatorView() {
                         max={500}
                         value={pagesCount}
                         onChange={(e) => setPagesCount(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full bg-white border card-border text-[#1B2B20] rounded-xl pl-4 pr-24 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                        className="w-full bg-white border card-border text-[#1E1B18] rounded-xl pl-4 pr-24 py-3 text-sm focus:ring-2 focus:ring-[#7D4F39] focus:border-[#7D4F39] outline-none"
                       />
-                      <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-[#414942]/60 font-medium pointer-events-none">
+                      <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-[#645D56]/60 font-medium pointer-events-none">
                         {pagesCount > 30 ? `+${pagesCount - 30} extra` : "Included"}
                       </span>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-bold text-[#1E1B18]/80 uppercase tracking-wider mb-2">
                       Total Claims (Base: 10)
                     </label>
                     <div className="relative">
@@ -411,9 +411,9 @@ export default function FeeCalculatorView() {
                         max={100}
                         value={claimsCount}
                         onChange={(e) => setClaimsCount(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full bg-white border card-border text-[#1B2B20] rounded-xl pl-4 pr-24 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                        className="w-full bg-white border card-border text-[#1E1B18] rounded-xl pl-4 pr-24 py-3 text-sm focus:ring-2 focus:ring-[#7D4F39] focus:border-[#7D4F39] outline-none"
                       />
-                      <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-[#414942]/60 font-medium pointer-events-none">
+                      <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-[#645D56]/60 font-medium pointer-events-none">
                         {claimsCount > 10 ? `+${claimsCount - 10} extra` : "Included"}
                       </span>
                     </div>
@@ -422,12 +422,12 @@ export default function FeeCalculatorView() {
               )}
 
               {/* Toggles */}
-              <div className="space-y-4 pt-4 border-t border-[#1B2B20]/10">
+              <div className="space-y-4 pt-4 border-t border-[#1E1B18]/10">
                 {/* Startup 80% Subsidy Switch */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#1B2B20]/10 ambient-shadow">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#1E1B18]/10 ambient-shadow">
                   <div className="pr-4">
-                    <p className="font-bold text-sm text-[#638C6D]">80% Startup Subsidy Eligibility</p>
-                    <p className="text-xs text-[#414942] mt-0.5">
+                    <p className="font-bold text-sm text-[#7D4F39]">80% Startup Subsidy Eligibility</p>
+                    <p className="text-xs text-[#645D56] mt-0.5">
                       DPIIT Recognized Startups &amp; MSMEs receive significant official fee reductions.
                     </p>
                   </div>
@@ -438,16 +438,16 @@ export default function FeeCalculatorView() {
                       onChange={(e) => handleSubsidyToggle(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-[#C1C8C0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]"></div>
+                    <div className="w-11 h-6 bg-[#E5DCD0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7D4F39]"></div>
                   </label>
                 </div>
 
                 {/* Expedited Examination Switch (Patent Only) */}
                 {ipType === "patent" && (
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#1B2B20]/10 ambient-shadow">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#1E1B18]/10 ambient-shadow">
                     <div className="pr-4">
-                      <p className="font-semibold text-sm text-[#1B2B20]">Expedited Examination</p>
-                      <p className="text-xs text-[#414942] mt-0.5">
+                      <p className="font-semibold text-sm text-[#1E1B18]">Expedited Examination</p>
+                      <p className="text-xs text-[#645D56] mt-0.5">
                         Accelerated patent examination under Rule 24C.
                       </p>
                     </div>
@@ -458,7 +458,7 @@ export default function FeeCalculatorView() {
                         onChange={(e) => setIsExpedited(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-[#C1C8C0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#638C6D]"></div>
+                      <div className="w-11 h-6 bg-[#E5DCD0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7D4F39]"></div>
                     </label>
                   </div>
                 )}
@@ -468,29 +468,29 @@ export default function FeeCalculatorView() {
 
           {/* Right Column: Estimated Total & Breakdown */}
           <div className="lg:col-span-5">
-            <div className="bg-[#FFFDE7]/75 rounded-2xl border card-border ambient-shadow sticky top-8 overflow-hidden flex flex-col h-full">
+            <div className="bg-[#FAF7F2]/75 rounded-2xl border card-border ambient-shadow sticky top-8 overflow-hidden flex flex-col h-full">
               {/* Estimated Total Header Strip */}
-              <div className="bg-[#E7FBB4] p-6 border-b border-[#1B2B20]/10">
-                <p className="text-xs font-bold text-[#1B2B20] uppercase tracking-wider mb-1">
+              <div className="bg-[#F6EDE7] p-6 border-b border-[#1E1B18]/10">
+                <p className="text-xs font-bold text-[#1E1B18] uppercase tracking-wider mb-1">
                   Estimated Total
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-extrabold text-[#638C6D]">
+                  <span className="text-4xl font-extrabold text-[#7D4F39]">
                     ₹{estimatedTotal.toLocaleString("en-IN")}
                   </span>
-                  <span className="text-sm font-bold text-[#1B2B20]">INR</span>
+                  <span className="text-sm font-bold text-[#1E1B18]">INR</span>
                 </div>
               </div>
 
               {/* Breakdown */}
               <div className="p-6 flex-grow flex flex-col justify-between space-y-6">
                 <div>
-                  <h3 className="font-bold text-base text-[#1B2B20] mb-4">Fee Breakdown</h3>
+                  <h3 className="font-bold text-base text-[#1E1B18] mb-4">Fee Breakdown</h3>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center pb-3 border-b border-[#1B2B20]/10">
+                    <div className="flex justify-between items-center pb-3 border-b border-[#1E1B18]/10">
                       <div>
-                        <p className="text-sm font-semibold text-[#1B2B20]">Official Registry Fee</p>
-                        <p className="text-xs text-[#727971]">
+                        <p className="text-sm font-semibold text-[#1E1B18]">Official Registry Fee</p>
+                        <p className="text-xs text-[#8C827A]">
                           {ipType === "patent"
                             ? "Patent Application (E-filing)"
                             : ipType === "trademark"
@@ -498,14 +498,14 @@ export default function FeeCalculatorView() {
                             : "Industrial Design Application (Form 1)"}
                         </p>
                       </div>
-                      <span className="font-statutory font-bold text-sm text-[#1B2B20]">
+                      <span className="font-statutory font-bold text-sm text-[#1E1B18]">
                         ₹{officialFee.toLocaleString("en-IN")}
                       </span>
                     </div>
 
                     {/* Surcharge breakdown items */}
                     {ipType === "patent" && (pagesCount > 30 || claimsCount > 10) && (
-                      <div className="space-y-1.5 pl-2 border-l-2 border-[#638C6D]/40 text-xs text-[#414942]">
+                      <div className="space-y-1.5 pl-2 border-l-2 border-[#7D4F39]/40 text-xs text-[#645D56]">
                         {pagesCount > 30 && (
                           <div className="flex justify-between">
                             <span>Extra Pages ({pagesCount - 30} pages @ {isSubsidyEligible ? "₹160" : "₹800"}/page)</span>
@@ -521,20 +521,20 @@ export default function FeeCalculatorView() {
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center pb-3 border-b border-[#1B2B20]/10">
+                    <div className="flex justify-between items-center pb-3 border-b border-[#1E1B18]/10">
                       <div>
-                        <p className="text-sm font-semibold text-[#1B2B20]">Professional Charges</p>
-                        <p className="text-xs text-[#727971]">Drafting &amp; Filing Services</p>
+                        <p className="text-sm font-semibold text-[#1E1B18]">Professional Charges</p>
+                        <p className="text-xs text-[#8C827A]">Drafting &amp; Filing Services</p>
                       </div>
-                      <span className="font-statutory font-bold text-sm text-[#1B2B20]">
+                      <span className="font-statutory font-bold text-sm text-[#1E1B18]">
                         ₹{professionalFee.toLocaleString("en-IN")}
                       </span>
                     </div>
 
                     {isSubsidyEligible && (
-                      <div className="flex justify-between items-center text-[#638C6D] bg-white p-3 rounded-lg border card-border shadow-xs">
+                      <div className="flex justify-between items-center text-[#7D4F39] bg-white p-3 rounded-lg border card-border shadow-xs">
                         <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-sm text-[#638C6D]">
+                          <span className="material-symbols-outlined text-sm text-[#7D4F39]">
                             check_circle
                           </span>
                           <p className="text-xs font-bold">Startup Subsidy Applied</p>
@@ -546,18 +546,18 @@ export default function FeeCalculatorView() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-[#E5F9E7] p-3.5 rounded-xl flex gap-2.5 border card-border">
-                    <span className="material-symbols-outlined text-[#638C6D] text-lg shrink-0 mt-0.5">
+                  <div className="bg-[#F1EDE6] p-3.5 rounded-xl flex gap-2.5 border card-border">
+                    <span className="material-symbols-outlined text-[#7D4F39] text-lg shrink-0 mt-0.5">
                       info
                     </span>
-                    <p className="text-xs text-[#414942] leading-relaxed">
+                    <p className="text-xs text-[#645D56] leading-relaxed">
                       Professional fees are estimates based on standard IP-SAKTI partner rates. Final quotation will be generated on official letterhead.
                     </p>
                   </div>
 
                   <button
                     onClick={handleGenerateQuote}
-                    className="w-full bg-[#638C6D] hover:bg-[#557E60] text-white py-3.5 px-6 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full bg-[#7D4F39] hover:bg-[#643B28] text-white py-3.5 px-6 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span className="material-symbols-outlined text-base">receipt_long</span>
                     <span>Generate Formal Quote</span>
@@ -572,10 +572,10 @@ export default function FeeCalculatorView() {
       {/* ── View 2: "Am I Patentable?" Wizard ─────────────────────────── */}
       {activeTab === "wizard" && (
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
-          <div className="bg-[#FFFDE7]/75 rounded-2xl p-6 md:p-8 card-border ambient-shadow space-y-6">
+          <div className="bg-[#FAF7F2]/75 rounded-2xl p-6 md:p-8 card-border ambient-shadow space-y-6">
             {/* Title */}
             <div>
-              <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-[#1E1B18]/80 uppercase tracking-wider mb-2">
                 Invention Title
               </label>
               <input
@@ -583,13 +583,13 @@ export default function FeeCalculatorView() {
                 value={wizTitle}
                 onChange={(e) => setWizTitle(e.target.value)}
                 placeholder="e.g. Synergistic Herbal Formulation for Blood Glucose Management"
-                className="w-full bg-white border card-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                className="w-full bg-white border card-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#7D4F39] focus:border-[#7D4F39] outline-none"
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-[#1E1B18]/80 uppercase tracking-wider mb-2">
                 Brief Technical Description
               </label>
               <textarea
@@ -597,13 +597,13 @@ export default function FeeCalculatorView() {
                 value={wizDesc}
                 onChange={(e) => setWizDesc(e.target.value)}
                 placeholder="Explain the composition, active ingredients, or novel extraction process..."
-                className="w-full bg-white border card-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#638C6D] focus:border-[#638C6D] outline-none"
+                className="w-full bg-white border card-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#7D4F39] focus:border-[#7D4F39] outline-none"
               />
             </div>
 
             {/* Statutory Checklist */}
-            <div className="pt-6 border-t border-[#1B2B20]/10">
-              <label className="block text-xs font-bold text-[#1B2B20]/80 uppercase tracking-wider mb-4">
+            <div className="pt-6 border-t border-[#1E1B18]/10">
+              <label className="block text-xs font-bold text-[#1E1B18]/80 uppercase tracking-wider mb-4">
                 Statutory Criteria Checklist
               </label>
               <div className="space-y-3.5 bg-white p-6 rounded-xl border card-border">
@@ -612,9 +612,9 @@ export default function FeeCalculatorView() {
                     type="checkbox"
                     checked={checkAyush}
                     onChange={(e) => setCheckAyush(e.target.checked)}
-                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                    className="mt-1 rounded text-[#7D4F39] focus:ring-[#7D4F39] border-[#E5DCD0] w-4 h-4"
                   />
-                  <span className="text-xs md:text-sm text-[#414942]">
+                  <span className="text-xs md:text-sm text-[#645D56]">
                     Is the invention based on traditional Ayurvedic, Unani, Siddha, or herbal knowledge? (Section 3(p))
                   </span>
                 </label>
@@ -624,9 +624,9 @@ export default function FeeCalculatorView() {
                     type="checkbox"
                     checked={checkAdmixture}
                     onChange={(e) => setCheckAdmixture(e.target.checked)}
-                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                    className="mt-1 rounded text-[#7D4F39] focus:ring-[#7D4F39] border-[#E5DCD0] w-4 h-4"
                   />
-                  <span className="text-xs md:text-sm text-[#414942]">
+                  <span className="text-xs md:text-sm text-[#645D56]">
                     Is it an admixture or combination of known herbs/chemical substances? (Section 3(e))
                   </span>
                 </label>
@@ -636,9 +636,9 @@ export default function FeeCalculatorView() {
                     type="checkbox"
                     checked={checkSynergism}
                     onChange={(e) => setCheckSynergism(e.target.checked)}
-                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                    className="mt-1 rounded text-[#7D4F39] focus:ring-[#7D4F39] border-[#E5DCD0] w-4 h-4"
                   />
-                  <span className="text-xs md:text-sm text-[#414942]">
+                  <span className="text-xs md:text-sm text-[#645D56]">
                     Do you possess experimental laboratory proof of synergistic therapeutic efficacy?
                   </span>
                 </label>
@@ -648,9 +648,9 @@ export default function FeeCalculatorView() {
                     type="checkbox"
                     checked={checkBioResources}
                     onChange={(e) => setCheckBioResources(e.target.checked)}
-                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                    className="mt-1 rounded text-[#7D4F39] focus:ring-[#7D4F39] border-[#E5DCD0] w-4 h-4"
                   />
-                  <span className="text-xs md:text-sm text-[#414942]">
+                  <span className="text-xs md:text-sm text-[#645D56]">
                     Does it utilize biological resources (plants, herbs, seeds) sourced from India? (Section 6 NBA)
                   </span>
                 </label>
@@ -660,9 +660,9 @@ export default function FeeCalculatorView() {
                     type="checkbox"
                     checked={checkTreatment}
                     onChange={(e) => setCheckTreatment(e.target.checked)}
-                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                    className="mt-1 rounded text-[#7D4F39] focus:ring-[#7D4F39] border-[#E5DCD0] w-4 h-4"
                   />
-                  <span className="text-xs md:text-sm text-[#414942]">
+                  <span className="text-xs md:text-sm text-[#645D56]">
                     Is the primary invention drafted as a method of treating a disease? (Section 3(i))
                   </span>
                 </label>
@@ -672,9 +672,9 @@ export default function FeeCalculatorView() {
                     type="checkbox"
                     checked={checkDisclosed}
                     onChange={(e) => setCheckDisclosed(e.target.checked)}
-                    className="mt-1 rounded text-[#638C6D] focus:ring-[#638C6D] border-[#C1C8C0] w-4 h-4"
+                    className="mt-1 rounded text-[#7D4F39] focus:ring-[#7D4F39] border-[#E5DCD0] w-4 h-4"
                   />
-                  <span className="text-xs md:text-sm text-[#414942]">
+                  <span className="text-xs md:text-sm text-[#645D56]">
                     Has this formulation/process already been published in journals, presented publicly, or sold?
                   </span>
                 </label>
@@ -684,7 +684,7 @@ export default function FeeCalculatorView() {
             <button
               onClick={evaluatePatentability}
               disabled={wizLoading || !wizTitle.trim()}
-              className="w-full bg-[#638C6D] hover:bg-[#557E60] disabled:opacity-50 text-white py-4 px-6 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-[#7D4F39] hover:bg-[#643B28] disabled:opacity-50 text-white py-4 px-6 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               {wizLoading ? (
                 <>
@@ -703,16 +703,16 @@ export default function FeeCalculatorView() {
           {/* Wizard Result Display */}
           {wizResult && (
             <div className="bg-white rounded-2xl p-6 md:p-8 card-border ambient-shadow space-y-6 animate-in fade-in">
-              <div className="flex items-center justify-between border-b border-[#1B2B20]/10 pb-4">
+              <div className="flex items-center justify-between border-b border-[#1E1B18]/10 pb-4">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-2xl text-[#638C6D]">verified</span>
-                  <h3 className="text-lg font-bold text-[#1B2B20]">Patentability Evaluation Result</h3>
+                  <span className="material-symbols-outlined text-2xl text-[#7D4F39]">verified</span>
+                  <h3 className="text-lg font-bold text-[#1E1B18]">Patentability Evaluation Result</h3>
                 </div>
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                     wizResult.patentability_score >= 70
-                      ? "bg-[#E7FBB4] text-[#5A6A32] border border-[#638C6D]"
-                      : "bg-[#FFDAD6] text-[#BA1A1A] border border-[#BA1A1A]/30"
+                      ? "bg-[#F6EDE7] text-[#7D4F39] border border-[#7D4F39]"
+                      : "bg-[#FDF2F2] text-[#B3261E] border border-[#B3261E]/30"
                   }`}
                 >
                   Score: {wizResult.patentability_score}% ({wizResult.risk_level} Risk)
@@ -722,12 +722,12 @@ export default function FeeCalculatorView() {
               {/* Objections / Warnings */}
               {wizResult.objections && wizResult.objections.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-[#BA1A1A] uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-[#B3261E] uppercase tracking-wider">
                     Statutory Objections Identified:
                   </h4>
                   <div className="space-y-2">
                     {wizResult.objections.map((obj: string, i: number) => (
-                      <div key={i} className="p-3 bg-[#FFDAD6]/40 rounded-xl border border-[#BA1A1A]/20 text-xs text-[#BA1A1A]">
+                      <div key={i} className="p-3 bg-[#FDF2F2]/40 rounded-xl border border-[#B3261E]/20 text-xs text-[#B3261E]">
                         ⚠️ {obj}
                       </div>
                     ))}
@@ -737,11 +737,11 @@ export default function FeeCalculatorView() {
 
               {/* Recommendations */}
               {wizResult.recommendations && (
-                <div className="space-y-2 bg-[#FFFDE7]/75 p-5 rounded-xl border card-border">
-                  <h4 className="text-xs font-bold text-[#638C6D] uppercase tracking-wider">
+                <div className="space-y-2 bg-[#FAF7F2]/75 p-5 rounded-xl border card-border">
+                  <h4 className="text-xs font-bold text-[#7D4F39] uppercase tracking-wider">
                     Recommended Statutory Drafting Strategy:
                   </h4>
-                  <ul className="text-xs text-[#414942] space-y-1.5 list-disc pl-5">
+                  <ul className="text-xs text-[#645D56] space-y-1.5 list-disc pl-5">
                     {wizResult.recommendations.map((rec: string, i: number) => (
                       <li key={i}>{rec}</li>
                     ))}
@@ -757,30 +757,30 @@ export default function FeeCalculatorView() {
       {isQuoteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-6 card-border ambient-shadow animate-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-[#1B2B20]/10 pb-4">
+            <div className="flex items-center justify-between border-b border-[#1E1B18]/10 pb-4">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-2xl text-[#638C6D]">receipt_long</span>
+                <span className="material-symbols-outlined text-2xl text-[#7D4F39]">receipt_long</span>
                 <div>
-                  <h3 className="font-bold text-base text-[#1B2B20]">Official Formal Quotation</h3>
-                  <p className="text-xs text-[#727971]">{quoteId}</p>
+                  <h3 className="font-bold text-base text-[#1E1B18]">Official Formal Quotation</h3>
+                  <p className="text-xs text-[#8C827A]">{quoteId}</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsQuoteModalOpen(false)}
-                className="p-1 rounded-md text-[#727971] hover:text-[#1B2B20] text-sm"
+                className="p-1 rounded-md text-[#8C827A] hover:text-[#1E1B18] text-sm"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3 text-xs text-[#414942]">
-              <div className="flex justify-between py-1.5 border-b border-[#1B2B20]/10">
+            <div className="space-y-3 text-xs text-[#645D56]">
+              <div className="flex justify-between py-1.5 border-b border-[#1E1B18]/10">
                 <span>IP Filing Type:</span>
-                <span className="font-bold text-[#1B2B20] capitalize">{ipType} (India E-filing)</span>
+                <span className="font-bold text-[#1E1B18] capitalize">{ipType} (India E-filing)</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1B2B20]/10">
+              <div className="flex justify-between py-1.5 border-b border-[#1E1B18]/10">
                 <span>Applicant Category:</span>
-                <span className="font-bold text-[#1B2B20]">
+                <span className="font-bold text-[#1E1B18]">
                   {applicantType === "startup"
                     ? "Startup / MSME"
                     : applicantType === "natural"
@@ -788,31 +788,31 @@ export default function FeeCalculatorView() {
                     : "Large Entity"}
                 </span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1B2B20]/10">
+              <div className="flex justify-between py-1.5 border-b border-[#1E1B18]/10">
                 <span>Official Government Fee:</span>
-                <span className="font-statutory font-bold text-[#1B2B20]">₹{officialFee.toLocaleString("en-IN")}</span>
+                <span className="font-statutory font-bold text-[#1E1B18]">₹{officialFee.toLocaleString("en-IN")}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1B2B20]/10">
+              <div className="flex justify-between py-1.5 border-b border-[#1E1B18]/10">
                 <span>Professional Partner Services:</span>
-                <span className="font-statutory font-bold text-[#1B2B20]">₹{professionalFee.toLocaleString("en-IN")}</span>
+                <span className="font-statutory font-bold text-[#1E1B18]">₹{professionalFee.toLocaleString("en-IN")}</span>
               </div>
-              <div className="flex justify-between py-2 bg-[#E7FBB4] p-3 rounded-lg text-sm">
-                <span className="font-bold text-[#5A6A32]">Total Payable:</span>
-                <span className="font-bold text-[#638C6D]">₹{estimatedTotal.toLocaleString("en-IN")} INR</span>
+              <div className="flex justify-between py-2 bg-[#F6EDE7] p-3 rounded-lg text-sm">
+                <span className="font-bold text-[#7D4F39]">Total Payable:</span>
+                <span className="font-bold text-[#7D4F39]">₹{estimatedTotal.toLocaleString("en-IN")} INR</span>
               </div>
             </div>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setIsQuoteModalOpen(false)}
-                className="flex-1 py-2.5 rounded-xl border card-border text-xs font-semibold text-[#414942] hover:bg-[#FAFAF5]"
+                className="flex-1 py-2.5 rounded-xl border card-border text-xs font-semibold text-[#645D56] hover:bg-[#FBF9F5]"
               >
                 Close
               </button>
               <button
                 onClick={handleDownloadQuotePDF}
                 disabled={isDownloadingPdf}
-                className="flex-1 py-2.5 rounded-xl bg-[#638C6D] hover:bg-[#557E60] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-[#7D4F39] hover:bg-[#643B28] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
               >
                 {isDownloadingPdf ? (
                   <span>Generating PDF...</span>

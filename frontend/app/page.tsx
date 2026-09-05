@@ -184,11 +184,12 @@ export default function Home() {
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [jurisdiction, setJurisdiction] = useState<"india" | "international">("india");
-  const [activePdfUrl, setActivePdfUrl] = useState<{url: string, page: number, title: string, searchQuery?: string} | null>(null);
+  const [activePdfUrl, setActivePdfUrl] = useState<{ url: string, page: number, title: string, searchQuery?: string } | null>(null);
 
   // Saved sessions state
   const [mySessions, setMySessions] = useState<SavedSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [inquirySearch, setInquirySearch] = useState("");
 
   // Auth & Service state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -221,7 +222,7 @@ export default function Home() {
     try {
       localStorage.removeItem("ip_shakti_token");
       localStorage.removeItem("ip_shakti_user");
-    } catch {}
+    } catch { }
     setAuthToken(null);
     setCurrentUser(null);
     setMySessions([]);
@@ -262,7 +263,7 @@ export default function Home() {
           setFaqPool(mapped);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     const token = typeof window !== "undefined" ? localStorage.getItem("ip_shakti_token") : null;
     if (token) {
@@ -281,7 +282,7 @@ export default function Home() {
             setCurrentUser(data);
             try {
               localStorage.setItem("ip_shakti_user", JSON.stringify(data));
-            } catch {}
+            } catch { }
           } else {
             handleLogout();
           }
@@ -375,28 +376,28 @@ export default function Home() {
     if (!text && selectedFile) {
       text = "Please analyze the attached document.";
     }
-    
+
     if (!text || isStreaming) return;
 
     setCurrentView("chat");
     setIsAutoScrollEnabled(true);
-    
+
     if (!allowCloud) {
-        setInput("");
-        setLastAttemptedQuery(text);
-        const userMsgId = "user-" + Date.now();
-        
-        let displayContent = text;
-        if (selectedFile) {
-           displayContent = `[Attached: ${selectedFile.name}]\n${text}`;
-        }
-        
-        setMessages((prev) => [
-          ...prev,
-          { id: userMsgId, role: "user", content: displayContent },
-        ]);
+      setInput("");
+      setLastAttemptedQuery(text);
+      const userMsgId = "user-" + Date.now();
+
+      let displayContent = text;
+      if (selectedFile) {
+        displayContent = `[Attached: ${selectedFile.name}]\n${text}`;
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { id: userMsgId, role: "user", content: displayContent },
+      ]);
     }
-    
+
     const assistantMsgId = "asst-" + Date.now();
     setIsStreaming(true);
     setThinkingState("Analyzing Indian Patents Act 1970 & TKDL...");
@@ -409,18 +410,18 @@ export default function Home() {
         setThinkingState(`Reading ${selectedFile.name}...`);
         const formData = new FormData();
         formData.append("file", selectedFile);
-        
+
         const uploadHeaders: Record<string, string> = {};
         if (authToken) {
           uploadHeaders["Authorization"] = `Bearer ${authToken}`;
         }
-        
+
         const uploadResponse = await fetch(`${apiBaseUrl}/api/chat/extract-text`, {
           method: "POST",
           headers: uploadHeaders,
           body: formData
         });
-        
+
         if (uploadResponse.ok) {
           const uploadData = await uploadResponse.json();
           contextDocumentText = uploadData.text;
@@ -453,7 +454,7 @@ export default function Home() {
           let errData: any = {};
           try {
             errData = await response.json();
-          } catch {}
+          } catch { }
           const detail = errData.detail || {};
           const reason = detail.message || "Consultation quota reached.";
           const retryAfter = detail.retry_after_seconds || 60;
@@ -470,8 +471,8 @@ export default function Home() {
               noticeDesc: isBurst
                 ? `You have submitted multiple consultation inquiries in rapid succession. To ensure stability and equal access for all researchers, please pause briefly.`
                 : !currentUser
-                ? `You have used your 25 complimentary guest consultations for today. Pre-verified FAQs in our legal library remain 100% free and unlimited. Sign in or register a free account to instantly upgrade to 50 consultations/day.`
-                : `You have completed your daily quota of 50 legal consultations. Quota resets at 12:00 AM UTC. Pre-verified FAQs remain free and accessible.`,
+                  ? `You have used your 25 complimentary guest consultations for today. Pre-verified FAQs in our legal library remain 100% free and unlimited. Sign in or register a free account to instantly upgrade to 50 consultations/day.`
+                  : `You have completed your daily quota of 50 legal consultations. Quota resets at 12:00 AM UTC. Pre-verified FAQs remain free and accessible.`,
               retryQuery: text,
               retryAfterSeconds: retryAfter,
               dailyRemaining: detail.daily_remaining,
@@ -530,10 +531,10 @@ export default function Home() {
                   prev.map((m) =>
                     m.id === assistantMsgId
                       ? {
-                          ...m,
-                          confidence: event.confidence,
-                          isLowConfidence: event.is_low_confidence,
-                        }
+                        ...m,
+                        confidence: event.confidence,
+                        isLowConfidence: event.is_low_confidence,
+                      }
                       : m
                   )
                 );
@@ -551,16 +552,16 @@ export default function Home() {
                   prev.map((m) =>
                     m.id === assistantMsgId
                       ? {
-                          ...m,
-                          content: partialText,
-                          citations,
-                          isFaq: event.from_faq,
-                          confidence: event.confidence || m.confidence,
-                          isLowConfidence:
-                            event.is_low_confidence !== undefined
-                              ? event.is_low_confidence
-                              : m.isLowConfidence,
-                        }
+                        ...m,
+                        content: partialText,
+                        citations,
+                        isFaq: event.from_faq,
+                        confidence: event.confidence || m.confidence,
+                        isLowConfidence:
+                          event.is_low_confidence !== undefined
+                            ? event.is_low_confidence
+                            : m.isLowConfidence,
+                      }
                       : m
                   )
                 );
@@ -588,10 +589,10 @@ export default function Home() {
           ...prev.map((m) =>
             m.id === assistantMsgId
               ? {
-                  ...m,
-                  content: partialText,
-                  citations,
-                }
+                ...m,
+                content: partialText,
+                citations,
+              }
               : m
           ),
           {
@@ -703,29 +704,29 @@ export default function Home() {
   const isChatEmpty = messages.length === 0;
 
   return (
-    <div className="bg-[#FAFAF5] text-[#1B2B20] font-sans h-screen overflow-hidden flex flex-col md:flex-row">
+    <div className="bg-[#FBF9F5] text-[#1E1B18] font-sans h-screen overflow-hidden flex flex-col md:flex-row">
       {/* ── Top Navigation (Mobile Only) ────────────────────────────── */}
-      <header className="md:hidden flex justify-between items-center w-full px-4 py-3 sticky top-0 z-40 bg-[#FFFDE7]/80 backdrop-blur-md border-b card-border">
+      <header className="md:hidden flex justify-between items-center w-full px-4 py-3 sticky top-0 z-40 bg-[#FAF7F2]/80 backdrop-blur-md border-b card-border">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="text-[#638C6D] p-1 cursor-pointer"
+            className="text-[#7D4F39] p-1 cursor-pointer"
           >
             <span className="material-symbols-outlined">menu</span>
           </button>
-          <span className="font-bold text-lg text-[#638C6D]">IP-SAKTI</span>
+          <span className="font-bold text-lg text-[#7D4F39]">IP-SAKTI</span>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleResetChat}
-            className="p-1.5 rounded-full bg-[#638C6D] text-white text-xs font-bold"
+            className="p-1.5 rounded-full bg-[#7D4F39] text-white text-xs font-bold"
             title="New Chat"
           >
             ＋
           </button>
           <button
             onClick={() => (currentUser ? switchView("settings") : setIsAuthOpen(true))}
-            className="w-8 h-8 rounded-full flex items-center justify-center border border-[#C1C8C0] cursor-pointer bg-[#E5F9E7] text-[#638C6D] hover:bg-[#DAEDDC] transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center border border-[#E5DCD0] cursor-pointer bg-[#F1EDE6] text-[#7D4F39] hover:bg-[#F1EDE6] transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">
               {currentUser ? "person" : "login"}
@@ -736,7 +737,7 @@ export default function Home() {
 
       {/* Mobile Sidebar Backdrop */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/20 z-40 md:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -744,30 +745,27 @@ export default function Home() {
 
       {/* ── Sidebar (Desktop - Exact Stitch AI Dashboard & Unified Theme) ── */}
       <aside
-        className={`flex flex-col h-screen p-6 w-[280px] fixed left-0 top-0 border-r card-border z-50 transition-transform duration-300 select-none bg-[#FFFDE7] ${
-          isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
-        }`}
+        className={`flex flex-col h-screen p-6 w-[280px] fixed left-0 top-0 border-r card-border z-50 transition-transform duration-300 select-none bg-[#FAF7F2] ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
+          }`}
       >
         {/* Brand */}
         <div
           onClick={handleResetChat}
-          className="flex items-center gap-3 mb-8 px-2 cursor-pointer"
+          className="flex items-center gap-3 mb-8 px-2 cursor-pointer group"
         >
-          <img
-            alt="IP-SAKTI Logo"
-            className="w-10 h-10 object-contain rounded-lg shadow-2xs"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9lk-V00H9o6k4G8IJexs3h2HKtANXj1QbDFLg7zaEe9wqSfHBzzjJH-LK4bW7AifHooA2M-6Qs-2kcjNwn6yZ9kGlEi7bCY8HZ7wybNCyD1uRoHdhDFADexqiPgjD1q3YVMytPsH4R24-PNkIXM0imI3dbAfyg7wK3pnsUqz0bCsrNDBfyExM3yORSpI2EytQW0a8LVx4PohstAs0IiiEAGZJb6XhOEzOawe5jS7qjW8SoulSf-nfxA"
-          />
+          <div className="w-10 h-10 rounded-xl bg-[#F1EDE6] border border-[#E5DCD0] flex items-center justify-center text-[#7D4F39] shadow-xs shrink-0 group-hover:border-[#7D4F39] transition-colors">
+            <span className="material-symbols-outlined text-[22px]">balance</span>
+          </div>
           <div>
-            <h1 className="text-[24px] font-bold leading-tight text-[#638C6D]">IP-SAKTI</h1>
-            <p className="text-[11px] font-semibold text-[#414942] opacity-70 uppercase tracking-wider">AI Legal Suite</p>
+            <h1 className="text-[24px] font-bold leading-tight text-[#7D4F39] font-serif">IP-SAKTI</h1>
+            <p className="text-[11px] font-semibold text-[#645D56] opacity-70 uppercase tracking-wider">AI Legal Suite</p>
           </div>
         </div>
 
         {/* CTA: New Chat */}
         <button
           onClick={handleResetChat}
-          className="w-full mb-6 bg-[#638C6D] hover:bg-[#557E60] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+          className="w-full mb-6 bg-[#7D4F39] hover:bg-[#643B28] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
         >
           <span className="material-symbols-outlined text-lg">add</span>
           <span>New Chat</span>
@@ -775,15 +773,15 @@ export default function Home() {
 
         {/* Navigation Tabs */}
         <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1">
-          <div className="px-3 py-1 text-[#414942] text-[11px] font-bold uppercase tracking-wider mb-1">
+          <div className="px-3 py-1 text-[#645D56] text-[11px] font-bold uppercase tracking-wider mb-1">
             Navigation
           </div>
 
           <button
             onClick={() => switchView("chat")}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "chat"
-                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
-                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              ? "bg-[#F6EDE7] text-[#7D4F39] border-l-4 border-[#7D4F39] font-bold"
+              : "text-[#645D56] hover:bg-[#F1EDE6]/60"
               }`}
           >
             <span className="material-symbols-outlined text-[20px]">chat</span>
@@ -793,8 +791,8 @@ export default function Home() {
           <button
             onClick={() => switchView("history")}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "history"
-                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
-                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              ? "bg-[#F6EDE7] text-[#7D4F39] border-l-4 border-[#7D4F39] font-bold"
+              : "text-[#645D56] hover:bg-[#F1EDE6]/60"
               }`}
           >
             <span className="material-symbols-outlined text-[20px]">history</span>
@@ -804,8 +802,8 @@ export default function Home() {
           <button
             onClick={() => switchView("research")}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "research"
-                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
-                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              ? "bg-[#F6EDE7] text-[#7D4F39] border-l-4 border-[#7D4F39] font-bold"
+              : "text-[#645D56] hover:bg-[#F1EDE6]/60"
               }`}
           >
             <span className="material-symbols-outlined text-[20px]">menu_book</span>
@@ -815,8 +813,8 @@ export default function Home() {
           <button
             onClick={() => switchView("tools")}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "tools"
-                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
-                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              ? "bg-[#F6EDE7] text-[#7D4F39] border-l-4 border-[#7D4F39] font-bold"
+              : "text-[#645D56] hover:bg-[#F1EDE6]/60"
               }`}
           >
             <span className="material-symbols-outlined text-[20px]">calculate</span>
@@ -827,8 +825,8 @@ export default function Home() {
           <button
             onClick={() => switchView("classifier")}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "classifier"
-                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
-                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              ? "bg-[#F6EDE7] text-[#7D4F39] border-l-4 border-[#7D4F39] font-bold"
+              : "text-[#645D56] hover:bg-[#F1EDE6]/60"
               }`}
           >
             <span className="material-symbols-outlined text-[20px]">account_tree</span>
@@ -838,8 +836,8 @@ export default function Home() {
           <button
             onClick={() => switchView("nba-helper")}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "nba-helper"
-                ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
-                : "text-[#414942] hover:bg-[#DAEDDC]/60"
+              ? "bg-[#F6EDE7] text-[#7D4F39] border-l-4 border-[#7D4F39] font-bold"
+              : "text-[#645D56] hover:bg-[#F1EDE6]/60"
               }`}
           >
             <span className="material-symbols-outlined text-[20px]">policy</span>
@@ -850,8 +848,8 @@ export default function Home() {
             <button
               onClick={() => switchView("admin")}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors duration-200 cursor-pointer ${currentView === "admin"
-                  ? "bg-[#E7FBB4] text-[#5A6A32] border-l-4 border-[#638C6D] font-bold"
-                  : "text-[#414942] hover:bg-[#DAEDDC]/60"
+                ? "bg-[#F6EDE7] text-[#7D4F39] border-l-4 border-[#7D4F39] font-bold"
+                : "text-[#645D56] hover:bg-[#F1EDE6]/60"
                 }`}
             >
               <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
@@ -862,11 +860,11 @@ export default function Home() {
           {/* Search History */}
           <div className="mt-4 px-1">
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#727971] text-[18px]">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8C827A] text-[18px]">
                 search
               </span>
               <input
-                className="w-full bg-[#E5F9E7] border border-transparent focus:border-[#638C6D] rounded-lg pl-9 pr-3 py-2 text-xs text-[#1B2B20] outline-none transition-colors placeholder:text-[#414942]/60"
+                className="w-full bg-[#F1EDE6] border border-transparent focus:border-[#7D4F39] rounded-lg pl-9 pr-3 py-2 text-xs text-[#1E1B18] outline-none transition-colors placeholder:text-[#645D56]/60"
                 placeholder="Search history..."
                 type="text"
                 onChange={(e) => {
@@ -886,30 +884,33 @@ export default function Home() {
           {/* Grouped Recent Sessions */}
           {mySessions.length > 0 && (
             <div className="mt-4 space-y-1">
-              <div className="px-3 py-1 text-[#414942] text-[10px] font-bold uppercase tracking-wider">
+              <div className="px-3 py-1 text-[#7D4F39] text-[11px] font-bold uppercase tracking-wider">
                 Recent Chats
               </div>
-              {mySessions.slice(0, 5).map((s) => {
-                const sId = s.session_id || s.id || "";
-                return (
-                  <button
-                    key={sId}
-                    onClick={() => {
-                      resumeSession(sId);
-                    }}
-                    className="w-full text-left px-3 py-1.5 text-xs text-[#414942] hover:bg-[#DAEDDC]/60 rounded-lg truncate transition-colors block cursor-pointer"
-                  >
-                    {s.title || `Consultation #${sId.slice(-4)}`}
-                  </button>
-                );
-              })}
+              <div className="divide-y divide-[#E5DCD0]/60">
+                {mySessions.slice(0, 6).map((s) => {
+                  const sId = s.session_id || s.id || "";
+                  return (
+                    <button
+                      key={sId}
+                      onClick={() => {
+                        resumeSession(sId);
+                      }}
+                      title={s.title || `Consultation #${sId.slice(-4)}`}
+                      className="w-full text-left px-3 py-2.5 text-sm font-medium text-[#1E1B18] hover:text-[#7D4F39] hover:bg-[#F1EDE6]/50 rounded-lg truncate transition-colors block cursor-pointer"
+                    >
+                      {s.title || `Consultation #${sId.slice(-4)}`}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </nav>
 
         {/* Footer Profile (Stitch Dashboard style) */}
-        <div className="mt-auto pt-4 border-t border-[#1B2B20]/10">
-          <div className="flex items-center w-full justify-between gap-2 px-2 py-2 rounded-xl hover:bg-[#DAEDDC]/60 transition-colors">
+        <div className="mt-auto pt-4 border-t border-[#1E1B18]/10">
+          <div className="flex items-center w-full justify-between gap-2 px-2 py-2 rounded-xl hover:bg-[#F1EDE6]/60 transition-colors">
             <div
               onClick={() => {
                 if (currentUser) {
@@ -920,16 +921,16 @@ export default function Home() {
               }}
               className="flex items-center flex-1 min-w-0 gap-3 cursor-pointer"
             >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center border border-[#C1C8C0] bg-[#E5F9E7] text-[#638C6D] shrink-0">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center border border-[#E5DCD0] bg-[#F1EDE6] text-[#7D4F39] shrink-0">
                 <span className="material-symbols-outlined text-[18px]">
                   {currentUser ? "person" : "login"}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#1B2B20] truncate">
+                <p className="text-sm font-bold text-[#1E1B18] truncate">
                   {currentUser?.full_name || (currentUser?.email ? currentUser.email.split("@")[0] : "Temporary User")}
                 </p>
-                <p className="text-[10px] text-[#727971] truncate">
+                <p className="text-[10px] text-[#8C827A] truncate">
                   {currentUser ? (currentUser.role === "admin" ? "Administrator" : "Verified User") : "Guest • Click to sign in"}
                 </p>
               </div>
@@ -939,14 +940,14 @@ export default function Home() {
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => switchView("settings")}
-                  className="p-1.5 rounded-lg hover:bg-black/5 text-[#727971] hover:text-[#1B2B20] transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-black/5 text-[#8C827A] hover:text-[#1E1B18] transition-colors cursor-pointer"
                   title="Account Settings"
                 >
                   <span className="material-symbols-outlined text-base">settings</span>
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 rounded-lg hover:bg-[#FFDAD6] text-[#BA1A1A] transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-[#FDF2F2] text-[#B3261E] transition-colors cursor-pointer"
                   title="Sign Out (Switch to Temporary User)"
                 >
                   <span className="material-symbols-outlined text-base">logout</span>
@@ -955,7 +956,7 @@ export default function Home() {
             ) : (
               <button
                 onClick={() => setIsAuthOpen(true)}
-                className="px-2.5 py-1 rounded-lg bg-[#638C6D] hover:bg-[#557E60] text-white text-[11px] font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                className="px-2.5 py-1 rounded-lg bg-[#7D4F39] hover:bg-[#643B28] text-white text-[11px] font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1"
                 title="Sign In / Register"
               >
                 <span className="material-symbols-outlined text-xs">login</span>
@@ -967,640 +968,664 @@ export default function Home() {
       </aside>
 
       {/* ── Main Content Area ─────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-row relative w-full md:ml-[280px] bg-[#FAFAF5] transition-all duration-300 h-screen overflow-hidden">
-        
+      <main className="flex-1 flex flex-row relative w-full md:ml-[280px] bg-[#FBF9F5] transition-all duration-300 h-screen overflow-hidden">
+
         {/* LEFT PANE: Chat & Views */}
         <div className={`relative flex flex-col h-full transition-all duration-300 ${activePdfUrl ? "hidden md:flex md:w-1/2" : "w-full flex-1"}`}>
 
-        {/* Dynamic Views Container */}
-        <div 
-          className="flex-1 overflow-y-auto w-full px-4 md:px-10 pt-6 md:pt-10 pb-48 md:pb-36 flex flex-col items-center"
-          onScroll={handleScroll}
-        >
-          {currentView === "research" && (
-            <LegalResearchView
-              onAskQuestion={(q) => {
-                void sendMessage(q);
-              }}
-            />
-          )}
+          {/* Dynamic Views Container */}
+          <div
+            className="flex-1 overflow-y-auto w-full px-4 md:px-10 pt-6 md:pt-10 pb-48 md:pb-36 flex flex-col items-center"
+            onScroll={handleScroll}
+          >
+            {currentView === "research" && (
+              <LegalResearchView
+                onAskQuestion={(q) => {
+                  void sendMessage(q);
+                }}
+              />
+            )}
 
-          {currentView === "tools" && <FeeCalculatorView />}
+            {currentView === "tools" && <FeeCalculatorView />}
 
 
-          {currentView === "classifier" && (
-            <div className="w-full max-w-[900px]">
-               <FormulationClassifierWidget />
-            </div>
-          )}
-
-          {currentView === "nba-helper" && (
-            <div className="w-full max-w-[900px]">
-               <NBAComplianceWidget 
-                 onGenerateMemo={(prompt) => {
-                   switchView("chat");
-                   setInput(prompt);
-                   // Give a tiny delay for React to switch the view before focusing
-                   setTimeout(() => inputRef.current?.focus(), 100);
-                 }} 
-               />
-            </div>
-          )}
-
-          {currentView === "settings" && (
-            <AccountSettingsView
-              currentUser={currentUser}
-              onLogout={handleLogout}
-              onOpenAuth={() => setIsAuthOpen(true)}
-              onProfileUpdate={(updatedUser) => {
-                setCurrentUser(updatedUser);
-              }}
-              onClearHistory={() => {
-                setMySessions([]);
-                setMessages([]);
-                handleResetChat();
-              }}
-            />
-          )}
-
-          {currentView === "admin" && (
-            currentUser?.role === "admin" && authToken ? (
-              <AdminPanelView user={currentUser} token={authToken} />
-            ) : (
-              <div className="w-full max-w-[800px] p-8 text-center bg-white rounded-2xl border card-border mt-8 animate-in fade-in">
-                <span className="material-symbols-outlined text-4xl text-[#BA1A1A] mb-2">admin_panel_settings</span>
-                <h3 className="text-lg font-bold text-[#1B2B20]">Administrator Privileges Required</h3>
-                <p className="text-xs text-[#727971] mt-1">Please sign in with an administrator account to access corpus management and knowledge base ingestion controls.</p>
-                {!currentUser && (
-                  <button
-                    onClick={() => setIsAuthOpen(true)}
-                    className="mt-4 px-4 py-2 rounded-xl bg-[#638C6D] hover:bg-[#557E60] text-white text-xs font-bold transition cursor-pointer"
-                  >
-                    Sign In as Administrator
-                  </button>
-                )}
+            {currentView === "classifier" && (
+              <div className="w-full max-w-[900px]">
+                <FormulationClassifierWidget />
               </div>
-            )
-          )}
+            )}
 
-          {currentView === "history" && (
-            <div className="w-full max-w-[800px] space-y-4 pt-4 animate-in fade-in">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h2 className="text-2xl font-bold text-[#1B2B20]">Past Consultation Inquiries</h2>
-                <div className="flex items-center gap-2">
-                  {mySessions.length > 0 && (
-                    <button
-                      onClick={handleClearAllHistory}
-                      className="px-3 py-1.5 rounded-lg border border-[#BA1A1A]/30 text-xs font-semibold text-[#BA1A1A] hover:bg-[#FFDAD6] transition cursor-pointer flex items-center gap-1"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete_forever</span>
-                      <span>Clear All History</span>
-                    </button>
-                  )}
-                  {authToken && (
-                    <button
-                      onClick={() => handleExportPDF()}
-                      className="px-3 py-1.5 rounded-lg border border-[#638C6D] text-xs font-semibold text-[#638C6D] hover:bg-[#E5F9E7] transition cursor-pointer flex items-center gap-1"
-                    >
-                      <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
-                      <span>Export Current PDF</span>
-                    </button>
-                  )}
-                </div>
+            {currentView === "nba-helper" && (
+              <div className="w-full max-w-[900px]">
+                <NBAComplianceWidget
+                  onGenerateMemo={(prompt) => {
+                    switchView("chat");
+                    setInput(prompt);
+                    // Give a tiny delay for React to switch the view before focusing
+                    setTimeout(() => inputRef.current?.focus(), 100);
+                  }}
+                />
               </div>
+            )}
 
-              {!currentUser ? (
-                <div className="p-8 text-center bg-white rounded-2xl border card-border">
-                  <p className="text-xs text-[#727971]">Sign in to view and resume your saved consultation records</p>
-                  <button
-                    onClick={() => setIsAuthOpen(true)}
-                    className="mt-3 rounded-xl bg-[#638C6D] px-4 py-2 text-xs font-bold text-white cursor-pointer"
-                  >
-                    Sign In
-                  </button>
-                </div>
-              ) : mySessions.length === 0 ? (
-                <div className="p-8 text-center bg-white rounded-2xl border card-border text-xs text-[#727971]">
-                  No saved consultations found in your account archive.
-                </div>
+            {currentView === "settings" && (
+              <AccountSettingsView
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                onOpenAuth={() => setIsAuthOpen(true)}
+                onProfileUpdate={(updatedUser) => {
+                  setCurrentUser(updatedUser);
+                }}
+                onClearHistory={() => {
+                  setMySessions([]);
+                  setMessages([]);
+                  handleResetChat();
+                }}
+              />
+            )}
+
+            {currentView === "admin" && (
+              currentUser?.role === "admin" && authToken ? (
+                <AdminPanelView user={currentUser} token={authToken} />
               ) : (
-                <div className="space-y-3">
-                  {mySessions.map((s) => {
-                    const sId = s.session_id || s.id || "";
-                    return (
-                      <div
-                        key={sId}
-                        onClick={() => resumeSession(sId)}
-                        className="p-4 rounded-xl bg-white border card-border flex items-center justify-between hover:border-[#638C6D] cursor-pointer transition ambient-shadow group"
-                      >
-                        <div className="flex-1 pr-4">
-                          <div className="font-bold text-sm text-[#1B2B20] group-hover:text-[#638C6D] transition-colors">
-                            {s.title || `Consultation #${sId.slice(-6)}`}
-                          </div>
-                          <div className="text-[11px] text-[#727971] mt-0.5">
-                            {formatTimestamp(s.updated_at)}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleExportPDF(sId);
-                            }}
-                            className="px-3 py-1.5 rounded-lg border card-border text-xs font-semibold text-[#638C6D] hover:bg-[#E7FBB4]/50 cursor-pointer"
-                            title="Export PDF"
-                          >
-                            📄 PDF
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleDeleteSession(sId);
-                            }}
-                            className="px-2.5 py-1.5 rounded-lg border card-border text-xs font-semibold text-[#BA1A1A] hover:bg-[#FFDAD6] cursor-pointer"
-                            title="Delete Session"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="w-full max-w-[800px] p-8 text-center bg-white rounded-2xl border card-border mt-8 animate-in fade-in">
+                  <span className="material-symbols-outlined text-4xl text-[#B3261E] mb-2">admin_panel_settings</span>
+                  <h3 className="text-lg font-bold text-[#1E1B18]">Administrator Privileges Required</h3>
+                  <p className="text-xs text-[#8C827A] mt-1">Please sign in with an administrator account to access corpus management and knowledge base ingestion controls.</p>
+                  {!currentUser && (
+                    <button
+                      onClick={() => setIsAuthOpen(true)}
+                      className="mt-4 px-4 py-2 rounded-xl bg-[#7D4F39] hover:bg-[#643B28] text-white text-xs font-bold transition cursor-pointer"
+                    >
+                      Sign In as Administrator
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              )
+            )}
 
-          {currentView === "chat" && (
-            <div className="w-full max-w-[800px] flex flex-col items-center">
-              {isChatEmpty ? (
-                /* ── Empty Dashboard Welcome State (Design 3: Stitch IP-SAKTI AI Dashboard) ── */
-                <div className="w-full flex flex-col items-center text-center mt-6 md:mt-12 animate-in fade-in">
-                  <img
-                    alt="IP-SAKTI Emblem"
-                    className="w-16 h-16 md:w-20 md:h-20 mb-6 opacity-80 mix-blend-multiply rounded-xl"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9lk-V00H9o6k4G8IJexs3h2HKtANXj1QbDFLg7zaEe9wqSfHBzzjJH-LK4bW7AifHooA2M-6Qs-2kcjNwn6yZ9kGlEi7bCY8HZ7wybNCyD1uRoHdhDFADexqiPgjD1q3YVMytPsH4R24-PNkIXM0imI3dbAfyg7wK3pnsUqz0bCsrNDBfyExM3yORSpI2EytQW0a8LVx4PohstAs0IiiEAGZJb6XhOEzOawe5jS7qjW8SoulSf-nfxA"
-                  />
-                  <h2 className="text-[30px] md:text-[46px] font-bold text-[#1B2B20] mb-10 max-w-2xl leading-tight tracking-tight">
-                    How can IP-SAKTI assist your invention today?
-                  </h2>
+            {currentView === "history" && (() => {
+              const filteredSessions = mySessions.filter((s) => {
+                if (!inquirySearch.trim()) return true;
+                const q = inquirySearch.toLowerCase();
+                const title = (s.title || "").toLowerCase();
+                const id = (s.session_id || s.id || "").toLowerCase();
+                const dateStr = formatTimestamp(s.updated_at).toLowerCase();
+                return title.includes(q) || id.includes(q) || dateStr.includes(q);
+              });
 
-                  {/* Rotating Landing Page FAQs Section */}
-                  {(() => {
-                    const totalFaqSets = Math.max(1, Math.ceil(faqPool.length / ITEMS_PER_SET));
-                    const safePage = currentFaqPage % totalFaqSets;
-                    const rawVisible = faqPool.slice(safePage * ITEMS_PER_SET, safePage * ITEMS_PER_SET + ITEMS_PER_SET);
-                    const visibleFaqs = rawVisible.length === ITEMS_PER_SET
-                      ? rawVisible
-                      : [...rawVisible, ...faqPool.slice(0, ITEMS_PER_SET - rawVisible.length)];
-
-                    return (
-                      <div
-                        className="w-full mt-2"
-                        onMouseEnter={() => setIsFaqPaused(true)}
-                        onMouseLeave={() => setIsFaqPaused(false)}
-                      >
-                        {/* Rotation controls */}
-                        <div className="flex items-center justify-end mb-3 px-1 text-xs">
-                          <div className="flex items-center gap-2.5">
-                            {/* Page Indicator Dots */}
-                            <div className="flex items-center gap-1.5 mr-0.5">
-                              {Array.from({ length: totalFaqSets }).map((_, dotIdx) => (
-                                <button
-                                  key={dotIdx}
-                                  onClick={() => {
-                                    setIsFaqTransitioning(true);
-                                    setTimeout(() => {
-                                      setCurrentFaqPage(dotIdx);
-                                      setIsFaqTransitioning(false);
-                                    }, 200);
-                                  }}
-                                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                                    dotIdx === safePage
-                                      ? "w-5 bg-[#638C6D]"
-                                      : "w-1.5 bg-[#C1C8C0]/70 hover:bg-[#638C6D]/60"
-                                  }`}
-                                  title={`Switch to question set ${dotIdx + 1}`}
-                                  aria-label={`Switch to question set ${dotIdx + 1}`}
-                                />
-                              ))}
-                            </div>
-
-                            {/* Manual Rotate / Shuffle Button */}
-                            <button
-                              onClick={() => rotateFaqSet(1)}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#638C6D]/30 bg-[#E5F9E7]/60 hover:bg-[#E5F9E7] text-[#1B2B20] text-xs font-semibold transition-all cursor-pointer shadow-xs hover:border-[#638C6D] active:scale-95"
-                              title="Cycle to next featured questions"
-                            >
-                              <span className="material-symbols-outlined text-[15px] text-[#638C6D]">
-                                autorenew
-                              </span>
-                              <span>Cycle</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* 3 Rotated Template Cards */}
-                        <div
-                          className={`grid grid-cols-1 md:grid-cols-3 gap-4 w-full transition-all duration-300 transform ${
-                            isFaqTransitioning ? "opacity-0 translate-y-2 scale-[0.99]" : "opacity-100 translate-y-0 scale-100"
-                          }`}
+              return (
+                <div className="w-full max-w-[800px] space-y-4 pt-4 animate-in fade-in">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#1E1B18]">Past Consultation Inquiries</h2>
+                      {currentUser && mySessions.length > 0 && (
+                        <p className="text-xs text-[#8C827A] mt-0.5">
+                          {inquirySearch.trim()
+                            ? `Found ${filteredSessions.length} of ${mySessions.length} inquiries`
+                            : `${mySessions.length} total saved inquiries`}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {mySessions.length > 0 && (
+                        <button
+                          onClick={handleClearAllHistory}
+                          className="px-3 py-1.5 rounded-lg border border-[#B3261E]/30 text-xs font-semibold text-[#B3261E] hover:bg-[#FDF2F2] transition cursor-pointer flex items-center gap-1"
                         >
-                          {visibleFaqs.map((card, idx) => (
-                            <button
-                              key={`${safePage}-${idx}-${card.title}`}
-                              onClick={() => sendMessage(card.query)}
-                              className="flex items-start gap-3 p-4 rounded-xl border border-[#638C6D]/20 transition-all duration-200 text-left ambient-shadow cursor-pointer group hover:border-[#638C6D] hover:shadow-md hover:-translate-y-0.5 bg-[#FFFDE7]/75"
-                            >
-                              <span className="text-xl shrink-0 transition-transform group-hover:scale-110">
-                                {card.icon}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-semibold text-sm text-[#1B2B20] group-hover:text-[#638C6D] transition-colors leading-snug line-clamp-2">
-                                  {card.title}
-                                </p>
-                                <p className="text-xs text-[#414942] mt-1 opacity-75 truncate">
-                                  {card.desc}
-                                </p>
+                          <span className="material-symbols-outlined text-sm">delete_forever</span>
+                          <span>Clear All History</span>
+                        </button>
+                      )}
+                      {authToken && (
+                        <button
+                          onClick={() => handleExportPDF()}
+                          title="Export current active chat as PDF"
+                          className="px-3 py-1.5 rounded-lg border border-[#7D4F39] text-xs font-semibold text-[#7D4F39] hover:bg-[#F1EDE6] transition cursor-pointer flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                          <span>Export Current Chat PDF</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Search Bar for Recent Inquiries */}
+                  {currentUser && mySessions.length > 0 && (
+                    <div className="flex items-center gap-3 w-full bg-white border card-border rounded-xl px-4 py-3 shadow-xs focus-within:border-[#7D4F39] focus-within:ring-2 focus-within:ring-[#7D4F39]/20 transition">
+                      <span className="material-symbols-outlined text-[#7D4F39] text-xl select-none shrink-0">
+                        search
+                      </span>
+                      <input
+                        type="text"
+                        value={inquirySearch}
+                        onChange={(e) => setInquirySearch(e.target.value)}
+                        placeholder="Search past inquiries by question title, keywords, or date..."
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-[#1E1B18] placeholder-[#8C827A] p-0 focus:ring-0"
+                      />
+                      {inquirySearch && (
+                        <button
+                          type="button"
+                          onClick={() => setInquirySearch("")}
+                          className="text-xs font-bold text-[#8C827A] hover:text-[#1E1B18] cursor-pointer px-2 py-1 rounded-md hover:bg-[#FAF7F2]"
+                        >
+                          ✕ Clear
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {!currentUser ? (
+                    <div className="p-8 text-center bg-white rounded-2xl border card-border">
+                      <p className="text-xs text-[#8C827A]">Sign in to view and resume your saved consultation records</p>
+                      <button
+                        onClick={() => setIsAuthOpen(true)}
+                        className="mt-3 rounded-xl bg-[#7D4F39] px-4 py-2 text-xs font-bold text-white cursor-pointer"
+                      >
+                        Sign In
+                      </button>
+                    </div>
+                  ) : mySessions.length === 0 ? (
+                    <div className="p-8 text-center bg-white rounded-2xl border card-border text-xs text-[#8C827A]">
+                      No saved consultations found in your account archive.
+                    </div>
+                  ) : filteredSessions.length === 0 ? (
+                    <div className="p-8 text-center bg-white rounded-2xl border card-border text-xs text-[#8C827A] space-y-2">
+                      <span className="material-symbols-outlined text-3xl text-[#8C827A]">search_off</span>
+                      <p className="font-bold text-sm text-[#1E1B18]">No inquiries match "{inquirySearch}"</p>
+                      <p>Try searching with a different term or keyword.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredSessions.map((s) => {
+                        const sId = s.session_id || s.id || "";
+                        return (
+                          <div
+                            key={sId}
+                            onClick={() => resumeSession(sId)}
+                            className="p-4 rounded-xl bg-white border card-border flex items-center justify-between hover:border-[#7D4F39] cursor-pointer transition ambient-shadow group"
+                          >
+                            <div className="flex-1 pr-4">
+                              <div className="font-bold text-sm text-[#1E1B18] group-hover:text-[#7D4F39] transition-colors">
+                                {s.title || `Consultation #${sId.slice(-6)}`}
                               </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                              <div className="text-[11px] text-[#8C827A] mt-0.5">
+                                {formatTimestamp(s.updated_at)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleExportPDF(sId);
+                                }}
+                                className="px-3 py-1.5 rounded-lg border card-border text-xs font-semibold text-[#7D4F39] hover:bg-[#F6EDE7]/50 cursor-pointer flex items-center gap-1 transition-colors"
+                                title="Export PDF"
+                              >
+                                <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                                <span>PDF</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDeleteSession(sId);
+                                }}
+                                className="px-2.5 py-1.5 rounded-lg border card-border text-xs font-semibold text-[#8C827A] hover:text-[#B3261E] hover:bg-[#FDF2F2] cursor-pointer flex items-center justify-center transition-colors"
+                                title="Delete Session"
+                              >
+                                <span className="material-symbols-outlined text-base">delete</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                /* ── Active Conversation Stream (Design 1: Legal Research Chat - Unified Theme) ── */
-                <div className="w-full space-y-6 pt-2 animate-in fade-in">
-                  {messages.map((msg) => {
-                    const isUser = msg.role === "user";
-                    return (
-                      <div key={msg.id} className="w-full">
-                        {isUser ? (
-                          /* User Query Bubble */
-                          <div className="flex justify-end w-full">
-                            <div className="bg-[#DAEDDC] text-[#1B2B20] rounded-2xl rounded-tr-xs px-5 py-3 max-w-[85%] shadow-xs">
-                              <p className="text-sm font-medium">{msg.content}</p>
-                            </div>
-                          </div>
-                        ) : msg.role === "notice" ? (
-                          /* Polite Status & Error Notice Card (Section 4.3) */
-                          <div className="flex justify-start w-full animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className={`w-full rounded-2xl p-5 border ambient-shadow ${
-                              msg.noticeType === "burst_limit"
-                                ? "bg-[#FFFDE7] border-amber-300/80"
-                                : msg.noticeType === "daily_limit"
-                                ? "bg-[#E5F9E7]/80 border-[#638C6D]/40"
-                                : msg.noticeType === "network_drop"
-                                ? "bg-amber-50/70 border-amber-200"
-                                : "bg-white border-card-border"
-                            }`}>
-                              <div className="flex items-start gap-3.5">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                                  msg.noticeType === "burst_limit"
-                                    ? "bg-amber-100 text-amber-800"
-                                    : msg.noticeType === "daily_limit"
-                                    ? "bg-[#DAEDDC] text-[#638C6D]"
-                                    : msg.noticeType === "network_drop"
-                                    ? "bg-amber-100 text-amber-800"
-                                    : "bg-gray-100 text-gray-700"
-                                }`}>
-                                  <span className="material-symbols-outlined text-[20px]">
-                                    {msg.noticeType === "burst_limit"
-                                      ? "hourglass_top"
-                                      : msg.noticeType === "daily_limit"
-                                      ? "workspace_premium"
-                                      : msg.noticeType === "network_drop"
-                                      ? "wifi_off"
-                                      : "info"}
-                                  </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                                    <h4 className="text-sm font-bold text-[#1B2B20]">
-                                      {msg.noticeTitle || "System Advisory Notice"}
-                                    </h4>
-                                    {msg.retryAfterSeconds && msg.retryAfterSeconds > 0 && (
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold border border-amber-200">
-                                        <span className="material-symbols-outlined text-[13px]">schedule</span>
-                                        Cooldown: ~{msg.retryAfterSeconds}s
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-[#414942] leading-relaxed mb-3.5">
-                                    {msg.noticeDesc}
-                                  </p>
+              );
+            })()}
 
-                                  {/* Action Buttons */}
-                                  <div className="flex items-center gap-2.5 flex-wrap">
-                                    {msg.retryQuery && (
-                                      <button
-                                        onClick={() => void sendMessage(msg.retryQuery)}
-                                        disabled={isStreaming}
-                                        className="px-3.5 py-1.5 rounded-xl bg-[#638C6D] hover:bg-[#557E60] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                      >
-                                        <span className="material-symbols-outlined text-sm">refresh</span>
-                                        <span>Retry Consultation</span>
-                                      </button>
-                                    )}
+            {currentView === "chat" && (
+              <div className="w-full max-w-[800px] flex flex-col items-center">
+                {isChatEmpty ? (
+                  /* ── Empty Dashboard Welcome State (Design 3: Stitch IP-SAKTI AI Dashboard) ── */
+                  <div className="w-full flex flex-col items-center text-center mt-6 md:mt-12 animate-in fade-in">
+                    <div className="w-16 h-16 md:w-20 md:h-20 mb-6 rounded-2xl bg-[#F1EDE6] border border-[#E5DCD0] flex items-center justify-center text-[#7D4F39] shadow-stone">
+                      <span className="material-symbols-outlined text-[36px] md:text-[44px]">balance</span>
+                    </div>
+                    <h2 className="text-[30px] md:text-[46px] font-bold text-[#1E1B18] mb-10 max-w-2xl leading-tight tracking-tight font-serif">
+                      How can IP-SAKTI assist your invention today?
+                    </h2>
 
-                                    {msg.noticeType === "daily_limit" && !currentUser && (
-                                      <button
-                                        onClick={() => setIsAuthOpen(true)}
-                                        className="px-3.5 py-1.5 rounded-xl border border-[#638C6D] text-[#638C6D] hover:bg-[#638C6D]/10 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                                      >
-                                        <span className="material-symbols-outlined text-sm">login</span>
-                                        <span>Sign In to Unlock 50/day</span>
-                                      </button>
-                                    )}
+                    {/* Rotating Landing Page FAQs Section */}
+                    {(() => {
+                      const totalFaqSets = Math.max(1, Math.ceil(faqPool.length / ITEMS_PER_SET));
+                      const safePage = currentFaqPage % totalFaqSets;
+                      const rawVisible = faqPool.slice(safePage * ITEMS_PER_SET, safePage * ITEMS_PER_SET + ITEMS_PER_SET);
+                      const visibleFaqs = rawVisible.length === ITEMS_PER_SET
+                        ? rawVisible
+                        : [...rawVisible, ...faqPool.slice(0, ITEMS_PER_SET - rawVisible.length)];
 
-                                    <button
-                                      onClick={() => {
-                                        handleResetChat();
-                                      }}
-                                      className="px-3 py-1.5 rounded-xl bg-black/5 hover:bg-black/10 text-[#414942] text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                                    >
-                                      <span className="material-symbols-outlined text-sm">menu_book</span>
-                                      <span>Browse Verified FAQs</span>
-                                    </button>
-                                  </div>
-                                </div>
+                      return (
+                        <div
+                          className="w-full mt-2"
+                          onMouseEnter={() => setIsFaqPaused(true)}
+                          onMouseLeave={() => setIsFaqPaused(false)}
+                        >
+                          {/* Rotation controls */}
+                          <div className="flex items-center justify-end mb-3 px-1 text-xs">
+                            <div className="flex items-center gap-2.5">
+                              {/* Page Indicator Dots */}
+                              <div className="flex items-center gap-1.5">
+                                {Array.from({ length: totalFaqSets }).map((_, dotIdx) => (
+                                  <button
+                                    key={dotIdx}
+                                    onClick={() => {
+                                      setIsFaqTransitioning(true);
+                                      setTimeout(() => {
+                                        setCurrentFaqPage(dotIdx);
+                                        setIsFaqTransitioning(false);
+                                      }, 200);
+                                    }}
+                                    className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${dotIdx === safePage
+                                        ? "w-5 bg-[#7D4F39]"
+                                        : "w-1.5 bg-[#E5DCD0]/70 hover:bg-[#7D4F39]/60"
+                                      }`}
+                                    title={`Switch to question set ${dotIdx + 1}`}
+                                    aria-label={`Switch to question set ${dotIdx + 1}`}
+                                  />
+                                ))}
                               </div>
                             </div>
                           </div>
-                        ) : (
-                          /* AI Advisory Response Card */
-                          (() => {
-                            const isLow = msg.isLowConfidence === true || (() => {
-                              if (msg.role !== "assistant" || msg.id === "welcome" || msg.isFaq) return false;
-                              if (msg.confidence) {
-                                const num = parseInt(msg.confidence.replace(/[^0-9]/g, ""), 10);
-                                if (!isNaN(num) && num < 80) return true;
-                              }
-                              if (msg.citations && msg.citations.length > 0) {
-                                const confs = msg.citations
-                                  .map((c) => (c.confidence ? parseInt(c.confidence.replace(/[^0-9]/g, ""), 10) : 0))
-                                  .filter((n) => !isNaN(n) && n > 0);
-                                if (confs.length > 0 && Math.max(...confs) < 80) return true;
-                              }
-                              return false;
-                            })();
 
-                            return (
-                              <div className="flex justify-start w-full">
-                                <div className="bg-[#FAFAF5] border card-border rounded-xl w-full shadow-sm overflow-hidden flex flex-col relative">
-                                  {/* Internal Header */}
-                                  <div className={`px-6 py-3.5 border-b card-border flex items-center justify-between transition-colors ${isLow ? "bg-amber-50/90 border-amber-200" : "bg-[#FFFDE7]"}`}>
-                                    <div className="flex items-center gap-2.5 flex-wrap">
-                                      <span className={`material-symbols-outlined text-lg filled ${isLow ? "text-amber-700" : "text-[#638C6D]"}`}>
-                                        {isLow ? "warning" : "policy"}
-                                      </span>
-                                      <h3 className={`text-sm font-bold m-0 tracking-wide ${isLow ? "text-amber-900" : "text-[#638C6D]"}`}>
-                                        {msg.isFaq ? "Statutory Guidance (Verified FAQ)" : isLow ? "Corpus Boundary Advisory (Low Confidence)" : "Section 3 & Statutory Guidance"}
-                                      </h3>
-                                      {isLow && (
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300/80 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 shadow-xs">
-                                          <span>⚠️</span> Outside High-Similarity Boundary
+                          {/* 3 Rotated Template Cards */}
+                          <div
+                            className={`grid grid-cols-1 md:grid-cols-3 gap-4 w-full transition-all duration-300 transform ${isFaqTransitioning ? "opacity-0 translate-y-2 scale-[0.99]" : "opacity-100 translate-y-0 scale-100"
+                              }`}
+                          >
+                            {visibleFaqs.map((card, idx) => (
+                              <button
+                                key={`${safePage}-${idx}-${card.title}`}
+                                onClick={() => sendMessage(card.query)}
+                                className="flex items-start gap-3 p-4 rounded-xl border border-[#7D4F39]/20 transition-all duration-200 text-left ambient-shadow cursor-pointer group hover:border-[#7D4F39] hover:shadow-md hover:-translate-y-0.5 bg-[#FAF7F2]/75"
+                              >
+                                <span className="text-xl shrink-0 transition-transform group-hover:scale-110">
+                                  {card.icon}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-semibold text-sm text-[#1E1B18] group-hover:text-[#7D4F39] transition-colors leading-snug line-clamp-2">
+                                    {card.title}
+                                  </p>
+                                  <p className="text-xs text-[#645D56] mt-1 opacity-75 truncate">
+                                    {card.desc}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  /* ── Active Conversation Stream (Design 1: Legal Research Chat - Unified Theme) ── */
+                  <div className="w-full space-y-6 pt-2 animate-in fade-in">
+                    {messages.map((msg) => {
+                      const isUser = msg.role === "user";
+                      return (
+                        <div key={msg.id} className="w-full">
+                          {isUser ? (
+                            /* User Query Bubble */
+                            <div className="flex justify-end w-full">
+                              <div className="bg-[#F1EDE6] text-[#1E1B18] rounded-2xl rounded-tr-xs px-5 py-3 max-w-[85%] shadow-xs">
+                                <p className="text-sm font-medium">{msg.content}</p>
+                              </div>
+                            </div>
+                          ) : msg.role === "notice" ? (
+                            /* Polite Status & Error Notice Card (Section 4.3) */
+                            <div className="flex justify-start w-full animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className={`w-full rounded-2xl p-5 border ambient-shadow ${msg.noticeType === "burst_limit"
+                                  ? "bg-[#FAF7F2] border-amber-300/80"
+                                  : msg.noticeType === "daily_limit"
+                                    ? "bg-[#F1EDE6]/80 border-[#7D4F39]/40"
+                                    : msg.noticeType === "network_drop"
+                                      ? "bg-amber-50/70 border-amber-200"
+                                      : "bg-white border-card-border"
+                                }`}>
+                                <div className="flex items-start gap-3.5">
+                                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${msg.noticeType === "burst_limit"
+                                      ? "bg-amber-100 text-amber-800"
+                                      : msg.noticeType === "daily_limit"
+                                        ? "bg-[#F1EDE6] text-[#7D4F39]"
+                                        : msg.noticeType === "network_drop"
+                                          ? "bg-amber-100 text-amber-800"
+                                          : "bg-gray-100 text-gray-700"
+                                    }`}>
+                                    <span className="material-symbols-outlined text-[20px]">
+                                      {msg.noticeType === "burst_limit"
+                                        ? "hourglass_top"
+                                        : msg.noticeType === "daily_limit"
+                                          ? "workspace_premium"
+                                          : msg.noticeType === "network_drop"
+                                            ? "wifi_off"
+                                            : "info"}
+                                    </span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                                      <h4 className="text-sm font-bold text-[#1E1B18]">
+                                        {msg.noticeTitle || "System Advisory Notice"}
+                                      </h4>
+                                      {msg.retryAfterSeconds && msg.retryAfterSeconds > 0 && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold border border-amber-200">
+                                          <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                          Cooldown: ~{msg.retryAfterSeconds}s
                                         </span>
                                       )}
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <p className="text-xs text-[#645D56] leading-relaxed mb-3.5">
+                                      {msg.noticeDesc}
+                                    </p>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                      {msg.retryQuery && (
+                                        <button
+                                          onClick={() => void sendMessage(msg.retryQuery)}
+                                          disabled={isStreaming}
+                                          className="px-3.5 py-1.5 rounded-xl bg-[#7D4F39] hover:bg-[#643B28] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                        >
+                                          <span className="material-symbols-outlined text-sm">refresh</span>
+                                          <span>Retry Consultation</span>
+                                        </button>
+                                      )}
+
+                                      {msg.noticeType === "daily_limit" && !currentUser && (
+                                        <button
+                                          onClick={() => setIsAuthOpen(true)}
+                                          className="px-3.5 py-1.5 rounded-xl border border-[#7D4F39] text-[#7D4F39] hover:bg-[#7D4F39]/10 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                          <span className="material-symbols-outlined text-sm">login</span>
+                                          <span>Sign In to Unlock 50/day</span>
+                                        </button>
+                                      )}
+
                                       <button
-                                        onClick={() => handleExportPDF()}
-                                        className="px-2 py-1 bg-amber-50 border border-slate-300 rounded text-amber-800 text-[10px] font-bold hover:bg-amber-100 transition-colors shadow-sm"
-                                        title="Extract PDF"
+                                        onClick={() => {
+                                          handleResetChat();
+                                        }}
+                                        className="px-3 py-1.5 rounded-xl bg-black/5 hover:bg-black/10 text-[#645D56] text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer"
                                       >
-                                        📄 Extract Pdf
-                                      </button>
-                                      <button
-                                        onClick={() => navigator.clipboard.writeText(msg.content)}
-                                        className="p-1 text-[#638C6D] hover:bg-[#DAEDDC] rounded-md transition-colors"
-                                        title="Copy Response"
-                                      >
-                                        <span className="material-symbols-outlined text-sm">content_copy</span>
+                                        <span className="material-symbols-outlined text-sm">menu_book</span>
+                                        <span>Browse Verified FAQs</span>
                                       </button>
                                     </div>
-                                  </div>
-
-                                  {/* Low Confidence Warning Banner */}
-                                  {isLow && (
-                                    <div className="mx-6 mt-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/70 border-2 border-amber-300 text-amber-950 flex items-start gap-3 shadow-xs animate-in fade-in slide-in-from-top-1">
-                                      <span className="material-symbols-outlined text-amber-600 text-2xl shrink-0 select-none mt-0.5">
-                                        warning
-                                      </span>
-                                      <div className="text-xs leading-relaxed flex-1">
-                                        <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                                          <span className="font-bold text-amber-950 tracking-wide uppercase text-[11px] flex items-center gap-1.5">
-                                            Low Confidence Warning — Outside High-Similarity Corpus Boundaries
-                                          </span>
-                                          {msg.confidence && (
-                                            <span className="rounded-md bg-amber-200/90 border border-amber-300 text-amber-950 font-bold px-2 py-0.5 text-[10px]">
-                                              Corpus Match: {msg.confidence}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <p className="text-amber-900 font-medium">
-                                          This inquiry falls outside the high-similarity statutory corpus boundaries (Patents Act 1970, Trade Marks Act 1999, Biological Diversity Act 2002, and TKDL guidelines). The guidance below is synthesized using peripheral statutory provisions or broader legal context. Please verify all information independently with a certified Indian Patent Attorney or official CGPDTM gazette.
-                                        </p>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Card Body */}
-                                  <div className="p-6 space-y-5 bg-white">
-                                    <MarkdownRenderer content={msg.content} />
-                                  </div>
-
-                                  {/* Citations Section - Trust UI */}
-                                  {msg.citations && msg.citations.length > 0 && (
-                                    <div className="bg-white px-6 py-4 border-t card-border flex flex-col gap-2">
-                                      <span className="font-bold flex items-center gap-1 text-emerald-800 mb-2 text-xs">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                        </svg>
-                                        Verified Statutory Citations
-                                      </span>
-                                      <div className="flex flex-wrap gap-2 text-xs">
-                                        {msg.citations.map((c, i) => (
-                                          <div 
-                                            key={i} 
-                                            onClick={() => {
-                                              let url = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}#page=${c.page}`;
-                                              if (c.snippet && !c.source.startsWith("Live Web:")) {
-                                                  url += `&search=${encodeURIComponent(c.snippet)}`;
-                                              }
-                                              if (c.source.startsWith("Live Web:")) {
-                                                  const match = c.source.match(/\((https?:\/\/[^\)]+)\)/);
-                                                  if (match) {
-                                                      window.open(match[1], '_blank');
-                                                  }
-                                              } else {
-                                                  const fileUrl = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}`;
-                                                  setActivePdfUrl({ url: fileUrl, page: c.page, title: c.source, searchQuery: c.snippet });
-                                              }
-                                            }}
-                                            className="flex items-center gap-2 rounded-md bg-emerald-50 px-2.5 py-1.5 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors"
-                                          >
-                                            <span className="font-semibold text-emerald-900">{c.source}</span>
-                                            <span className="text-emerald-700">| Pg {c.page}</span>
-                                            {c.confidence && (
-                                              <span className="ml-1 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
-                                                {c.confidence}
-                                              </span>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Card Footer */}
-                                  <div className="bg-[#FAFAF5] px-6 py-2.5 border-t card-border flex items-center justify-between text-xs text-[#727971]">
-                                    <span className="text-[11px]">IP-SAKTI Verified Statutory Corpus</span>
-                                    {msg.confidence && (
-                                      <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${isLow ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-900"}`}>
-                                        {isLow ? "⚠️ Low Match:" : "Statutory Match:"} {msg.confidence}
-                                      </span>
-                                    )}
                                   </div>
                                 </div>
                               </div>
-                            );
-                          })()
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                            </div>
+                          ) : (
+                            /* AI Advisory Response Card */
+                            (() => {
+                              const isLow = msg.isLowConfidence === true || (() => {
+                                if (msg.role !== "assistant" || msg.id === "welcome" || msg.isFaq) return false;
+                                if (msg.confidence) {
+                                  const num = parseInt(msg.confidence.replace(/[^0-9]/g, ""), 10);
+                                  if (!isNaN(num) && num < 80) return true;
+                                }
+                                if (msg.citations && msg.citations.length > 0) {
+                                  const confs = msg.citations
+                                    .map((c) => (c.confidence ? parseInt(c.confidence.replace(/[^0-9]/g, ""), 10) : 0))
+                                    .filter((n) => !isNaN(n) && n > 0);
+                                  if (confs.length > 0 && Math.max(...confs) < 80) return true;
+                                }
+                                return false;
+                              })();
 
-              {/* Active Thinking / Pulsing Indicator (Design 1) */}
-              {thinkingState && (
-                <div className="w-full flex justify-start mt-4">
-                  <div className="flex items-center gap-2.5 text-[#727971] text-xs font-semibold pulse-animation bg-[#FFFDE7] px-4 py-2 rounded-full border card-border">
-                    <span className="material-symbols-outlined animate-spin text-sm text-[#638C6D]">sync</span>
-                    <span>{thinkingState}</span>
+                              return (
+                                <div className="flex justify-start w-full">
+                                  <div className="bg-[#FBF9F5] border card-border rounded-xl w-full shadow-sm overflow-hidden flex flex-col relative">
+                                    {/* Internal Header */}
+                                    <div className={`px-6 py-3.5 border-b card-border flex items-center justify-between transition-colors ${isLow ? "bg-amber-50/90 border-amber-200" : "bg-[#FAF7F2]"}`}>
+                                      <div className="flex items-center gap-2.5 flex-wrap">
+                                        <span className={`material-symbols-outlined text-lg filled ${isLow ? "text-amber-700" : "text-[#7D4F39]"}`}>
+                                          {isLow ? "warning" : "policy"}
+                                        </span>
+                                        <h3 className={`text-sm font-bold m-0 tracking-wide ${isLow ? "text-amber-900" : "text-[#7D4F39]"}`}>
+                                          {msg.isFaq ? "Statutory Guidance (Verified FAQ)" : isLow ? "Corpus Boundary Advisory (Low Confidence)" : "Section 3 & Statutory Guidance"}
+                                        </h3>
+                                        {isLow && (
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300/80 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 shadow-xs">
+                                            <span>⚠️</span> Outside High-Similarity Boundary
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => handleExportPDF()}
+                                          className="px-2 py-1 bg-amber-50 border border-slate-300 rounded text-amber-800 text-[10px] font-bold hover:bg-amber-100 transition-colors shadow-sm"
+                                          title="Extract PDF"
+                                        >
+                                          📄 Extract Pdf
+                                        </button>
+                                        <button
+                                          onClick={() => navigator.clipboard.writeText(msg.content)}
+                                          className="p-1 text-[#7D4F39] hover:bg-[#F1EDE6] rounded-md transition-colors"
+                                          title="Copy Response"
+                                        >
+                                          <span className="material-symbols-outlined text-sm">content_copy</span>
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Low Confidence Warning Banner */}
+                                    {isLow && (
+                                      <div className="mx-6 mt-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/70 border-2 border-amber-300 text-amber-950 flex items-start gap-3 shadow-xs animate-in fade-in slide-in-from-top-1">
+                                        <span className="material-symbols-outlined text-amber-600 text-2xl shrink-0 select-none mt-0.5">
+                                          warning
+                                        </span>
+                                        <div className="text-xs leading-relaxed flex-1">
+                                          <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                                            <span className="font-bold text-amber-950 tracking-wide uppercase text-[11px] flex items-center gap-1.5">
+                                              Low Confidence Warning — Outside High-Similarity Corpus Boundaries
+                                            </span>
+                                            {msg.confidence && (
+                                              <span className="rounded-md bg-amber-200/90 border border-amber-300 text-amber-950 font-bold px-2 py-0.5 text-[10px]">
+                                                Corpus Match: {msg.confidence}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <p className="text-amber-900 font-medium">
+                                            This inquiry falls outside the high-similarity statutory corpus boundaries (Patents Act 1970, Trade Marks Act 1999, Biological Diversity Act 2002, and TKDL guidelines). The guidance below is synthesized using peripheral statutory provisions or broader legal context. Please verify all information independently with a certified Indian Patent Attorney or official CGPDTM gazette.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Card Body */}
+                                    <div className="p-6 space-y-5 bg-white">
+                                      <MarkdownRenderer content={msg.content} />
+                                    </div>
+
+                                    {/* Citations Section - Trust UI */}
+                                    {msg.citations && msg.citations.length > 0 && (
+                                      <div className="bg-white px-6 py-4 border-t card-border flex flex-col gap-2">
+                                        <span className="font-bold flex items-center gap-1 text-[#2D6A4F] mb-2 text-xs">
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                          </svg>
+                                          Verified Statutory Citations
+                                        </span>
+                                        <div className="flex flex-wrap gap-2 text-xs">
+                                          {msg.citations.map((c, i) => (
+                                            <div
+                                              key={i}
+                                              onClick={() => {
+                                                let url = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}#page=${c.page}`;
+                                                if (c.snippet && !c.source.startsWith("Live Web:")) {
+                                                  url += `&search=${encodeURIComponent(c.snippet)}`;
+                                                }
+                                                if (c.source.startsWith("Live Web:")) {
+                                                  const match = c.source.match(/\((https?:\/\/[^\)]+)\)/);
+                                                  if (match) {
+                                                    window.open(match[1], '_blank');
+                                                  }
+                                                } else {
+                                                  const fileUrl = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}`;
+                                                  setActivePdfUrl({ url: fileUrl, page: c.page, title: c.source, searchQuery: c.snippet });
+                                                }
+                                              }}
+                                              className="flex items-center gap-2 rounded-md bg-[#EBF5EE] px-2.5 py-1.5 border border-[#D2E8D8] cursor-pointer hover:bg-[#DDF0E3] transition-colors"
+                                            >
+                                              <span className="font-semibold text-[#2D6A4F]">{c.source}</span>
+                                              <span className="text-[#2D6A4F]/80">| Pg {c.page}</span>
+                                              {c.confidence && (
+                                                <span className="ml-1 rounded bg-[#D8ECE0] px-1.5 py-0.5 text-[10px] font-bold text-[#2D6A4F]">
+                                                  {c.confidence}
+                                                </span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Card Footer */}
+                                    <div className="bg-[#FBF9F5] px-6 py-2.5 border-t card-border flex items-center justify-between text-xs text-[#8C827A]">
+                                      <span className="text-[11px]">IP-SAKTI Verified Statutory Corpus</span>
+                                      {msg.confidence && (
+                                        <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${isLow ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-[#2D6A4F]"}`}>
+                                          {isLow ? "⚠️ Low Match:" : "Statutory Match:"} {msg.confidence}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Active Thinking / Pulsing Indicator (Design 1) */}
+                {thinkingState && (
+                  <div className="w-full flex justify-start mt-4">
+                    <div className="flex items-center gap-2.5 text-[#8C827A] text-xs font-semibold pulse-animation bg-[#FAF7F2] px-4 py-2 rounded-full border card-border">
+                      <span className="material-symbols-outlined animate-spin text-sm text-[#7D4F39]">sync</span>
+                      <span>{thinkingState}</span>
+                    </div>
+                  </div>
+                )}
+
+
+
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+
+          {/* ── Floating Prompt Bar (Design 3 & Design 1 Unified) ───────────── */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 pb-20 md:p-6 md:pb-6 bg-gradient-to-t from-[#FBF9F5] via-[#FBF9F5]/90 to-transparent pointer-events-none z-20">
+            <div className="max-w-[800px] mx-auto pointer-events-auto">
+              {/* Jurisdiction Toggle - Static Above Input */}
+              {currentView === "chat" && (
+                <div className="flex justify-center mb-3">
+                  <div className="flex items-center gap-1 rounded-full bg-[#F1EDE6]/80 p-1 border card-border backdrop-blur-md shadow-sm">
+                    <button
+                      onClick={() => setJurisdiction("india")}
+                      className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${jurisdiction === "india" ? "bg-white shadow-sm text-emerald-800" : "text-[#645D56] hover:text-[#1E1B18]"
+                        }`}
+                    >
+                      🇮🇳 India
+                    </button>
+                    <button
+                      onClick={() => setJurisdiction("international")}
+                      className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${jurisdiction === "international" ? "bg-white shadow-sm text-blue-800" : "text-[#645D56] hover:text-[#1E1B18]"
+                        }`}
+                    >
+                      🌐 International
+                    </button>
                   </div>
                 </div>
               )}
 
-
-
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* ── Floating Prompt Bar (Design 3 & Design 1 Unified) ───────────── */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-20 md:p-6 md:pb-6 bg-gradient-to-t from-[#FAFAF5] via-[#FAFAF5]/90 to-transparent pointer-events-none z-20">
-          <div className="max-w-[800px] mx-auto pointer-events-auto">
-            {/* Jurisdiction Toggle - Static Above Input */}
-            {currentView === "chat" && (
-              <div className="flex justify-center mb-3">
-                <div className="flex items-center gap-1 rounded-full bg-[#E5F9E7]/80 p-1 border card-border backdrop-blur-md shadow-sm">
-                  <button
-                    onClick={() => setJurisdiction("india")}
-                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                      jurisdiction === "india" ? "bg-white shadow-sm text-emerald-800" : "text-[#414942] hover:text-[#1B2B20]"
-                    }`}
-                  >
-                    🇮🇳 India
-                  </button>
-                  <button
-                    onClick={() => setJurisdiction("international")}
-                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                      jurisdiction === "international" ? "bg-white shadow-sm text-blue-800" : "text-[#414942] hover:text-[#1B2B20]"
-                    }`}
-                  >
-                    🌐 International
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void sendMessage();
-              }}
-              className="bg-[#FFFDE7] backdrop-blur-md rounded-[24px] p-2 flex flex-col gap-2 ambient-shadow border card-border shadow-lg"
-            >
-              {selectedFile && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-[#E5F9E7] rounded-full border border-[#638C6D] self-start ml-2 mt-1">
-                  <span className="text-xs text-[#1B2B20] font-medium truncate max-w-[200px]">{selectedFile.name}</span>
-                  <button type="button" onClick={() => setSelectedFile(null)} className="text-[#638C6D] hover:text-red-600 transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined text-sm flex items-center justify-center">close</span>
-                  </button>
-                </div>
-              )}
-              <div className="flex items-center gap-2 w-full">
-                {/* Left Tools / Attach */}
-                <button
-                  type="button"
-                  onClick={() => setCurrentView("research")}
-                  title="Browse Statutory FAQs & Repository"
-                  className="p-2.5 text-[#5A6A32] hover:bg-white/60 rounded-full transition-colors shrink-0 flex items-center justify-center cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-xl">menu_book</span>
-                </button>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  accept=".pdf"
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Attach PDF Document"
-                  className="p-2.5 text-[#5A6A32] hover:bg-white/60 rounded-full transition-colors shrink-0 flex items-center justify-center cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-xl">attach_file</span>
-                </button>
-
-                {/* Input */}
-                <div className="flex-1 py-1 px-2">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void sendMessage();
+                }}
+                className="bg-[#FAF7F2] backdrop-blur-md rounded-[24px] p-2 flex flex-col gap-2 ambient-shadow border card-border shadow-lg"
+              >
+                {selectedFile && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-[#F1EDE6] rounded-full border border-[#7D4F39] self-start ml-2 mt-1">
+                    <span className="text-xs text-[#1E1B18] font-medium truncate max-w-[200px]">{selectedFile.name}</span>
+                    <button type="button" onClick={() => setSelectedFile(null)} className="text-[#7D4F39] hover:text-red-600 transition-colors cursor-pointer">
+                      <span className="material-symbols-outlined text-sm flex items-center justify-center">close</span>
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 w-full">
+                  {/* Left Tools / Attach */}
                   <input
-                    ref={inputRef}
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    disabled={isStreaming}
-                    placeholder="Ask in English, Hindi, Marathi, Tamil, Telugu, Sanskrit..."
-                    className="w-full bg-transparent border-none focus:ring-0 text-sm text-[#1B2B20] placeholder:text-[#414942]/60 outline-none block"
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    accept=".pdf"
+                    className="hidden"
                   />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Attach PDF Document"
+                    className="p-2.5 text-[#7D4F39] hover:bg-white/60 rounded-full transition-colors shrink-0 flex items-center justify-center cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-xl">attach_file</span>
+                  </button>
+
+                  {/* Input */}
+                  <div className="flex-1 py-1 px-2">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      disabled={isStreaming}
+                      placeholder="Ask in English, Hindi, Marathi, Tamil, Telugu, Sanskrit..."
+                      className="w-full bg-transparent border-none focus:ring-0 text-sm text-[#1E1B18] placeholder:text-[#645D56]/60 outline-none block"
+                    />
+                  </div>
+
+                  {/* Send Action */}
+                  <button
+                    type="submit"
+                    disabled={isStreaming || (!input.trim() && !selectedFile)}
+                    className="p-3 bg-[#7D4F39] hover:bg-[#643B28] disabled:opacity-50 text-white rounded-full transition-colors shrink-0 flex items-center justify-center shadow-md cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-lg">send</span>
+                  </button>
                 </div>
+              </form>
 
-                {/* Send Action */}
-                <button
-                  type="submit"
-                  disabled={isStreaming || (!input.trim() && !selectedFile)}
-                  className="p-3 bg-[#DF6D2D] hover:bg-[#C84C05] disabled:opacity-50 text-white rounded-full transition-colors shrink-0 flex items-center justify-center shadow-md cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-lg">send</span>
-                </button>
+              <div className="text-center mt-2.5 text-[11px] text-[#645D56]/70 font-medium">
+                IP-SAKTI can make mistakes. Verify important legal &amp; statutory information.
               </div>
-            </form>
-
-            <div className="text-center mt-2.5 text-[11px] text-[#414942]/70 font-medium">
-              IP-SAKTI can make mistakes. Verify important legal &amp; statutory information.
             </div>
           </div>
-        </div>
         </div>
 
         {/* RIGHT PANE: PDF Viewer */}
         {activePdfUrl && (
           <div className="w-full md:w-1/2 h-full z-30 relative animate-in slide-in-from-right duration-300 shadow-[-10px_0_30px_rgba(0,0,0,0.05)]">
-            <PdfViewerWidget 
-              url={activePdfUrl.url} 
-              initialPage={activePdfUrl.page} 
+            <PdfViewerWidget
+              url={activePdfUrl.url}
+              initialPage={activePdfUrl.page}
               title={activePdfUrl.title}
               searchQuery={activePdfUrl.searchQuery}
-              onClose={() => setActivePdfUrl(null)} 
+              onClose={() => setActivePdfUrl(null)}
             />
           </div>
         )}
@@ -1608,10 +1633,10 @@ export default function Home() {
       </main>
 
       {/* ── Bottom Navigation (Mobile Only - Exact Stitch Layout) ─────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-[#FFFDE7] border-t card-border flex justify-around items-center py-2 px-2 z-40">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-[#FAF7F2] border-t card-border flex justify-around items-center py-2 px-2 z-40">
         <button
           onClick={() => setCurrentView("chat")}
-          className={`flex flex-col items-center p-2 cursor-pointer ${currentView === "chat" ? "text-[#638C6D] font-bold" : "text-[#414942]"
+          className={`flex flex-col items-center p-2 cursor-pointer ${currentView === "chat" ? "text-[#7D4F39] font-bold" : "text-[#645D56]"
             }`}
         >
           <span className="material-symbols-outlined text-[22px]">chat</span>
@@ -1619,7 +1644,7 @@ export default function Home() {
         </button>
         <button
           onClick={() => setCurrentView("research")}
-          className={`flex flex-col items-center p-2 cursor-pointer ${currentView === "research" ? "text-[#638C6D] font-bold" : "text-[#414942]"
+          className={`flex flex-col items-center p-2 cursor-pointer ${currentView === "research" ? "text-[#7D4F39] font-bold" : "text-[#645D56]"
             }`}
         >
           <span className="material-symbols-outlined text-[22px]">menu_book</span>
@@ -1627,7 +1652,7 @@ export default function Home() {
         </button>
         <button
           onClick={() => setCurrentView("tools")}
-          className={`flex flex-col items-center p-2 cursor-pointer ${currentView === "tools" ? "text-[#638C6D] font-bold" : "text-[#414942]"
+          className={`flex flex-col items-center p-2 cursor-pointer ${currentView === "tools" ? "text-[#7D4F39] font-bold" : "text-[#645D56]"
             }`}
         >
           <span className="material-symbols-outlined text-[22px]">calculate</span>
@@ -1635,7 +1660,7 @@ export default function Home() {
         </button>
         <button
           onClick={() => setCurrentView("settings")}
-          className={`flex flex-col items-center p-2 cursor-pointer ${currentView === "settings" ? "text-[#638C6D] font-bold" : "text-[#414942]"
+          className={`flex flex-col items-center p-2 cursor-pointer ${currentView === "settings" ? "text-[#7D4F39] font-bold" : "text-[#645D56]"
             }`}
         >
           <span className="material-symbols-outlined text-[22px]">settings</span>

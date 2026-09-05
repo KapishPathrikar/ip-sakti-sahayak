@@ -34,21 +34,21 @@ export default function AccountSettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-      <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-[#C1C8C0] bg-[#FAFAF5] text-[#0F1F15] shadow-2xl animate-in fade-in zoom-in-95">
+      <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-[#E5DCD0] bg-[#FBF9F5] text-[#1E1B18] shadow-2xl animate-in fade-in zoom-in-95">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-[#D4E7D6] bg-[#FFFDE7]/80 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[#E5DCD0] bg-[#FAF7F2]/80 px-6 py-4">
           <div className="flex items-center gap-2.5">
-            <div className="grid size-9 place-items-center rounded-xl bg-[#638C6D] text-white font-bold shadow-xs">
+            <div className="grid size-9 place-items-center rounded-xl bg-[#7D4F39] text-white font-bold shadow-xs">
               ⚙️
             </div>
             <div>
-              <h2 className="text-lg font-bold text-[#0F1F15]">Account &amp; System Settings</h2>
-              <p className="text-xs text-[#414942]">IP-SAKTI Legal AI Workspace</p>
+              <h2 className="text-lg font-bold text-[#1E1B18]">Account &amp; System Settings</h2>
+              <p className="text-xs text-[#645D56]">IP-SAKTI Legal AI Workspace</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full bg-[#E5F9E7] p-2 text-[#414942] hover:bg-[#D4E7D6] hover:text-[#0F1F15] transition cursor-pointer"
+            className="rounded-full bg-[#F1EDE6] p-2 text-[#645D56] hover:bg-[#E5DCD0] hover:text-[#1E1B18] transition cursor-pointer"
           >
             ✕
           </button>
@@ -57,59 +57,59 @@ export default function AccountSettingsModal({
         {/* Modal Body */}
         <div className="space-y-5 p-6 max-h-[75vh] overflow-y-auto">
           {/* User Profile Card */}
-          <div className="rounded-2xl border border-[#D4E7D6] bg-white p-4.5 shadow-2xs">
+          <div className="rounded-2xl border border-[#E5DCD0] bg-white p-4.5 shadow-2xs">
             <div className="flex items-center gap-4">
-              <div className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-[#638C6D] to-[#3D6448] text-white text-xl font-bold shadow-sm">
+              <div className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-[#7D4F39] to-[#643B28] text-white text-xl font-bold shadow-sm">
                 {currentUser?.email ? currentUser.email[0].toUpperCase() : "U"}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base text-[#0F1F15]">
+                  <h3 className="font-bold text-base text-[#1E1B18]">
                     {currentUser?.full_name || currentUser?.email?.split("@")[0] || "Guest Researcher"}
                   </h3>
-                  <span className="rounded-full bg-[#E5F9E7] border border-[#638C6D]/30 px-2 py-0.5 text-[10px] font-bold text-[#3D6448]">
+                  <span className="rounded-full bg-[#F1EDE6] border border-[#7D4F39]/30 px-2 py-0.5 text-[10px] font-bold text-[#643B28]">
                     {currentUser?.role?.toUpperCase() || "IP APPLICANT"}
                   </span>
                 </div>
-                <p className="text-xs text-[#414942] font-mono mt-0.5">{currentUser?.email}</p>
-                <p className="text-[11px] text-[#727971] mt-1">Joined: {joinDate}</p>
+                <p className="text-xs text-[#645D56] font-mono mt-0.5">{currentUser?.email}</p>
+                <p className="text-[11px] text-[#8C827A] mt-1">Joined: {joinDate}</p>
               </div>
             </div>
           </div>
 
           {/* Statutory Query Quota */}
-          <div className="rounded-2xl border border-[#D4E7D6] bg-[#FFFDE7]/50 p-4">
+          <div className="rounded-2xl border border-[#E5DCD0] bg-[#FAF7F2]/50 p-4">
             <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-              <span className="text-[#0F1F15]">Daily Statutory Query Limit</span>
-              <span className="text-[#C84C05]">Active Plan: Unlimited Beta</span>
+              <span className="text-[#1E1B18]">Daily Statutory Query Limit</span>
+              <span className="text-[#C86D3B]">Active Plan: Unlimited Beta</span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-[#D4E7D6]">
-              <div className="h-full w-1/4 rounded-full bg-[#638C6D]" />
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[#E5DCD0]">
+              <div className="h-full w-1/4 rounded-full bg-[#7D4F39]" />
             </div>
-            <p className="mt-2 text-[11px] text-[#414942]">
+            <p className="mt-2 text-[11px] text-[#645D56]">
               RAG queries against Indian Patents Act 1970, Trade Marks Act 1999 &amp; TKDL are rate-guarded at 5 requests/sec with live streaming.
             </p>
           </div>
 
           {/* Legal Knowledge Base Status */}
-          <div className="rounded-2xl border border-[#D4E7D6] bg-white p-4 space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#727971]">
+          <div className="rounded-2xl border border-[#E5DCD0] bg-white p-4 space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#8C827A]">
               Knowledge Base &amp; Regulatory Corpus
             </h4>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl bg-[#FAFAF5] p-2.5 border border-[#D4E7D6]">
-                <div className="text-[10px] text-[#727971]">Total Indexed Chunks</div>
-                <div className="font-bold text-[#0F1F15] text-sm">18,518 Chunks</div>
+              <div className="rounded-xl bg-[#FBF9F5] p-2.5 border border-[#E5DCD0]">
+                <div className="text-[10px] text-[#8C827A]">Total Indexed Chunks</div>
+                <div className="font-bold text-[#1E1B18] text-sm">18,518 Chunks</div>
               </div>
-              <div className="rounded-xl bg-[#FAFAF5] p-2.5 border border-[#D4E7D6]">
-                <div className="text-[10px] text-[#727971]">Jurisdiction Coverage</div>
-                <div className="font-bold text-[#638C6D] text-sm">India + WIPO/PCT</div>
+              <div className="rounded-xl bg-[#FBF9F5] p-2.5 border border-[#E5DCD0]">
+                <div className="text-[10px] text-[#8C827A]">Jurisdiction Coverage</div>
+                <div className="font-bold text-[#7D4F39] text-sm">India + WIPO/PCT</div>
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-2 border-t border-[#D4E7D6]">
+          <div className="flex items-center justify-between pt-2 border-t border-[#E5DCD0]">
             <button
               onClick={() => {
                 onLogout();
@@ -121,7 +121,7 @@ export default function AccountSettingsModal({
             </button>
             <button
               onClick={onClose}
-              className="rounded-xl bg-[#638C6D] px-5 py-2 text-xs font-bold text-white hover:bg-[#3D6448] transition shadow-xs cursor-pointer"
+              className="rounded-xl bg-[#7D4F39] px-5 py-2 text-xs font-bold text-white hover:bg-[#643B28] transition shadow-xs cursor-pointer"
             >
               Done
             </button>

@@ -113,14 +113,14 @@ export default function AccountSettingsView({
   <meta charset="utf-8">
   <title>IP-SAKTI Legal Consultation Records</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #0F1F15; background: #FAFAF5; padding: 40px; }
-    .container { max-width: 860px; margin: 0 auto; background: #FFFFFF; padding: 40px; border-radius: 16px; border: 1px solid #D4E7D6; }
-    .header { border-bottom: 2px solid #638C6D; padding-bottom: 20px; margin-bottom: 30px; }
-    .title { font-size: 24px; font-weight: bold; color: #3D6448; }
-    .session { background: #FFFDE7; border: 1px solid #D4E7D6; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1E1B18; background: #FBF9F5; padding: 40px; }
+    .container { max-width: 860px; margin: 0 auto; background: #FFFFFF; padding: 40px; border-radius: 16px; border: 1px solid #E5DCD0; }
+    .header { border-bottom: 2px solid #7D4F39; padding-bottom: 20px; margin-bottom: 30px; }
+    .title { font-size: 24px; font-weight: bold; color: #7D4F39; }
+    .session { background: #FAF7F2; border: 1px solid #E5DCD0; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
     .msg { margin: 12px 0; padding: 12px; border-radius: 8px; font-size: 14px; }
-    .user { background: #E5F9E7; font-weight: 600; }
-    .assistant { background: #FFFFFF; border: 1px solid #D4E7D6; }
+    .user { background: #F1EDE6; font-weight: 600; }
+    .assistant { background: #FFFFFF; border: 1px solid #E5DCD0; }
   </style>
 </head>
 <body>
@@ -139,7 +139,7 @@ export default function AccountSettingsView({
             const histData = await histRes.json();
             const msgs = histData.history || [];
             if (msgs.length === 0) continue;
-            htmlContent += `<div class="session"><h3 style="margin-top:0; color:#0F1F15;">📌 ${sess.title || sId}</h3>`;
+            htmlContent += `<div class="session"><h3 style="margin-top:0; color:#1E1B18;">📌 ${sess.title || sId}</h3>`;
             for (const m of msgs) {
               const isUser = m.role === "user";
               htmlContent += `<div class="msg ${isUser ? "user" : "assistant"}"><strong>${isUser ? "Query" : "Advisory"}:</strong> ${m.content.replace(/\n/g, "<br/>")}</div>`;
@@ -208,17 +208,17 @@ export default function AccountSettingsView({
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-6 py-6 md:py-10 space-y-8 animate-in fade-in transition-colors duration-300 dark:bg-gray-900">
       {/* ── Header (Stitch Unified Theme) ───────────────────────────── */}
       <header className="mb-4">
-        <h2 className="text-3xl sm:text-4xl font-bold text-[#1B2B20] mb-2 tracking-tight dark:text-white transition-colors duration-300">
+        <h2 className="text-3xl sm:text-4xl font-bold text-[#1E1B18] mb-2 tracking-tight dark:text-white transition-colors duration-300">
           Account Settings
         </h2>
-        <p className="text-sm md:text-base text-[#414942] dark:text-gray-300 transition-colors duration-300">
+        <p className="text-sm md:text-base text-[#645D56] dark:text-gray-300 transition-colors duration-300">
           Manage your profile, usage limits, and data preferences.
         </p>
       </header>
 
       {/* Save / Notification Toast */}
       {saveMessage && (
-        <div className="p-4 rounded-xl bg-[#E7FBB4] border border-[#638C6D]/40 text-[#5A6A32] text-xs font-bold flex items-center justify-between animate-in fade-in">
+        <div className="p-4 rounded-xl bg-[#F6EDE7] border border-[#7D4F39]/40 text-[#7D4F39] text-xs font-bold flex items-center justify-between animate-in fade-in">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-base">check_circle</span>
             <span>{saveMessage}</span>
@@ -231,16 +231,16 @@ export default function AccountSettingsView({
         {/* ── Left Column: Profile Card ───────────────────────────────── */}
         <div className="lg:col-span-2 flex flex-col gap-8">
           <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 ambient-shadow border card-border dark:border-gray-700 transition-colors duration-300">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8 pb-8 border-b border-[#1B2B20]/10 dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8 pb-8 border-b border-[#1E1B18]/10 dark:border-gray-700">
               {/* Profile Details */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-2xl font-bold text-[#1B2B20] dark:text-white mb-1 transition-colors duration-300">
+                <h3 className="text-2xl font-bold text-[#1E1B18] dark:text-white mb-1 transition-colors duration-300">
                   {fullName}
                 </h3>
-                <p className="text-[#638C6D] dark:text-[#A8DAB5] text-xs font-bold uppercase tracking-wider mb-2 transition-colors duration-300">
+                <p className="text-[#7D4F39] dark:text-[#C86D3B] text-xs font-bold uppercase tracking-wider mb-2 transition-colors duration-300">
                   {displayRole}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-[#414942] dark:text-gray-400 transition-colors duration-300">
+                <div className="flex items-center gap-2 text-xs text-[#645D56] dark:text-gray-400 transition-colors duration-300">
                   <span className="material-symbols-outlined text-base">mail</span>
                   <span className="truncate">{displayEmail}</span>
                 </div>
@@ -251,7 +251,7 @@ export default function AccountSettingsView({
                 {currentUser && onLogout && (
                   <button
                     onClick={onLogout}
-                    className="mt-4 sm:mt-0 px-4 py-2.5 rounded-xl border border-[#BA1A1A]/40 text-[#BA1A1A] text-xs font-bold hover:bg-[#FFDAD6]/50 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    className="mt-4 sm:mt-0 px-4 py-2.5 rounded-xl border border-[#B3261E]/40 text-[#B3261E] text-xs font-bold hover:bg-[#FDF2F2]/50 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
                     title="Sign out and return to Temporary User"
                   >
                     <span className="material-symbols-outlined text-sm">logout</span>
@@ -261,7 +261,7 @@ export default function AccountSettingsView({
                 {!currentUser ? (
                   <button
                     onClick={onOpenAuth}
-                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl bg-[#638C6D] text-white text-xs font-bold hover:bg-[#557E60] transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl bg-[#7D4F39] text-white text-xs font-bold hover:bg-[#643B28] transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
                   >
                     <span className="material-symbols-outlined text-sm">login</span>
                     Sign In / Register
@@ -269,14 +269,14 @@ export default function AccountSettingsView({
                 ) : isEditing ? (
                   <button
                     onClick={handleSaveProfile}
-                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl bg-[#638C6D] text-white text-xs font-bold hover:bg-[#557E60] transition-colors shadow-xs cursor-pointer"
+                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl bg-[#7D4F39] text-white text-xs font-bold hover:bg-[#643B28] transition-colors shadow-xs cursor-pointer"
                   >
                     Save Changes
                   </button>
                 ) : (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl border border-[#638C6D] text-[#638C6D] text-xs font-bold hover:bg-[#638C6D]/10 transition-colors cursor-pointer"
+                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl border border-[#7D4F39] text-[#7D4F39] text-xs font-bold hover:bg-[#7D4F39]/10 transition-colors cursor-pointer"
                   >
                     Edit Profile
                   </button>
@@ -287,7 +287,7 @@ export default function AccountSettingsView({
             {/* Profile Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-bold text-[#727971] uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-[#8C827A] uppercase tracking-wider mb-2">
                   Full Name
                 </label>
                 {isEditing ? (
@@ -295,17 +295,17 @@ export default function AccountSettingsView({
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-[#E5F9E7] text-[#1B2B20] text-sm border card-border outline-none focus:ring-2 focus:ring-[#638C6D] dark:bg-gray-800 dark:text-white"
+                    className="w-full px-4 py-3 rounded-xl bg-[#F1EDE6] text-[#1E1B18] text-sm border card-border outline-none focus:ring-2 focus:ring-[#7D4F39] dark:bg-gray-800 dark:text-white"
                   />
                 ) : (
-                  <div className="px-4 py-3 rounded-xl bg-[#E5F9E7]/60 text-[#1B2B20] text-sm border card-border font-medium dark:bg-gray-800 dark:text-white">
+                  <div className="px-4 py-3 rounded-xl bg-[#F1EDE6]/60 text-[#1E1B18] text-sm border card-border font-medium dark:bg-gray-800 dark:text-white">
                     {fullName}
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#727971] uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-[#8C827A] uppercase tracking-wider mb-2">
                   Location
                 </label>
                 {isEditing ? (
@@ -313,10 +313,10 @@ export default function AccountSettingsView({
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-[#E5F9E7] text-[#1B2B20] text-sm border card-border outline-none focus:ring-2 focus:ring-[#638C6D] dark:bg-gray-800 dark:text-white"
+                    className="w-full px-4 py-3 rounded-xl bg-[#F1EDE6] text-[#1E1B18] text-sm border card-border outline-none focus:ring-2 focus:ring-[#7D4F39] dark:bg-gray-800 dark:text-white"
                   />
                 ) : (
-                  <div className="px-4 py-3 rounded-xl bg-[#E5F9E7]/60 text-[#1B2B20] text-sm border card-border font-medium dark:bg-gray-800 dark:text-white">
+                  <div className="px-4 py-3 rounded-xl bg-[#F1EDE6]/60 text-[#1E1B18] text-sm border card-border font-medium dark:bg-gray-800 dark:text-white">
                     {location}
                   </div>
                 )}
@@ -324,33 +324,33 @@ export default function AccountSettingsView({
 
               <div className="sm:col-span-2 mt-2">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-[#727971] uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#8C827A] uppercase tracking-wider">
                     API Usage (Daily)
                   </label>
-                  <span className="text-xs font-bold text-[#1B2B20] dark:text-white transition-colors duration-300">
+                  <span className="text-xs font-bold text-[#1E1B18] dark:text-white transition-colors duration-300">
                     {queriesUsed} / {queriesMax} queries
                   </span>
                 </div>
                 
                 {/* Progress Bar Track */}
-                <div className="h-3 w-full bg-[#E5F9E7] dark:bg-gray-700 rounded-full overflow-hidden border card-border dark:border-gray-600 transition-colors duration-300">
+                <div className="h-3 w-full bg-[#F1EDE6] dark:bg-gray-700 rounded-full overflow-hidden border card-border dark:border-gray-600 transition-colors duration-300">
                   {/* Progress Bar Fill */}
                   <div 
-                    className="h-full bg-[#638C6D] transition-all duration-1000 ease-out"
+                    className="h-full bg-[#7D4F39] transition-all duration-1000 ease-out"
                     style={{ width: `${usagePercentage}%` }}
                   ></div>
                 </div>
-                <p className="text-[10px] text-[#727971] mt-2">
+                <p className="text-[10px] text-[#8C827A] mt-2">
                   Your limit resets daily at midnight UTC. Upgrade your plan for more queries.
                 </p>
               </div>
             </div>
 
             {currentUser && onLogout && (
-              <div className="mt-8 pt-6 border-t border-[#1B2B20]/10 flex justify-end">
+              <div className="mt-8 pt-6 border-t border-[#1E1B18]/10 flex justify-end">
                 <button
                   onClick={onLogout}
-                  className="px-4 py-2 rounded-lg border border-[#BA1A1A]/30 text-xs font-semibold text-[#BA1A1A] hover:bg-[#FFDAD6]/50 transition cursor-pointer"
+                  className="px-4 py-2 rounded-lg border border-[#B3261E]/30 text-xs font-semibold text-[#B3261E] hover:bg-[#FDF2F2]/50 transition cursor-pointer"
                 >
                   Sign Out
                 </button>
@@ -363,37 +363,37 @@ export default function AccountSettingsView({
         <div className="flex flex-col gap-8">
           {/* Security Card - Hidden per user request */}
           <section className="hidden bg-white rounded-2xl p-6 ambient-shadow border card-border">
-            <h3 className="text-base font-bold text-[#1B2B20] mb-6 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#638C6D]">lock</span>
+            <h3 className="text-base font-bold text-[#1E1B18] mb-6 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#7D4F39]">lock</span>
               <span>Security</span>
             </h3>
             <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center p-3.5 hover:bg-[#E5F9E7]/50 rounded-xl transition-colors cursor-pointer group border card-border">
+              <div className="flex justify-between items-center p-3.5 hover:bg-[#F1EDE6]/50 rounded-xl transition-colors cursor-pointer group border card-border">
                 <div>
-                  <h4 className="text-sm font-semibold text-[#1B2B20] group-hover:text-[#638C6D] transition-colors">
+                  <h4 className="text-sm font-semibold text-[#1E1B18] group-hover:text-[#7D4F39] transition-colors">
                     Password &amp; Auth
                   </h4>
-                  <p className="text-xs text-[#727971]">Protected via JWT encryption</p>
+                  <p className="text-xs text-[#8C827A]">Protected via JWT encryption</p>
                 </div>
-                <span className="material-symbols-outlined text-[#727971]">chevron_right</span>
+                <span className="material-symbols-outlined text-[#8C827A]">chevron_right</span>
               </div>
             </div>
           </section>
 
           {/* Data Privacy Card */}
           <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 ambient-shadow border card-border dark:border-gray-700 transition-colors duration-300">
-            <h3 className="text-base font-bold text-[#1B2B20] dark:text-white mb-2 flex items-center gap-2 transition-colors duration-300">
-              <span className="material-symbols-outlined text-[#DF6D2D]">shield_lock</span>
+            <h3 className="text-base font-bold text-[#1E1B18] dark:text-white mb-2 flex items-center gap-2 transition-colors duration-300">
+              <span className="material-symbols-outlined text-[#7D4F39]">shield_lock</span>
               <span>Data Privacy</span>
             </h3>
-            <p className="text-xs text-[#414942] dark:text-gray-400 mb-6 leading-relaxed transition-colors duration-300">
+            <p className="text-xs text-[#645D56] dark:text-gray-400 mb-6 leading-relaxed transition-colors duration-300">
               Manage your legal research data and history. Actions taken here are permanent.
             </p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleExportAllRecords}
                 disabled={isExporting}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-[#638C6D] text-[#638C6D] text-xs font-bold hover:bg-[#638C6D]/5 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-[#7D4F39] text-[#7D4F39] text-xs font-bold hover:bg-[#7D4F39]/5 transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-base">download</span>
                 <span>{isExporting ? "Exporting Records..." : "Export All Records"}</span>
@@ -401,7 +401,7 @@ export default function AccountSettingsView({
 
               <button
                 onClick={handleClearHistory}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FFDAD6]/50 text-[#BA1A1A] border border-[#BA1A1A]/30 text-xs font-bold hover:bg-[#FFDAD6] transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FDF2F2]/50 text-[#B3261E] border border-[#B3261E]/30 text-xs font-bold hover:bg-[#FDF2F2] transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-base">delete_forever</span>
                 <span>Clear History</span>

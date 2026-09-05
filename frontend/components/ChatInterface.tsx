@@ -241,7 +241,7 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
             <button
               onClick={() => setJurisdiction("india")}
               className={`rounded-full px-3 py-1 text-xs font-bold transition-all ${
-                jurisdiction === "india" ? "bg-white shadow-sm text-emerald-700" : "text-slate-500 hover:text-slate-700"
+                jurisdiction === "india" ? "bg-white shadow-sm text-[#2D6A4F]/80" : "text-slate-500 hover:text-slate-700"
               }`}
             >
               🇮🇳 India
@@ -328,7 +328,7 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
                 {/* Citations block */}
                 {msg.citations && msg.citations.length > 0 && (
                   <div className="mt-4 border-t border-slate-200/60 pt-3 text-xs">
-                    <span className="font-bold flex items-center gap-1 text-emerald-800 mb-2">
+                    <span className="font-bold flex items-center gap-1 text-[#2D6A4F] mb-2">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
@@ -336,11 +336,11 @@ export default function ChatInterface({ initialQuestion, authToken, currentUser 
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {msg.citations.map((c, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-md bg-emerald-50 px-2.5 py-1.5 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors">
-                          <span className="font-semibold text-emerald-900">{c.source}</span>
-                          <span className="text-emerald-700">| Pg {c.page}</span>
+                        <div key={i} className="flex items-center gap-2 rounded-md bg-[#EBF5EE] px-2.5 py-1.5 border border-[#D2E8D8] cursor-pointer hover:bg-[#DDF0E3] transition-colors">
+                          <span className="font-semibold text-[#2D6A4F]">{c.source}</span>
+                          <span className="text-[#2D6A4F]/80">| Pg {c.page}</span>
                           {c.confidence && (
-                            <span className="ml-1 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                            <span className="ml-1 rounded bg-[#D8ECE0] px-1.5 py-0.5 text-[10px] font-bold text-[#2D6A4F]">
                               {c.confidence}
                             </span>
                           )}

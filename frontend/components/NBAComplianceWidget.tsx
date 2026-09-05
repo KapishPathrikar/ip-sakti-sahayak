@@ -82,7 +82,7 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
       <div className="max-w-3xl w-full flex flex-col gap-6">
         
         {/* Header & Progress Bar */}
-        <div className="bg-gradient-to-r from-[#638C6D] to-[#4A6B52] p-8 rounded-2xl text-white shadow-md relative overflow-hidden flex-shrink-0">
+        <div className="bg-gradient-to-r from-[#7D4F39] to-[#643B28] p-8 rounded-2xl text-white shadow-md relative overflow-hidden flex-shrink-0">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <span className="material-symbols-outlined text-9xl">admin_panel_settings</span>
           </div>
@@ -98,11 +98,11 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
             {/* Progress Bar */}
             <div className="w-full bg-black/20 h-2.5 rounded-full overflow-hidden">
               <div 
-                className="bg-[#E7FBB4] h-full transition-all duration-500 ease-out"
+                className="bg-[#F6EDE7] h-full transition-all duration-500 ease-out"
                 style={{ width: `${progressPercentage}%` }}
               ></div>
             </div>
-            <div className="flex justify-between text-xs mt-2 font-medium text-[#E7FBB4]/80">
+            <div className="flex justify-between text-xs mt-2 font-medium text-[#F6EDE7]/80">
               <span>Start</span>
               <span>{currentStep === 5 ? "Report Ready" : `Step ${currentStep + 1} of 5`}</span>
             </div>
@@ -110,15 +110,15 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
         </div>
 
         {/* Wizard Container */}
-        <div className="bg-white rounded-2xl shadow-lg shadow-black/5 border border-[#E7EFE8] flex flex-col min-h-[400px]">
+        <div className="bg-white rounded-2xl shadow-lg shadow-black/5 border border-[#E5DCD0] flex flex-col min-h-[400px]">
           {/* Top navigation */}
           {currentStep > 0 && currentStep < 5 && (
             <div className="px-6 pt-6 flex justify-between items-center">
-              <button onClick={prevStep} className="text-[#638C6D] text-sm font-bold flex items-center gap-1 hover:bg-[#DAEDDC]/50 px-3 py-1.5 rounded-lg transition-colors">
+              <button onClick={prevStep} className="text-[#7D4F39] text-sm font-bold flex items-center gap-1 hover:bg-[#F1EDE6]/50 px-3 py-1.5 rounded-lg transition-colors">
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                 Back
               </button>
-              <span className="text-xs font-bold text-[#727971] uppercase tracking-widest">
+              <span className="text-xs font-bold text-[#8C827A] uppercase tracking-widest">
                 Audit Step {currentStep} / 5
               </span>
             </div>
@@ -127,8 +127,8 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
           {/* STEP 0: Resource Origin */}
           {currentStep === 0 && (
             <div className="p-8 md:p-12 animate-in slide-in-from-right-8 duration-300">
-              <h2 className="text-2xl font-bold text-[#1B2B20] mb-3">Resource Origin</h2>
-              <p className="text-[#414942] mb-8 leading-relaxed">
+              <h2 className="text-2xl font-bold text-[#1E1B18] mb-3">Resource Origin</h2>
+              <p className="text-[#645D56] mb-8 leading-relaxed">
                 Where is the primary biological or active material in your invention sourced from?
               </p>
               
@@ -161,10 +161,10 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
           {/* STEP 1: Classification */}
           {currentStep === 1 && (
             <div className="p-8 md:p-12 animate-in slide-in-from-right-8 duration-300">
-              <h2 className="text-2xl font-bold text-[#1B2B20] mb-3">Material Classification</h2>
-              <p className="text-[#414942] mb-8 leading-relaxed">
+              <h2 className="text-2xl font-bold text-[#1E1B18] mb-3">Material Classification</h2>
+              <p className="text-[#645D56] mb-8 leading-relaxed">
                 Under Section 2(c) of the BDA, how is this biological material classified? 
-                <span className="block text-xs mt-1 text-[#638C6D] font-medium">*Hint: Certain classes are exempt from NBA approval!</span>
+                <span className="block text-xs mt-1 text-[#7D4F39] font-medium">*Hint: Certain classes are exempt from NBA approval!</span>
               </p>
               
               <div className="grid gap-4 md:grid-cols-3">
@@ -196,8 +196,8 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
           {/* STEP 2: Applicant */}
           {currentStep === 2 && (
             <div className="p-8 md:p-12 animate-in slide-in-from-right-8 duration-300">
-              <h2 className="text-2xl font-bold text-[#1B2B20] mb-3">Applicant Identity</h2>
-              <p className="text-[#414942] mb-8 leading-relaxed">
+              <h2 className="text-2xl font-bold text-[#1E1B18] mb-3">Applicant Identity</h2>
+              <p className="text-[#645D56] mb-8 leading-relaxed">
                 Who will be the primary patent applicant? This strictly determines which NBA Form applies under Section 3 vs Section 7.
               </p>
               
@@ -237,8 +237,8 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
           {/* STEP 3: Traditional Knowledge */}
           {currentStep === 3 && (
             <div className="p-8 md:p-12 animate-in slide-in-from-right-8 duration-300">
-              <h2 className="text-2xl font-bold text-[#1B2B20] mb-3">Traditional Knowledge (Section 3p)</h2>
-              <p className="text-[#414942] mb-8 leading-relaxed">
+              <h2 className="text-2xl font-bold text-[#1E1B18] mb-3">Traditional Knowledge (Section 3p)</h2>
+              <p className="text-[#645D56] mb-8 leading-relaxed">
                 Is your formulation or its core mechanism documented in traditional Indian texts (e.g., Ayurveda, Unani) or the TKDL?
               </p>
               
@@ -264,8 +264,8 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
           {/* STEP 4: Synergy */}
           {currentStep === 4 && (
             <div className="p-8 md:p-12 animate-in slide-in-from-right-8 duration-300">
-              <h2 className="text-2xl font-bold text-[#1B2B20] mb-3">Scientific Synergy (Section 3e)</h2>
-              <p className="text-[#414942] mb-8 leading-relaxed">
+              <h2 className="text-2xl font-bold text-[#1E1B18] mb-3">Scientific Synergy (Section 3e)</h2>
+              <p className="text-[#645D56] mb-8 leading-relaxed">
                 If your invention is a combination of known substances, do you have concrete experimental data (in-vitro, in-vivo) proving <strong>synergistic efficacy</strong>?
               </p>
               
@@ -290,7 +290,7 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
 
           {/* Next Button Footer for Steps 0-4 */}
           {currentStep < 5 && (
-            <div className="mt-auto p-6 border-t border-[#E7EFE8] flex justify-end bg-gray-50/50">
+            <div className="mt-auto p-6 border-t border-[#E5DCD0] flex justify-end bg-gray-50/50">
               <button 
                 onClick={nextStep}
                 disabled={
@@ -300,7 +300,7 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
                   (currentStep === 3 && isTK === null) ||
                   (currentStep === 4 && hasSynergy === null)
                 }
-                className="bg-[#1B2B20] text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#2d4634] transition-all shadow-md disabled:opacity-30 disabled:cursor-not-allowed"
+                className="bg-[#1E1B18] text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#643B28] transition-all shadow-md disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 {currentStep === 4 ? "Generate Audit Report" : "Continue"}
                 <span className="material-symbols-outlined text-[18px]">
@@ -314,14 +314,14 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
           {currentStep === 5 && (
             <div className="p-8 md:p-12 animate-in zoom-in-95 duration-500">
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold text-[#1B2B20] flex items-center gap-3">
-                  <span className="material-symbols-outlined text-[#638C6D] text-3xl">verified_user</span>
+                <h2 className="text-2xl font-bold text-[#1E1B18] flex items-center gap-3">
+                  <span className="material-symbols-outlined text-[#7D4F39] text-3xl">verified_user</span>
                   Statutory Audit Report
                 </h2>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-[10px] font-bold text-[#727971] uppercase tracking-widest">Compliance Score</p>
-                    <p className={`text-3xl font-black ${score > 80 ? 'text-[#638C6D]' : score > 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                    <p className="text-[10px] font-bold text-[#8C827A] uppercase tracking-widest">Compliance Score</p>
+                    <p className={`text-3xl font-black ${score > 80 ? 'text-[#7D4F39]' : score > 50 ? 'text-amber-600' : 'text-red-600'}`}>
                       {score}/100
                     </p>
                   </div>
@@ -331,8 +331,8 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
               <div className="space-y-6">
                 
                 {/* BDA ANALYSIS */}
-                <div className="border border-[#E7EFE8] rounded-xl overflow-hidden">
-                  <div className="bg-[#F4F7F4] px-5 py-3 border-b border-[#E7EFE8] font-bold text-[#1B2B20] text-sm flex items-center gap-2">
+                <div className="border border-[#E5DCD0] rounded-xl overflow-hidden">
+                  <div className="bg-[#FBF9F5] px-5 py-3 border-b border-[#E5DCD0] font-bold text-[#1E1B18] text-sm flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px]">psychiatry</span>
                     Biological Diversity Act (BDA) Status
                   </div>
@@ -354,8 +354,8 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
                 </div>
 
                 {/* PATENTS ACT ANALYSIS */}
-                <div className="border border-[#E7EFE8] rounded-xl overflow-hidden">
-                  <div className="bg-[#F4F7F4] px-5 py-3 border-b border-[#E7EFE8] font-bold text-[#1B2B20] text-sm flex items-center gap-2">
+                <div className="border border-[#E5DCD0] rounded-xl overflow-hidden">
+                  <div className="bg-[#FBF9F5] px-5 py-3 border-b border-[#E5DCD0] font-bold text-[#1E1B18] text-sm flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px]">balance</span>
                     Indian Patents Act (1970) Posture
                   </div>
@@ -379,10 +379,10 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
               </div>
 
               {/* Action Buttons */}
-              <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E7EFE8] pt-6">
+              <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E5DCD0] pt-6">
                 <button 
                   onClick={reset}
-                  className="text-sm font-bold text-[#727971] hover:text-[#1B2B20] transition-colors"
+                  className="text-sm font-bold text-[#8C827A] hover:text-[#1E1B18] transition-colors"
                 >
                   Start New Audit
                 </button>
@@ -392,14 +392,14 @@ Please structure the memo with Sections for 1. BDA Compliance (Section 6, Value 
                       href="https://absefiling.nic.in/NBA/login/auth" 
                       target="_blank" 
                       rel="noreferrer"
-                      className="flex-1 sm:flex-none border border-[#638C6D] text-[#638C6D] bg-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#E7FBB4]/30 transition-all text-sm"
+                      className="flex-1 sm:flex-none border border-[#7D4F39] text-[#7D4F39] bg-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#F6EDE7]/30 transition-all text-sm"
                     >
                       NBA e-Filing <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                     </a>
                   )}
                   <button 
                     onClick={handleGenerateMemo}
-                    className="flex-1 sm:flex-none bg-gradient-to-r from-[#1B2B20] to-[#2d4634] text-[#E7FBB4] px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all text-sm group"
+                    className="flex-1 sm:flex-none bg-gradient-to-r from-[#1E1B18] to-[#643B28] text-[#F6EDE7] px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all text-sm group"
                   >
                     <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">auto_awesome</span>
                     Draft Legal Memo via AI
@@ -421,16 +421,16 @@ function OptionCard({ title, icon, desc, selected, onClick }: { title: string, i
       onClick={onClick}
       className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 flex flex-col h-full
         ${selected 
-          ? 'border-[#638C6D] bg-[#DAEDDC]/40 shadow-sm' 
-          : 'border-[#E7EFE8] bg-white hover:border-[#C1C8C0] hover:bg-slate-50'
+          ? 'border-[#7D4F39] bg-[#F1EDE6]/40 shadow-sm' 
+          : 'border-[#E5DCD0] bg-white hover:border-[#E5DCD0] hover:bg-slate-50'
         }
       `}
     >
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 transition-colors ${selected ? 'bg-[#638C6D] text-white' : 'bg-[#F4F7F4] text-[#638C6D]'}`}>
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 transition-colors ${selected ? 'bg-[#7D4F39] text-white' : 'bg-[#FBF9F5] text-[#7D4F39]'}`}>
         <span className="material-symbols-outlined text-[20px]">{icon}</span>
       </div>
-      <h3 className={`font-bold mb-1.5 text-sm ${selected ? 'text-[#1B2B20]' : 'text-[#414942]'}`}>{title}</h3>
-      <p className="text-xs text-[#727971] leading-relaxed mt-auto">{desc}</p>
+      <h3 className={`font-bold mb-1.5 text-sm ${selected ? 'text-[#1E1B18]' : 'text-[#645D56]'}`}>{title}</h3>
+      <p className="text-xs text-[#8C827A] leading-relaxed mt-auto">{desc}</p>
     </div>
   );
 }
@@ -440,8 +440,8 @@ function ResultRow({ icon, color, title, desc, isHighRisk = false }: { icon: str
     <div className={`flex gap-4 p-4 rounded-xl ${isHighRisk ? 'bg-red-50/50 border border-red-100' : ''}`}>
       <span className={`material-symbols-outlined ${color} mt-0.5`}>{icon}</span>
       <div>
-        <h4 className={`font-bold text-sm mb-1 ${isHighRisk ? 'text-red-900' : 'text-[#1B2B20]'}`}>{title}</h4>
-        <p className={`text-xs leading-relaxed ${isHighRisk ? 'text-red-800' : 'text-[#414942]'}`}>{desc}</p>
+        <h4 className={`font-bold text-sm mb-1 ${isHighRisk ? 'text-red-900' : 'text-[#1E1B18]'}`}>{title}</h4>
+        <p className={`text-xs leading-relaxed ${isHighRisk ? 'text-red-800' : 'text-[#645D56]'}`}>{desc}</p>
       </div>
     </div>
   );

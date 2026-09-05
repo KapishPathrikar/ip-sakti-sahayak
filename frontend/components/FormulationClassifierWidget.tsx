@@ -151,14 +151,14 @@ function OptionCard({ title, icon, selected, onClick }: { title: string; icon: s
       onClick={onClick}
       className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 flex flex-col h-full items-center text-center ${
         selected 
-          ? "border-[#285943] bg-[#FAF6ED] shadow-sm" 
-          : "border-[#E7EFE8] bg-white hover:border-[#A8CBAF] hover:bg-slate-50"
+          ? "border-[#7D4F39] bg-[#FBF9F5] shadow-sm" 
+          : "border-[#E5DCD0] bg-white hover:border-[#C86D3B] hover:bg-slate-50"
       }`}
     >
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors ${selected ? "bg-[#285943] text-white" : "bg-[#F4F7F4] text-[#285943]"}`}>
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors ${selected ? "bg-[#7D4F39] text-white" : "bg-[#FBF9F5] text-[#7D4F39]"}`}>
         <span className="material-symbols-outlined text-[24px]">{icon}</span>
       </div>
-      <h3 className={`font-bold mb-1.5 text-base ${selected ? "text-[#1B2B20]" : "text-[#414942]"}`}>{title}</h3>
+      <h3 className={`font-bold mb-1.5 text-base ${selected ? "text-[#1E1B18]" : "text-[#645D56]"}`}>{title}</h3>
     </div>
   );
 }
@@ -168,8 +168,8 @@ function ResultRow({ icon, color, title, desc }: { icon: string; color: string; 
     <div className="flex gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors">
       <span className={`material-symbols-outlined ${color} mt-0.5`}>{icon}</span>
       <div>
-        <h4 className="font-bold text-sm mb-1 text-[#1B2B20]">{title}</h4>
-        <p className="text-xs leading-relaxed text-[#414942]">{desc}</p>
+        <h4 className="font-bold text-sm mb-1 text-[#1E1B18]">{title}</h4>
+        <p className="text-xs leading-relaxed text-[#645D56]">{desc}</p>
       </div>
     </div>
   );
@@ -287,7 +287,7 @@ export default function FormulationClassifierWidget() {
       <div className="max-w-3xl w-full flex flex-col gap-6 relative">
         
         {/* Header & Progress Bar */}
-        <div className="bg-gradient-to-r from-[#285943] to-[#1E4433] p-8 rounded-2xl text-white shadow-md relative overflow-hidden flex-shrink-0">
+        <div className="bg-gradient-to-r from-[#7D4F39] to-[#643B28] p-8 rounded-2xl text-white shadow-md relative overflow-hidden flex-shrink-0">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <span className="material-symbols-outlined text-9xl">account_tree</span>
           </div>
@@ -303,11 +303,11 @@ export default function FormulationClassifierWidget() {
             {/* Progress Bar */}
             <div className="w-full bg-black/20 h-2.5 rounded-full overflow-hidden">
               <div 
-                className="bg-[#E7FBB4] h-full transition-all duration-500 ease-out"
+                className="bg-[#F6EDE7] h-full transition-all duration-500 ease-out"
                 style={{ width: `${progressPercentage}%` }}
               ></div>
             </div>
-            <div className="flex justify-between text-xs mt-2 font-medium text-[#E7FBB4]/80">
+            <div className="flex justify-between text-xs mt-2 font-medium text-[#F6EDE7]/80">
               <span>Start</span>
               <span>{currentNode.type === "result" ? "Classification Ready" : "In Progress"}</span>
             </div>
@@ -315,16 +315,16 @@ export default function FormulationClassifierWidget() {
         </div>
 
         {/* Wizard Container */}
-        <div className="bg-white rounded-2xl shadow-lg shadow-black/5 border border-[#E7EFE8] flex flex-col min-h-[400px]">
+        <div className="bg-white rounded-2xl shadow-lg shadow-black/5 border border-[#E5DCD0] flex flex-col min-h-[400px]">
           
           {/* Top navigation */}
           {currentStep > 1 && (
             <div className="px-6 pt-6 flex justify-between items-center">
-              <button onClick={goBack} className="text-[#285943] text-sm font-bold flex items-center gap-1 hover:bg-[#DAEDDC]/50 px-3 py-1.5 rounded-lg transition-colors">
+              <button onClick={goBack} className="text-[#7D4F39] text-sm font-bold flex items-center gap-1 hover:bg-[#F1EDE6]/50 px-3 py-1.5 rounded-lg transition-colors">
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                 Back
               </button>
-              <button onClick={reset} className="text-xs font-bold text-[#727971] uppercase tracking-widest hover:text-[#1B2B20] transition-colors flex items-center gap-1">
+              <button onClick={reset} className="text-xs font-bold text-[#8C827A] uppercase tracking-widest hover:text-[#1E1B18] transition-colors flex items-center gap-1">
                 <span className="material-symbols-outlined text-[14px]">refresh</span> Reset
               </button>
             </div>
@@ -334,15 +334,15 @@ export default function FormulationClassifierWidget() {
             {currentNode.type === "question" ? (
               <div className="animate-in slide-in-from-right-8 duration-300">
                 <div className="flex flex-col sm:flex-row justify-between items-start mb-8 gap-4">
-                  <h2 className="text-2xl font-bold text-[#1B2B20] leading-snug">
+                  <h2 className="text-2xl font-bold text-[#1E1B18] leading-snug">
                     {currentNode.text}
                   </h2>
                   <button
                     onClick={() => setDoubtQuestion(currentNode)}
                     className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors text-sm font-bold ${
                       doubtQuestion?.id === currentNode.id 
-                        ? "bg-[#285943] text-white border-[#285943]" 
-                        : "bg-white text-[#7A5135] border-[#E5DCBF] hover:bg-[#E5DCBF]/30"
+                        ? "bg-[#7D4F39] text-white border-[#7D4F39]" 
+                        : "bg-white text-[#7D4F39] border-[#E5DCD0] hover:bg-[#E5DCD0]/30"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[18px]">help</span>
@@ -365,8 +365,8 @@ export default function FormulationClassifierWidget() {
             ) : (
               <div className="animate-in zoom-in-95 duration-500">
                 <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-bold text-[#1B2B20] flex items-center gap-3">
-                    <span className="material-symbols-outlined text-[#285943] text-3xl">verified</span>
+                  <h2 className="text-2xl font-bold text-[#1E1B18] flex items-center gap-3">
+                    <span className="material-symbols-outlined text-[#7D4F39] text-3xl">verified</span>
                     Classification Result
                   </h2>
                 </div>
@@ -379,8 +379,8 @@ export default function FormulationClassifierWidget() {
                   </div>
 
                   {/* Details */}
-                  <div className="border border-[#E7EFE8] rounded-xl overflow-hidden">
-                    <div className="bg-[#F4F7F4] px-5 py-3 border-b border-[#E7EFE8] font-bold text-[#1B2B20] text-sm flex items-center gap-2">
+                  <div className="border border-[#E5DCD0] rounded-xl overflow-hidden">
+                    <div className="bg-[#FBF9F5] px-5 py-3 border-b border-[#E5DCD0] font-bold text-[#1E1B18] text-sm flex items-center gap-2">
                       <span className="material-symbols-outlined text-[18px]">gavel</span>
                       Regulatory Strategy & Posture
                     </div>
@@ -394,16 +394,16 @@ export default function FormulationClassifierWidget() {
                   </div>
                 </div>
 
-                <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E7EFE8] pt-6">
+                <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E5DCD0] pt-6">
                   <button 
                     onClick={reset}
-                    className="text-sm font-bold text-[#727971] hover:text-[#1B2B20] transition-colors"
+                    className="text-sm font-bold text-[#8C827A] hover:text-[#1E1B18] transition-colors"
                   >
                     Start Over
                   </button>
                   <button 
                     onClick={() => alert("Copied classification report to clipboard!")}
-                    className="flex-1 sm:flex-none bg-gradient-to-r from-[#1B2B20] to-[#285943] text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all text-sm group"
+                    className="flex-1 sm:flex-none bg-gradient-to-r from-[#1E1B18] to-[#7D4F39] text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all text-sm group"
                   >
                     <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">content_copy</span>
                     Copy Report
@@ -421,31 +421,31 @@ export default function FormulationClassifierWidget() {
           {/* Mobile backdrop */}
           <div className="fixed inset-0 bg-black/20 z-40 xl:hidden backdrop-blur-sm" onClick={() => setDoubtQuestion(null)} />
           
-          <div className="fixed xl:absolute top-1/2 left-1/2 xl:top-0 xl:left-[calc(100%+16px)] -translate-x-1/2 -translate-y-1/2 xl:translate-x-0 xl:translate-y-0 h-[80vh] xl:h-[600px] w-[90vw] sm:w-[400px] xl:w-[320px] bg-[#FFFEFA] border border-[#E5DCBF] rounded-2xl shadow-2xl flex flex-col animate-in zoom-in-95 xl:slide-in-from-left-4 fade-in duration-300 overflow-hidden z-50">
-            <div className="bg-[#FAF6ED] px-4 py-3 border-b border-[#E5DCBF] flex items-center justify-between shrink-0">
+          <div className="fixed xl:absolute top-1/2 left-1/2 xl:top-0 xl:left-[calc(100%+16px)] -translate-x-1/2 -translate-y-1/2 xl:translate-x-0 xl:translate-y-0 h-[80vh] xl:h-[600px] w-[90vw] sm:w-[400px] xl:w-[320px] bg-[#FFFFFF] border border-[#E5DCD0] rounded-2xl shadow-2xl flex flex-col animate-in zoom-in-95 xl:slide-in-from-left-4 fade-in duration-300 overflow-hidden z-50">
+            <div className="bg-[#FBF9F5] px-4 py-3 border-b border-[#E5DCD0] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7A5135]">support_agent</span>
-                <h3 className="font-bold text-[#7A5135] text-sm">Question Assistant</h3>
+                <span className="material-symbols-outlined text-[#7D4F39]">support_agent</span>
+                <h3 className="font-bold text-[#7D4F39] text-sm">Question Assistant</h3>
               </div>
               <button 
                 onClick={() => {
                   setDoubtQuestion(null);
                   setChatMessages([]);
                 }}
-                className="text-[#7A5135] hover:text-red-700 p-1 rounded-full hover:bg-white transition-colors"
+                className="text-[#7D4F39] hover:text-red-700 p-1 rounded-full hover:bg-white transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm bg-white/95 backdrop-blur-sm custom-scrollbar">
-              <div className="bg-[#FAFAF5] p-3 rounded-xl border border-[#E5DCBF] text-[#414942]">
-                <p className="font-medium mb-1 text-[10px] uppercase tracking-wider text-[#7A5135]">Context</p>
+              <div className="bg-[#FBF9F5] p-3 rounded-xl border border-[#E5DCD0] text-[#645D56]">
+                <p className="font-medium mb-1 text-[10px] uppercase tracking-wider text-[#7D4F39]">Context</p>
                 <p className="italic leading-relaxed">"{doubtQuestion.text}"</p>
               </div>
               
               {chatMessages.length === 0 && (
-                <div className="text-center text-[#727971] text-xs py-4 px-2">
+                <div className="text-center text-[#8C827A] text-xs py-4 px-2">
                   Confused by this question? Ask me to explain it or give you an example!
                 </div>
               )}
@@ -454,8 +454,8 @@ export default function FormulationClassifierWidget() {
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`p-3 max-w-[85%] rounded-xl ${
                     msg.role === "user" 
-                      ? "bg-[#DAEDDC] text-[#1B2B20] rounded-tr-sm" 
-                      : "bg-[#FAFAF5] border border-[#E5DCBF] text-[#1B2B20] rounded-tl-sm shadow-sm"
+                      ? "bg-[#F1EDE6] text-[#1E1B18] rounded-tr-sm" 
+                      : "bg-[#FBF9F5] border border-[#E5DCD0] text-[#1E1B18] rounded-tl-sm shadow-sm"
                   }`}>
                     {msg.content}
                   </div>
@@ -464,7 +464,7 @@ export default function FormulationClassifierWidget() {
               
               {isChatting && (
                 <div className="flex justify-start">
-                  <div className="p-3 bg-[#FAFAF5] border border-[#E5DCBF] rounded-xl rounded-tl-sm text-[#727971] flex items-center gap-2 shadow-sm">
+                  <div className="p-3 bg-[#FBF9F5] border border-[#E5DCD0] rounded-xl rounded-tl-sm text-[#8C827A] flex items-center gap-2 shadow-sm">
                     <span className="material-symbols-outlined animate-spin text-sm">sync</span>
                     Thinking...
                   </div>
@@ -473,13 +473,13 @@ export default function FormulationClassifierWidget() {
               <div ref={chatEndRef} />
             </div>
 
-            <div className="p-3 bg-[#FAF6ED] border-t border-[#E5DCBF] shrink-0">
+            <div className="p-3 bg-[#FBF9F5] border-t border-[#E5DCD0] shrink-0">
               <form 
                 onSubmit={(e) => {
                   e.preventDefault();
                   sendDoubtMessage();
                 }}
-                className="flex items-center gap-2 bg-white rounded-full px-3 py-1.5 border border-[#E5DCBF] focus-within:border-[#285943] transition-colors shadow-sm"
+                className="flex items-center gap-2 bg-white rounded-full px-3 py-1.5 border border-[#E5DCD0] focus-within:border-[#7D4F39] transition-colors shadow-sm"
               >
                 <input 
                   type="text"
@@ -492,7 +492,7 @@ export default function FormulationClassifierWidget() {
                 <button 
                   type="submit"
                   disabled={!chatInput.trim() || isChatting}
-                  className="w-7 h-7 rounded-full bg-[#285943] text-white flex items-center justify-center disabled:opacity-50"
+                  className="w-7 h-7 rounded-full bg-[#7D4F39] text-white flex items-center justify-center disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">send</span>
                 </button>

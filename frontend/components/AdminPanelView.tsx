@@ -154,79 +154,105 @@ export default function AdminPanelView({ user, token }: AdminPanelViewProps) {
 
   if (user?.role !== "admin") {
     return (
-      <div className="p-8 text-center text-red-500 font-medium">
-        Access Denied. You must be an administrator to view this page.
+      <div className="max-w-md mx-auto my-16 p-8 text-center bg-white rounded-2xl border card-border ambient-shadow space-y-3">
+        <span className="material-symbols-outlined text-4xl text-[#B33A3A]">gpp_bad</span>
+        <h2 className="text-lg font-bold text-[#1E1B18]">Access Restricted</h2>
+        <p className="text-xs text-[#645D56]">You must have administrator privileges to manage the statutory corpus.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-rose-400 drop-shadow-sm">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-10 space-y-8 animate-in fade-in">
+      {/* Header aligned with Sandstone Authority theme */}
+      <div className="space-y-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FAF7F2]/80 text-[#7D4F39] text-xs font-semibold uppercase tracking-wider border card-border">
+          <span className="material-symbols-outlined text-sm">database</span>
+          <span>Knowledge Base Corpus Management</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold text-[#1E1B18] tracking-tight font-serif">
           Knowledge Base Admin
         </h1>
-        <p className="text-slate-400 mt-2">
-          Manage the PDF corpus that the AI uses for RAG retrieval. Upload new laws, delete outdated ones, and rebuild the database.
+        <p className="text-sm md:text-base text-[#645D56] leading-relaxed max-w-3xl">
+          Manage the official statutory and regulatory PDF corpus that the AI references for RAG retrieval. Upload verified acts, delete outdated documents, and trigger vector re-indexing.
         </p>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-red-900/30 border border-red-500/50 text-red-200">
+        <div className="p-4 rounded-xl bg-[#FDF2F2] border border-[#F5C2C7] text-[#842029] flex items-center gap-2.5 text-sm font-medium">
+          <span className="material-symbols-outlined text-lg shrink-0">error</span>
           <p>{error}</p>
         </div>
       )}
       
       {success && (
-        <div className="mb-6 p-4 rounded-xl bg-emerald-900/30 border border-emerald-500/50 text-emerald-200">
+        <div className="p-4 rounded-xl bg-[#F0F9F1] border border-[#C3E6CB] text-[#155724] flex items-center gap-2.5 text-sm font-medium">
+          <span className="material-symbols-outlined text-lg shrink-0">check_circle</span>
           <p>{success}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Left Column: Actions */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-white/10 shadow-xl backdrop-blur-md">
-            <h2 className="text-xl font-semibold text-white mb-4">Upload New Document</h2>
-            <div className="flex flex-col gap-4">
-              <label className="flex items-center justify-center w-full h-32 px-4 transition bg-slate-800 border-2 border-slate-600 border-dashed rounded-xl appearance-none cursor-pointer hover:border-orange-400 hover:bg-slate-800/80 focus:outline-none">
-                <span className="flex items-center space-x-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span className="font-medium text-slate-400">
-                    Click to select PDF
-                  </span>
+          {/* Upload New Document Card */}
+          <div className="p-6 rounded-2xl bg-white border card-border ambient-shadow space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#FAF7F2] border card-border flex items-center justify-center text-[#7D4F39] shrink-0">
+                <span className="material-symbols-outlined text-lg">upload_file</span>
+              </div>
+              <h2 className="text-lg font-bold text-[#1E1B18]">Upload New Document</h2>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col items-center justify-center w-full h-36 px-4 transition bg-[#FAF7F2]/60 border-2 border-dashed border-[#E5DCD0] rounded-xl cursor-pointer hover:border-[#7D4F39] hover:bg-[#F6EDE7]/40 group">
+                <span className="material-symbols-outlined text-3xl text-[#8C827A] group-hover:text-[#7D4F39] transition-colors mb-2">
+                  cloud_upload
+                </span>
+                <span className="font-semibold text-sm text-[#1E1B18] group-hover:text-[#7D4F39] text-center">
+                  Click to select statutory PDF
+                </span>
+                <span className="text-xs text-[#8C827A] mt-1 text-center">
+                  Acts, rules, circulars, or TKDL files
                 </span>
                 <input type="file" name="file_upload" className="hidden" accept=".pdf" onChange={handleUpload} disabled={loading} />
               </label>
-              <p className="text-xs text-slate-500 text-center">
-                Supported formats: PDF. Files are uploaded directly to the active corpus.
+              <p className="text-xs text-[#8C827A] text-center leading-relaxed">
+                Supported formats: PDF. Files are uploaded directly to the active corpus directory.
               </p>
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-white/10 shadow-xl backdrop-blur-md">
-            <h2 className="text-xl font-semibold text-white mb-4">Rebuild Knowledge Base</h2>
-            <p className="text-sm text-slate-400 mb-6">
-              After adding or removing files, you must rebuild the ChromaDB vector database for the AI to learn the changes.
+          {/* Rebuild Knowledge Base Card */}
+          <div className="p-6 rounded-2xl bg-white border card-border ambient-shadow space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#FAF7F2] border card-border flex items-center justify-center text-[#7D4F39] shrink-0">
+                <span className="material-symbols-outlined text-lg">sync</span>
+              </div>
+              <h2 className="text-lg font-bold text-[#1E1B18]">Rebuild Knowledge Base</h2>
+            </div>
+            <p className="text-xs text-[#645D56] leading-relaxed">
+              After adding or removing files, rebuild the ChromaDB vector database so the AI indexes the updated statutory corpus.
             </p>
             <button
               onClick={handleIngest}
               disabled={isIngesting || loading}
-              className={`w-full py-3 rounded-xl font-semibold transition-all shadow-lg ${
+              className={`w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
                 isIngesting || loading
-                  ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-orange-500 to-rose-600 text-white hover:opacity-90 hover:shadow-orange-500/25 active:scale-[0.98]"
+                  ? "bg-[#E5DCD0] text-[#8C827A] cursor-not-allowed"
+                  : "bg-[#7D4F39] hover:bg-[#643B28] text-white"
               }`}
             >
               {isIngesting ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  Rebuilding in Background...
-                </div>
+                <>
+                  <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                  <span>Rebuilding in Background...</span>
+                </>
               ) : (
-                "Trigger Knowledge Base Rebuild"
+                <>
+                  <span className="material-symbols-outlined text-lg">bolt</span>
+                  <span>Trigger Knowledge Base Rebuild</span>
+                </>
               )}
             </button>
           </div>
@@ -234,62 +260,75 @@ export default function AdminPanelView({ user, token }: AdminPanelViewProps) {
 
         {/* Right Column: File List */}
         <div className="lg:col-span-2">
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-white/10 shadow-xl backdrop-blur-md">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-white">Current Corpus Files</h2>
+          <div className="rounded-2xl bg-white border card-border ambient-shadow overflow-hidden flex flex-col">
+            {/* Header Strip */}
+            <div className="bg-[#FAF7F2]/80 px-6 py-4 border-b card-border flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-white border card-border flex items-center justify-center text-[#7D4F39] shrink-0">
+                  <span className="material-symbols-outlined text-lg">folder_open</span>
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[#1E1B18]">Current Corpus Files</h2>
+                  <p className="text-xs text-[#8C827A]">{files.length} statutory files</p>
+                </div>
+              </div>
               <button 
                 onClick={fetchFiles}
                 disabled={loading}
-                className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border card-border text-[#645D56] hover:bg-[#F1EDE6] hover:border-[#7D4F39] hover:text-[#1E1B18] transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
+                <span className={`material-symbols-outlined text-sm ${loading ? 'animate-spin' : ''}`}>sync</span>
+                <span>Refresh</span>
               </button>
             </div>
 
             {loading && files.length === 0 ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="w-8 h-8 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+              <div className="flex flex-col justify-center items-center py-16 gap-3 text-sm text-[#8C827A]">
+                <span className="material-symbols-outlined text-3xl text-[#7D4F39] animate-spin">sync</span>
+                <span>Loading corpus documents...</span>
               </div>
             ) : files.length === 0 ? (
-              <div className="text-center py-12 text-slate-500">
-                No PDF files found in the corpus.
+              <div className="text-center py-16 px-6 text-[#8C827A] space-y-2">
+                <span className="material-symbols-outlined text-4xl text-[#8C827A]">folder_off</span>
+                <p className="font-semibold text-sm text-[#1E1B18]">No PDF files found in the corpus.</p>
+                <p className="text-xs">Upload your first statutory PDF document using the form on the left.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300">
-                  <thead className="text-xs uppercase bg-slate-800/50 text-slate-400">
+                <table className="w-full text-left text-sm text-[#1E1B18]">
+                  <thead className="text-[11px] font-bold uppercase tracking-wider bg-[#FAF7F2]/60 text-[#8C827A] border-b card-border">
                     <tr>
-                      <th className="px-4 py-3 rounded-tl-lg">Filename</th>
+                      <th className="px-5 py-3">Filename</th>
                       <th className="px-4 py-3">Location</th>
                       <th className="px-4 py-3">Size</th>
-                      <th className="px-4 py-3 rounded-tr-lg text-right">Actions</th>
+                      <th className="px-5 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-[#E5DCD0]/60">
                     {files.map((file, i) => (
-                      <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                        <td className="px-4 py-3 font-medium text-white truncate max-w-[200px]" title={file.filename}>
-                          {file.filename}
+                      <tr key={i} className="hover:bg-[#FAF7F2]/40 transition-colors">
+                        <td className="px-5 py-3.5 font-medium text-[#1E1B18] max-w-[240px]" title={file.filename}>
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#7D4F39] text-base shrink-0">description</span>
+                            <span className="truncate">{file.filename}</span>
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-slate-400 truncate max-w-[150px]" title={file.filepath}>
-                          {file.filepath}
+                        <td className="px-4 py-3.5 text-xs text-[#645D56] max-w-[170px]" title={file.filepath}>
+                          <span className="font-mono bg-[#FAF7F2] border border-[#E5DCD0]/60 px-2 py-0.5 rounded text-[11px] truncate block max-w-full">
+                            {file.filepath}
+                          </span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-4 py-3.5 text-xs text-[#645D56] whitespace-nowrap font-medium">
                           {formatSize(file.size)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-5 py-3.5 text-right">
                           <button
                             onClick={() => handleDelete(file.filepath)}
                             disabled={loading}
-                            className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-400/10 transition-colors"
-                            title="Delete file"
+                            className="text-[#8C827A] hover:text-[#B33A3A] p-1.5 rounded-lg hover:bg-[#FDF2F2] transition-colors cursor-pointer"
+                            title="Delete file from corpus"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                            <span className="material-symbols-outlined text-lg">delete</span>
                           </button>
                         </td>
                       </tr>
