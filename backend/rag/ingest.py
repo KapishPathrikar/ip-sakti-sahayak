@@ -119,6 +119,7 @@ def ingest_sources(
 		if not path.is_file() or path.suffix.lower() not in {".pdf", ".txt", ".md"}:
 			continue
 		source_count += 1
+		print(f"[Ingest] ({source_count}) Extracting: {path.name}...")
 		pages = _read_source(path)
 		repeated_lines = _repeated_page_lines(pages) if path.suffix.lower() == ".pdf" else set()
 		for item in pages:
@@ -137,14 +138,17 @@ def ingest_sources(
 						"section": chunk["section"],
 					}
 				)
+	print(f"[Ingest] Extracted total {len(documents)} chunks from {source_count} documents. Generating embeddings and upserting to ChromaDB...")
 	if documents:
 		for start in range(0, len(documents), UPSERT_BATCH_SIZE):
 			end = min(start + UPSERT_BATCH_SIZE, len(documents))
+			print(f"[Ingest] Upserting batch {start} to {end} of {len(documents)}...")
 			collection.upsert(
 				ids=ids[start:end],
 				documents=documents[start:end],
 				metadatas=metadatas[start:end],
 			)
+	print(f"[Ingest] Ingestion and embedding completed successfully! Total chunks: {len(documents)}")
 	return {"sources": source_count, "chunks": len(documents)}
 
 

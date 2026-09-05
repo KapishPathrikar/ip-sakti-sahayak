@@ -184,26 +184,28 @@ def answer_question(
 		if history_text:
 			history_section = f"\n=== PREVIOUS CONVERSATION HISTORY ===\n{history_text}\n"
 
-	# Check if live web search is needed for real-time links/updates
+	# Check if user explicitly asked for official links/URLs
 	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
 	web_section = ""
 	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist) and not is_greeting_query(english_query):
-		print(f"[Web Search] Live web search triggered for: '{english_query}'")
+		print(f"[Link Search] Official link discovery triggered for: '{english_query}'")
 		web_results = search_web(english_query, max_results=2)
 		if web_results:
 			web_context_text = format_web_context_for_prompt(web_results)
-			web_section = f"\n=== LIVE OFFICIAL WEB SOURCES & LINKS ===\n{web_context_text}\n"
+			web_section = f"\n=== VERIFIED OFFICIAL PORTAL LINKS (FOR REFERENCE ONLY) ===\n{web_context_text}\n"
 			for item in web_results:
 				citations.append({
-					"source": f"Live Web: {item['title']} ({item['url']})",
+					"source": f"Official Portal Link: {item['title']} ({item['url']})",
 					"page": 1,
-					"confidence": "Live Web",
+					"confidence": "Official Link",
 				})
 
 	# Adjust instructions based on Jurisdiction
 	system_prompt = f"""You are IP Shakti Sahayak, an expert Intellectual Property and Patent law assistant.
-Answer the user's question accurately, concisely, and strictly based on the provided legal reference context and live web sources.
-If the context does not provide sufficient information, clarify what is known and note the limitations.{history_section}
+Answer the user's question accurately, concisely, and strictly based on the provided statutory legal reference context.
+All legal rules, provisions, procedures, and timelines MUST be derived exclusively from the official legal reference context to guarantee zero hallucinations.
+If the user specifically requested an official website or portal link, supply the verified URL from the provided official links above.
+If the reference context does not provide sufficient information, clarify what is known from official statutes and note the limitations.{history_section}
 === REFERENCE CONTEXT ===
 {context_text}
 {web_section}
@@ -211,7 +213,8 @@ If the context does not provide sufficient information, clarify what is known an
 {english_query}
 
 === INSTRUCTIONS ===
-- Provide a clear, well-structured, and helpful explanation."""
+- Provide a clear, well-structured, and helpful explanation strictly grounded in the official statutes and reference context.
+- Never cite unverified third-party blogs or external speculation."""
 
 	if jurisdiction == "international":
 		system_prompt += """
@@ -416,35 +419,37 @@ def answer_question_stream(
 		if history_text:
 			history_section = f"\n=== PREVIOUS CONVERSATION HISTORY ===\n{history_text}\n"
 
-	# Check if live web search is needed for real-time links/updates
+	# Check if user explicitly asked for official links/URLs
 	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
 	web_section = ""
 	if needs_web_search(english_query, local_chunks_found=len(chunks), best_distance=best_dist) and not is_greeting_query(english_query):
-		yield f"data: {json.dumps({'type': 'thinking', 'message': '🌐 Searching official live government portals (ipindia.gov.in / ayush.gov.in)...'})}\n\n"
-		print(f"[Web Search Stream] Live web search triggered for: '{english_query}'")
+		yield f"data: {json.dumps({'type': 'thinking', 'message': '🌐 Resolving official portal link (ipindia.gov.in / ayush.gov.in)...'})}\n\n"
+		print(f"[Link Search Stream] Official link discovery triggered for: '{english_query}'")
 		web_results = search_web(english_query, max_results=2)
 		if web_results:
 			web_context_text = format_web_context_for_prompt(web_results)
-			web_section = f"\n=== LIVE OFFICIAL WEB SOURCES & LINKS ===\n{web_context_text}\n"
+			web_section = f"\n=== VERIFIED OFFICIAL PORTAL LINKS (FOR REFERENCE ONLY) ===\n{web_context_text}\n"
 			for item in web_results:
 				citations.append({
-					"source": f"Live Web: {item['title']} ({item['url']})",
+					"source": f"Official Portal Link: {item['title']} ({item['url']})",
 					"page": 1,
-					"confidence": "Live Web",
+					"confidence": "Official Link",
 				})
 
 	best_dist = min([c.distance for c in chunks]) if chunks else 1.0
 	top_calibrated = max([calculate_chunk_confidence(c.distance) for c in chunks]) if chunks else 0
 	is_low_confidence = (best_dist > HIGH_SIMILARITY_MAX_DISTANCE or top_calibrated < HIGH_SIMILARITY_MIN_CONFIDENCE) and not is_greeting_query(english_query)
-	overall_confidence = f"{top_calibrated}%" if top_calibrated > 0 else ("Live Web (55%)" if web_section else "50%")
+	overall_confidence = f"{top_calibrated}%" if top_calibrated > 0 else ("Official Portal" if web_section else "50%")
 
 	# Emit early metadata for low-confidence warning banner display
 	yield f"data: {json.dumps({'type': 'metadata', 'confidence': overall_confidence, 'is_low_confidence': is_low_confidence})}\n\n"
 
 	# Adjust instructions based on Jurisdiction
 	system_prompt = f"""You are IP Shakti Sahayak, an expert Intellectual Property and Patent law assistant.
-Answer the user's question accurately, concisely, and strictly based on the provided legal reference context and live web sources.
-If the context does not provide sufficient information, clarify what is known and note the limitations.{history_section}
+Answer the user's question accurately, concisely, and strictly based on the provided statutory legal reference context.
+All legal rules, provisions, procedures, and timelines MUST be derived exclusively from the official legal reference context to guarantee zero hallucinations.
+If the user specifically requested an official website or portal link, supply the verified URL from the provided official links above.
+If the reference context does not provide sufficient information, clarify what is known from official statutes and note the limitations.{history_section}
 === REFERENCE CONTEXT ===
 {context_text}
 {web_section}

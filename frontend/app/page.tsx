@@ -22,12 +22,18 @@ interface Citation {
 
 interface Message {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "notice";
   content: string;
   citations?: Citation[];
   confidence?: string;
   isFaq?: boolean;
   isLowConfidence?: boolean;
+  noticeType?: "network_drop" | "burst_limit" | "daily_limit" | "server_busy";
+  noticeTitle?: string;
+  noticeDesc?: string;
+  retryQuery?: string;
+  retryAfterSeconds?: number;
+  dailyRemaining?: number;
 }
 
 interface SavedSession {
@@ -211,8 +217,32 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("ip_shakti_token");
+      localStorage.removeItem("ip_shakti_user");
+    } catch {}
+    setAuthToken(null);
+    setCurrentUser(null);
+    setMySessions([]);
+  };
+
   useEffect(() => {
     setSessionId("sess-" + Math.random().toString(36).substring(2, 9));
+
+    // Handle URL parameters for explicit guest/logout mode: ?guest=true or ?logout=true
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (
+        urlParams.get("guest") === "true" ||
+        urlParams.get("logout") === "true" ||
+        urlParams.get("temp") === "true"
+      ) {
+        handleLogout();
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+    }
 
     // Randomize initial starting FAQ set on mount to keep landing page fresh
     const totalSets = Math.max(1, Math.ceil(CURATED_LANDING_FAQS.length / ITEMS_PER_SET));
@@ -234,26 +264,35 @@ export default function Home() {
       })
       .catch(() => {});
 
-    const token = localStorage.getItem("ip_shakti_token");
-    const userStr = localStorage.getItem("ip_shakti_user");
+    const token = typeof window !== "undefined" ? localStorage.getItem("ip_shakti_token") : null;
     if (token) {
       setAuthToken(token);
       // Fetch fresh profile data
       fetch(`${apiBaseUrl}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => res.json())
-        .then(data => {
-          if (!data.detail) {
+        .then((res) => {
+          if (!res.ok) {
+            handleLogout();
+            return null;
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (data && !data.detail && data.email) {
             setCurrentUser(data);
-            localStorage.setItem("ip_shakti_user", JSON.stringify(data));
+            try {
+              localStorage.setItem("ip_shakti_user", JSON.stringify(data));
+            } catch {}
+          } else {
+            handleLogout();
           }
         })
-        .catch(err => console.error("Failed to fetch profile", err));
-    }
-    
-    if (userStr && !token) {
-      try {
-        setCurrentUser(JSON.parse(userStr));
-      } catch { }
+        .catch((err) => {
+          console.error("Failed to fetch profile", err);
+          handleLogout();
+        });
+    } else {
+      // If no token exists, ensure guest/temporary user state is clean
+      handleLogout();
     }
   }, []);
 
@@ -362,6 +401,7 @@ export default function Home() {
     setIsStreaming(true);
     setThinkingState("Analyzing Indian Patents Act 1970 & TKDL...");
     let partialText = "";
+    let citations: Citation[] = [];
 
     try {
       let contextDocumentText = null;
@@ -410,17 +450,59 @@ export default function Home() {
 
       if (!response.ok) {
         if (response.status === 429) {
-          const errData = await response.json();
-          throw new Error(errData.detail?.message || "Rate limit reached. Please wait.");
+          let errData: any = {};
+          try {
+            errData = await response.json();
+          } catch {}
+          const detail = errData.detail || {};
+          const reason = detail.message || "Consultation quota reached.";
+          const retryAfter = detail.retry_after_seconds || 60;
+          const isBurst = reason.toLowerCase().includes("burst") || retryAfter <= 120;
+
+          setMessages((prev) => [
+            ...prev.filter((m) => m.id !== assistantMsgId),
+            {
+              id: "notice-429-" + Date.now(),
+              role: "notice",
+              content: reason,
+              noticeType: isBurst ? "burst_limit" : "daily_limit",
+              noticeTitle: isBurst ? "Consultation Request Cooldown" : "Daily Consultation Quota Reached",
+              noticeDesc: isBurst
+                ? `You have submitted multiple consultation inquiries in rapid succession. To ensure stability and equal access for all researchers, please pause briefly.`
+                : !currentUser
+                ? `You have used your 25 complimentary guest consultations for today. Pre-verified FAQs in our legal library remain 100% free and unlimited. Sign in or register a free account to instantly upgrade to 50 consultations/day.`
+                : `You have completed your daily quota of 50 legal consultations. Quota resets at 12:00 AM UTC. Pre-verified FAQs remain free and accessible.`,
+              retryQuery: text,
+              retryAfterSeconds: retryAfter,
+              dailyRemaining: detail.daily_remaining,
+            },
+          ]);
+          return;
         }
-        throw new Error("Failed to connect to streaming API.");
+
+        if (response.status >= 500) {
+          setMessages((prev) => [
+            ...prev.filter((m) => m.id !== assistantMsgId),
+            {
+              id: "notice-500-" + Date.now(),
+              role: "notice",
+              content: "AI reasoning engine momentarily unavailable.",
+              noticeType: "server_busy",
+              noticeTitle: "Statutory Engine Momentarily Busy",
+              noticeDesc: "The legal reasoning service is currently experiencing high demand or undergoing a brief restart. Your question has been preserved.",
+              retryQuery: text,
+            },
+          ]);
+          return;
+        }
+
+        throw new Error(`Service responded with status ${response.status}`);
       }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response stream.");
 
       const decoder = new TextDecoder("utf-8");
-      let citations: Citation[] = [];
 
       setMessages((prev) => [
         ...prev,
@@ -490,13 +572,54 @@ export default function Home() {
         }
       }
     } catch (err: any) {
-      if (!partialText || partialText.trim().length === 0) {
+      console.warn("Chat request exception:", err);
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      const isNetworkDrop =
+        isOffline ||
+        err.name === "TypeError" ||
+        err.message?.includes("fetch") ||
+        err.message?.includes("network") ||
+        err.message?.includes("NetworkError") ||
+        err.message?.includes("abort");
+
+      if (partialText && partialText.trim().length > 0) {
+        // Preserving partial content that arrived before network drop
+        setMessages((prev) => [
+          ...prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  content: partialText,
+                  citations,
+                }
+              : m
+          ),
+          {
+            id: "notice-net-" + Date.now(),
+            role: "notice",
+            content: "Network connection was interrupted during streaming.",
+            noticeType: "network_drop",
+            noticeTitle: "Connection Interrupted Mid-Response",
+            noticeDesc:
+              "The network connection to the legal reasoning engine was disconnected while generating this response. Partial statutory guidance received prior to the disconnect has been preserved above.",
+            retryQuery: text,
+          },
+        ]);
+      } else {
         setMessages((prev) => [
           ...prev.filter((m) => m.id !== assistantMsgId),
           {
-            id: "err-" + Date.now(),
-            role: "assistant",
-            content: `⚠️ ${err.message || "Failed to retrieve answer."}`,
+            id: "notice-net-" + Date.now(),
+            role: "notice",
+            content: isNetworkDrop
+              ? "Unable to reach the IP Shakti Sahayak reasoning server."
+              : `Unable to complete consultation: ${err.message || "Unknown error"}`,
+            noticeType: isNetworkDrop ? "network_drop" : "server_busy",
+            noticeTitle: isNetworkDrop ? "Connection Unreachable" : "Consultation Service Notice",
+            noticeDesc: isNetworkDrop
+              ? "Unable to reach the legal reasoning engine. Please verify your internet connection or check whether the service tunnel is active."
+              : (err.message || "An unexpected issue occurred while processing your legal consultation. Please retry in a moment."),
+            retryQuery: text,
           },
         ]);
       }
@@ -570,14 +693,6 @@ export default function Home() {
         console.error("Failed to clear all history", err);
       }
     }
-  }
-
-  function handleLogout() {
-    localStorage.removeItem("ip_shakti_token");
-    localStorage.removeItem("ip_shakti_user");
-    setAuthToken(null);
-    setCurrentUser(null);
-    setMySessions([]);
   }
 
   const switchView = (view: typeof currentView) => {
@@ -794,32 +909,59 @@ export default function Home() {
 
         {/* Footer Profile (Stitch Dashboard style) */}
         <div className="mt-auto pt-4 border-t border-[#1B2B20]/10">
-          <div
-            onClick={() => {
-              if (currentUser) {
-                switchView("settings");
-              } else {
-                setIsAuthOpen(true);
-              }
-            }}
-            className="flex items-center w-full gap-3 px-3 py-2 rounded-xl hover:bg-[#DAEDDC]/60 transition-colors cursor-pointer"
-          >
-            <div className="w-8 h-8 rounded-full flex items-center justify-center border border-[#C1C8C0] bg-[#E5F9E7] text-[#638C6D] shrink-0">
-              <span className="material-symbols-outlined text-[18px]">
-                {currentUser ? "person" : "login"}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0 flex items-center">
-              <p className="text-sm font-bold text-[#1B2B20] truncate">
-                {currentUser?.full_name || (currentUser?.email ? currentUser.email.split("@")[0] : "Temporary User")}
-              </p>
-            </div>
-            <span
-              className="material-symbols-outlined text-[#727971] text-base shrink-0"
-              title="Account Settings"
+          <div className="flex items-center w-full justify-between gap-2 px-2 py-2 rounded-xl hover:bg-[#DAEDDC]/60 transition-colors">
+            <div
+              onClick={() => {
+                if (currentUser) {
+                  switchView("settings");
+                } else {
+                  setIsAuthOpen(true);
+                }
+              }}
+              className="flex items-center flex-1 min-w-0 gap-3 cursor-pointer"
             >
-              settings
-            </span>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center border border-[#C1C8C0] bg-[#E5F9E7] text-[#638C6D] shrink-0">
+                <span className="material-symbols-outlined text-[18px]">
+                  {currentUser ? "person" : "login"}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-[#1B2B20] truncate">
+                  {currentUser?.full_name || (currentUser?.email ? currentUser.email.split("@")[0] : "Temporary User")}
+                </p>
+                <p className="text-[10px] text-[#727971] truncate">
+                  {currentUser ? (currentUser.role === "admin" ? "Administrator" : "Verified User") : "Guest • Click to sign in"}
+                </p>
+              </div>
+            </div>
+
+            {currentUser ? (
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => switchView("settings")}
+                  className="p-1.5 rounded-lg hover:bg-black/5 text-[#727971] hover:text-[#1B2B20] transition-colors cursor-pointer"
+                  title="Account Settings"
+                >
+                  <span className="material-symbols-outlined text-base">settings</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-1.5 rounded-lg hover:bg-[#FFDAD6] text-[#BA1A1A] transition-colors cursor-pointer"
+                  title="Sign Out (Switch to Temporary User)"
+                >
+                  <span className="material-symbols-outlined text-base">logout</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAuthOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-[#638C6D] hover:bg-[#557E60] text-white text-[11px] font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                title="Sign In / Register"
+              >
+                <span className="material-symbols-outlined text-xs">login</span>
+                <span>Sign In</span>
+              </button>
+            )}
           </div>
         </div>
       </aside>
@@ -1100,6 +1242,91 @@ export default function Home() {
                           <div className="flex justify-end w-full">
                             <div className="bg-[#DAEDDC] text-[#1B2B20] rounded-2xl rounded-tr-xs px-5 py-3 max-w-[85%] shadow-xs">
                               <p className="text-sm font-medium">{msg.content}</p>
+                            </div>
+                          </div>
+                        ) : msg.role === "notice" ? (
+                          /* Polite Status & Error Notice Card (Section 4.3) */
+                          <div className="flex justify-start w-full animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className={`w-full rounded-2xl p-5 border ambient-shadow ${
+                              msg.noticeType === "burst_limit"
+                                ? "bg-[#FFFDE7] border-amber-300/80"
+                                : msg.noticeType === "daily_limit"
+                                ? "bg-[#E5F9E7]/80 border-[#638C6D]/40"
+                                : msg.noticeType === "network_drop"
+                                ? "bg-amber-50/70 border-amber-200"
+                                : "bg-white border-card-border"
+                            }`}>
+                              <div className="flex items-start gap-3.5">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                  msg.noticeType === "burst_limit"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : msg.noticeType === "daily_limit"
+                                    ? "bg-[#DAEDDC] text-[#638C6D]"
+                                    : msg.noticeType === "network_drop"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-gray-100 text-gray-700"
+                                }`}>
+                                  <span className="material-symbols-outlined text-[20px]">
+                                    {msg.noticeType === "burst_limit"
+                                      ? "hourglass_top"
+                                      : msg.noticeType === "daily_limit"
+                                      ? "workspace_premium"
+                                      : msg.noticeType === "network_drop"
+                                      ? "wifi_off"
+                                      : "info"}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                                    <h4 className="text-sm font-bold text-[#1B2B20]">
+                                      {msg.noticeTitle || "System Advisory Notice"}
+                                    </h4>
+                                    {msg.retryAfterSeconds && msg.retryAfterSeconds > 0 && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold border border-amber-200">
+                                        <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                        Cooldown: ~{msg.retryAfterSeconds}s
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-[#414942] leading-relaxed mb-3.5">
+                                    {msg.noticeDesc}
+                                  </p>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex items-center gap-2.5 flex-wrap">
+                                    {msg.retryQuery && (
+                                      <button
+                                        onClick={() => void sendMessage(msg.retryQuery)}
+                                        disabled={isStreaming}
+                                        className="px-3.5 py-1.5 rounded-xl bg-[#638C6D] hover:bg-[#557E60] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                      >
+                                        <span className="material-symbols-outlined text-sm">refresh</span>
+                                        <span>Retry Consultation</span>
+                                      </button>
+                                    )}
+
+                                    {msg.noticeType === "daily_limit" && !currentUser && (
+                                      <button
+                                        onClick={() => setIsAuthOpen(true)}
+                                        className="px-3.5 py-1.5 rounded-xl border border-[#638C6D] text-[#638C6D] hover:bg-[#638C6D]/10 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-sm">login</span>
+                                        <span>Sign In to Unlock 50/day</span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      onClick={() => {
+                                        handleResetChat();
+                                      }}
+                                      className="px-3 py-1.5 rounded-xl bg-black/5 hover:bg-black/10 text-[#414942] text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <span className="material-symbols-outlined text-sm">menu_book</span>
+                                      <span>Browse Verified FAQs</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ) : (

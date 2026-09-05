@@ -27,28 +27,31 @@ export default function AccountSettingsView({
   onClearHistory,
 }: AccountSettingsViewProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [fullName, setFullName] = useState("Rajesh Kumar");
-  const [location, setLocation] = useState("Mumbai, India");
+  const [fullName, setFullName] = useState("Temporary User");
+  const [location, setLocation] = useState("India");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     try {
+      if (currentUser?.full_name) {
+        setFullName(currentUser.full_name);
+      } else {
+        setFullName("Temporary User");
+      }
       const savedPrefs = localStorage.getItem("ip_shakti_prefs");
-      if (savedPrefs) {
+      if (savedPrefs && currentUser) {
         const parsed = JSON.parse(savedPrefs);
         if (parsed.fullName) setFullName(parsed.fullName);
         if (parsed.location) setLocation(parsed.location);
-      } else if (currentUser?.full_name) {
-        setFullName(currentUser.full_name);
       }
     } catch {}
   }, [currentUser]);
 
   const displayRole = currentUser?.role
     ? currentUser.role.toUpperCase()
-    : "IP RESEARCHER / STARTUP";
-  const displayEmail = currentUser?.email || "rajesh@startup.in";
+    : "TEMPORARY USER (GUEST)";
+  const displayEmail = currentUser?.email || "Guest Session (Not Signed In)";
 
   // Real usage data from backend
   const queriesMax = currentUser?.daily_query_limit || 50;
@@ -243,13 +246,24 @@ export default function AccountSettingsView({
                 </div>
               </div>
 
-              {/* Edit / Sign-in Action */}
-              <div>
+              {/* Edit / Sign-in / Logout Action */}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {currentUser && onLogout && (
+                  <button
+                    onClick={onLogout}
+                    className="mt-4 sm:mt-0 px-4 py-2.5 rounded-xl border border-[#BA1A1A]/40 text-[#BA1A1A] text-xs font-bold hover:bg-[#FFDAD6]/50 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    title="Sign out and return to Temporary User"
+                  >
+                    <span className="material-symbols-outlined text-sm">logout</span>
+                    Sign Out
+                  </button>
+                )}
                 {!currentUser ? (
                   <button
                     onClick={onOpenAuth}
-                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl bg-[#638C6D] text-white text-xs font-bold hover:bg-[#557E60] transition-colors shadow-xs cursor-pointer"
+                    className="mt-4 sm:mt-0 px-5 py-2.5 rounded-xl bg-[#638C6D] text-white text-xs font-bold hover:bg-[#557E60] transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
                   >
+                    <span className="material-symbols-outlined text-sm">login</span>
                     Sign In / Register
                   </button>
                 ) : isEditing ? (
