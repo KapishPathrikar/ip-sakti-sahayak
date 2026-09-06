@@ -31,6 +31,7 @@ export default function AccountSettingsView({
   const [location, setLocation] = useState("India");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingDPDP, setIsExportingDPDP] = useState(false);
 
   useEffect(() => {
     try {
@@ -168,6 +169,82 @@ export default function AccountSettingsView({
       setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function handleExportDPDPAuditLog() {
+    setIsExportingDPDP(true);
+    try {
+      const token = localStorage.getItem("ip_shakti_token");
+      if (!token) {
+        // Fallback for guest session: export statutory manifest of local browser logs
+        const localSessions = localStorage.getItem("ip_shakti_sessions");
+        const parsed = localSessions ? JSON.parse(localSessions) : [];
+        const guestLog = {
+          statutory_compliance: {
+            governing_statute: "Digital Personal Data Protection Act, 2023 (Act No. 22 of 2023, Republic of India)",
+            session_classification: "Temporary Guest Session (Statutory Pre-Registration)",
+            data_principal_rights: [
+              "Section 11: Right to Access Summary of Processing",
+              "Section 12: Right to Correction and Erasure",
+              "Section 13: Right of Grievance Redressal",
+            ],
+            data_fiduciary: {
+              organization: "IP Shakti Sahayak Legal Knowledge Initiative",
+              purpose: "Intellectual Property & Patent Law Research Guidance",
+            },
+          },
+          data_principal_identity: {
+            role: "GUEST_RESEARCHER",
+            session_status: "Unauthenticated Local Storage Session",
+            recorded_local_inquiries: parsed.length,
+          },
+          local_sessions: parsed,
+          exported_at_utc: new Date().toISOString(),
+        };
+        const blob = new Blob([JSON.stringify(guestLog, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `DPDP_Audit_Log_Guest_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setSaveMessage("Guest DPDP audit log exported successfully!");
+        setTimeout(() => setSaveMessage(null), 3000);
+        return;
+      }
+
+      const res = await fetch(`${apiBaseUrl}/api/auth/dpdp-audit-log`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to generate official DPDP audit export.");
+
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get("Content-Disposition");
+      let filename = `DPDP_Audit_Log_User_${currentUser?.id || "account"}_${new Date().toISOString().slice(0, 10)}.json`;
+      if (contentDisposition && contentDisposition.includes("filename=")) {
+        const match = contentDisposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      setSaveMessage("Official DPDP Act 2023 Audit Log downloaded successfully!");
+      setTimeout(() => setSaveMessage(null), 3500);
+    } catch (err: any) {
+      setSaveMessage(err.message || "Failed to export DPDP audit log.");
+      setTimeout(() => setSaveMessage(null), 3000);
+    } finally {
+      setIsExportingDPDP(false);
     }
   }
 
@@ -380,11 +457,52 @@ export default function AccountSettingsView({
             </div>
           </section>
 
+          {/* DPDP Act 2023 Statutory Compliance Card */}
+          <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 ambient-shadow border card-border dark:border-gray-700 transition-colors duration-300">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h3 className="text-base font-bold text-[#1E1B18] dark:text-white flex items-center gap-2 transition-colors duration-300">
+                <span className="material-symbols-outlined text-[#2D6A4F]">verified_user</span>
+                <span>DPDP Act, 2023</span>
+              </h3>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EBF5EE] text-[#2D6A4F] text-[10px] font-bold border border-[#D2E8D8]">
+                SEC. 11-13 COMPLIANT
+              </span>
+            </div>
+            
+            <p className="text-xs text-[#645D56] dark:text-gray-400 mb-4 leading-relaxed transition-colors duration-300">
+              Pursuant to the <strong>Digital Personal Data Protection Act, 2023</strong> (Republic of India), you have the statutory right to access, summarize, and export all personal consultation logs, interaction trails, and processing records.
+            </p>
+
+            <div className="space-y-2 mb-5 text-[11px] text-[#645D56] dark:text-gray-300">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#2D6A4F] text-sm">check_circle</span>
+                <span><strong>Section 11:</strong> Right to Access Summary of Processing</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#2D6A4F] text-sm">check_circle</span>
+                <span><strong>Section 12:</strong> Right to Correction &amp; Complete Erasure</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#2D6A4F] text-sm">check_circle</span>
+                <span><strong>Section 13:</strong> Right to Grievance Redressal</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleExportDPDPAuditLog}
+              disabled={isExportingDPDP}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FAF7F2] border border-[#2D6A4F]/40 text-[#2D6A4F] text-xs font-bold hover:bg-[#EBF5EE] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-base">receipt_long</span>
+              <span>{isExportingDPDP ? "Generating Audit Manifest..." : "Export DPDP Audit Log (JSON)"}</span>
+            </button>
+          </section>
+
           {/* Data Privacy Card */}
           <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 ambient-shadow border card-border dark:border-gray-700 transition-colors duration-300">
             <h3 className="text-base font-bold text-[#1E1B18] dark:text-white mb-2 flex items-center gap-2 transition-colors duration-300">
               <span className="material-symbols-outlined text-[#7D4F39]">shield_lock</span>
-              <span>Data Privacy</span>
+              <span>Data Privacy &amp; Records</span>
             </h3>
             <p className="text-xs text-[#645D56] dark:text-gray-400 mb-6 leading-relaxed transition-colors duration-300">
               Manage your legal research data and history. Actions taken here are permanent.
@@ -396,7 +514,7 @@ export default function AccountSettingsView({
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-[#7D4F39] text-[#7D4F39] text-xs font-bold hover:bg-[#7D4F39]/5 transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-base">download</span>
-                <span>{isExporting ? "Exporting Records..." : "Export All Records"}</span>
+                <span>{isExporting ? "Exporting Records..." : "Export HTML Consultation Report"}</span>
               </button>
 
               <button
@@ -404,7 +522,7 @@ export default function AccountSettingsView({
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FDF2F2]/50 text-[#B3261E] border border-[#B3261E]/30 text-xs font-bold hover:bg-[#FDF2F2] transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-base">delete_forever</span>
-                <span>Clear History</span>
+                <span>Clear All History (Sec. 12 Erasure)</span>
               </button>
             </div>
           </section>

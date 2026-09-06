@@ -70,30 +70,45 @@ def _get_collection(persist_dir: str | Path = DEFAULT_CHROMA_DB) -> Any:
 	return _COLLECTION_CACHE[key]
 
 
+def _is_india_source(source: str) -> bool:
+	s = source.replace("\\", "/").lower()
+	return "national" in s or "ayurveda" in s
+
+
+def _is_international_source(source: str) -> bool:
+	s = source.replace("\\", "/").lower()
+	return "international" in s
+
+
 def retrieve(
 	query: str,
 	persist_dir: str | Path = DEFAULT_CHROMA_DB,
 	limit: int = 5,
 	max_distance: float = DEFAULT_MAX_DISTANCE,
+	jurisdiction: str = "india",
 ) -> list[RetrievedChunk]:
-	"""Return nearest chunks, preserving source and page provenance (using cached vector client)."""
+	"""Return nearest chunks, preserving source and page provenance (using cached vector client)
+	with jurisdiction-specific statutory filtering and comparative split support."""
 	if not query.strip() or limit < 1 or max_distance < 0:
 		return []
 
+	# Candidate pool size to allow jurisdiction filtering
+	candidate_limit = max(limit * 3, 18)
+
 	collection = _get_collection(persist_dir)
 	try:
-		result = collection.query(query_texts=[query], n_results=limit)
+		result = collection.query(query_texts=[query], n_results=candidate_limit)
 	except Exception as err:
 		print(f"[Retrieve Warning] Query failed with cached collection: {err}. Refreshing connection...")
 		_COLLECTION_CACHE.pop(str(persist_dir), None)
 		_CLIENT_CACHE.pop(str(persist_dir), None)
 		collection = _get_collection(persist_dir)
-		result = collection.query(query_texts=[query], n_results=limit)
+		result = collection.query(query_texts=[query], n_results=candidate_limit)
 
 	documents = result.get("documents", [[]])[0]
 	metadatas = result.get("metadatas", [[]])[0]
 	distances = result.get("distances", [[]])[0]
-	chunks: list[RetrievedChunk] = []
+	all_chunks: list[RetrievedChunk] = []
 	seen: set[tuple[str, int, str]] = set()
 	for document, metadata, distance in zip(documents, metadatas, distances):
 		source = metadata.get("source", "unknown")
@@ -102,8 +117,56 @@ def retrieve(
 		if float(distance) > max_distance or key in seen:
 			continue
 		seen.add(key)
-		chunks.append(RetrievedChunk(text=document, source=source, page=page, distance=float(distance)))
-	return chunks
+		all_chunks.append(RetrievedChunk(text=document, source=source, page=page, distance=float(distance)))
+
+	jur = (jurisdiction or "india").strip().lower()
+
+	if jur == "comparative":
+		# Balanced dual-regime retrieval
+		india_chunks = [c for c in all_chunks if _is_india_source(c.source)]
+		intl_chunks = [c for c in all_chunks if _is_international_source(c.source)]
+		
+		target_each = max(1, limit // 2)
+		selected_india = india_chunks[:target_each]
+		selected_intl = intl_chunks[:target_each]
+
+		# Interleave: [India, Intl, India, Intl]
+		interleaved: list[RetrievedChunk] = []
+		for i in range(max(len(selected_india), len(selected_intl))):
+			if i < len(selected_india):
+				interleaved.append(selected_india[i])
+			if i < len(selected_intl):
+				interleaved.append(selected_intl[i])
+
+		# Fallback if one pool had too few chunks
+		remaining_capacity = limit - len(interleaved)
+		if remaining_capacity > 0:
+			used_set = set((c.source, c.page, c.text) for c in interleaved)
+			for c in all_chunks:
+				if (c.source, c.page, c.text) not in used_set:
+					interleaved.append(c)
+					if len(interleaved) >= limit:
+						break
+
+		return interleaved[:limit]
+
+	elif jur == "international":
+		intl_chunks = [c for c in all_chunks if _is_international_source(c.source)]
+		if len(intl_chunks) >= limit:
+			return intl_chunks[:limit]
+		# Fallback: add remaining chunks
+		other_chunks = [c for c in all_chunks if not _is_international_source(c.source)]
+		return (intl_chunks + other_chunks)[:limit]
+
+	elif jur == "india":
+		india_chunks = [c for c in all_chunks if _is_india_source(c.source)]
+		if len(india_chunks) >= limit:
+			return india_chunks[:limit]
+		# Fallback: add remaining chunks
+		other_chunks = [c for c in all_chunks if not _is_india_source(c.source)]
+		return (india_chunks + other_chunks)[:limit]
+
+	return all_chunks[:limit]
 
 
 def main() -> None:

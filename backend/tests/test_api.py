@@ -316,6 +316,84 @@ class TestBackendAPI(unittest.TestCase):
         self.assertEqual(export_resp.headers.get("content-type"), "application/pdf")
         self.assertTrue(export_resp.content.startswith(b"%PDF-"))
 
+    def test_dpdp_audit_log_export(self):
+        import uuid
+        test_email = f"dpdp_user_{uuid.uuid4().hex[:6]}@example.com"
+        reg_resp = self.client.post(
+            "/api/auth/register",
+            json={"email": test_email, "password": "SecurePassword123!", "full_name": "DPDP Researcher"},
+        )
+        self.assertEqual(reg_resp.status_code, 201)
+        token = reg_resp.json()["access_token"]
+
+        # Call DPDP audit export endpoint with Bearer auth
+        dpdp_resp = self.client.get(
+            "/api/auth/dpdp-audit-log",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(dpdp_resp.status_code, 200)
+        self.assertEqual(dpdp_resp.headers.get("content-type"), "application/json")
+        self.assertIn("Content-Disposition", dpdp_resp.headers)
+        self.assertIn("DPDP_Audit_Log_User", dpdp_resp.headers["Content-Disposition"])
+
+        data = dpdp_resp.json()
+        self.assertIn("statutory_compliance", data)
+        self.assertIn("governing_statute", data["statutory_compliance"])
+        self.assertIn("Digital Personal Data Protection Act, 2023", data["statutory_compliance"]["governing_statute"])
+        self.assertIn("data_principal_rights_exercised", data["statutory_compliance"])
+        self.assertIn("data_principal_identity", data)
+        self.assertEqual(data["data_principal_identity"]["registered_email"], test_email)
+        self.assertIn("audit_summary", data)
+        self.assertIn("data_integrity_sha256", data["audit_summary"])
+
+    def test_dpdp_audit_log_requires_authentication(self):
+        # Unauthenticated request must receive 401 Unauthorized
+        resp = self.client.get("/api/auth/dpdp-audit-log")
+        self.assertEqual(resp.status_code, 401)
+
+    def test_jurisdiction_retrieval_modes(self):
+        from backend.rag.retrieve import retrieve
+        
+        # Test India Domestic retrieval
+        india_chunks = retrieve("turmeric haldi patent", limit=4, jurisdiction="india")
+        self.assertIsInstance(india_chunks, list)
+
+        # Test International Treaties retrieval
+        intl_chunks = retrieve("wipo pct madrid export", limit=4, jurisdiction="international")
+        self.assertIsInstance(intl_chunks, list)
+
+        # Test Comparative retrieval
+        comp_chunks = retrieve("ayurvedic formulation export abroad", limit=4, jurisdiction="comparative")
+        self.assertIsInstance(comp_chunks, list)
+
+    def test_comparative_query_detection(self):
+        from backend.rag.generate import is_comparative_query
+
+        # "this vs that" queries must trigger comparative mode
+        self.assertTrue(is_comparative_query("India patent vs US patent"))
+        self.assertTrue(is_comparative_query("Patent vs copyright"))
+        self.assertTrue(is_comparative_query("Classical Ayurvedic formulation versus proprietary medicine"))
+        self.assertTrue(is_comparative_query("What is the difference between Section 3(d) and Section 3(e)?"))
+        self.assertTrue(is_comparative_query("Compare PCT application with direct national filing"))
+        self.assertTrue(is_comparative_query("How does Indian patent law differ from US patent law?"))
+
+        # Standard non-comparative queries must NOT trigger comparative mode
+        self.assertFalse(is_comparative_query("What is Section 3(d) of the Indian Patents Act?"))
+        self.assertFalse(is_comparative_query("How long does a patent last in India?"))
+        self.assertFalse(is_comparative_query("Can an Ayurvedic formulation be patented?"))
+
+    def test_chat_comparative_auto_trigger(self):
+        # Even with default jurisdiction="india", a "vs" query automatically triggers comparative mode
+        resp = self.client.post("/api/chat", json={
+            "query": "India patent vs US patent filing procedure",
+            "session_id": "test-vs-session",
+            "jurisdiction": "india"
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("is_comparative", False))
+
+
 
 
 

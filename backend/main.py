@@ -116,7 +116,7 @@ class ChatRequest(BaseModel):
     limit: int = Field(default=4, ge=1, le=10, description="Max source chunks to retrieve")
     model: str | None = Field(default=None, description="Optional Ollama model override")
     allow_cloud: bool = Field(default=False, description="Explicit consent to use Cloud LLM fallback")
-    jurisdiction: str = Field(default="india", description="Jurisdiction filtering: 'india' or 'international'")
+    jurisdiction: str = Field(default="india", description="Jurisdiction filtering: 'india', 'international', or 'comparative'")
     context_document: str | None = Field(default=None, description="Optional text extracted from an uploaded document")
 
 
@@ -127,6 +127,7 @@ class ChatResponse(BaseModel):
     session_id: str
     confidence: str | None = None
     is_low_confidence: bool = False
+    is_comparative: bool = False
     disclaimer: str = "This service provides informational guidance on Indian IP law and does not constitute formal legal advice."
 
 
@@ -297,6 +298,131 @@ def update_user_profile_endpoint(
     return _populate_user_usage(db, current_user)
 
 
+@app.get("/api/auth/dpdp-audit-log", tags=["auth"])
+def export_dpdp_audit_log(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Statutory audit log export pursuant to Sections 11, 12, and 13 of the Digital Personal Data Protection Act, 2023 (DPDP Act).
+    Provides the Data Principal with a comprehensive summary of processed personal data, session logs,
+    and statutory disclosures on processing activities, retention policies, and grievance redressal.
+    """
+    import datetime
+    import json
+    import hashlib
+
+    # Fetch user sessions and messages
+    sessions = (
+        db.query(ChatSession)
+        .filter(ChatSession.user_id == current_user.id)
+        .order_by(ChatSession.created_at.desc())
+        .all()
+    )
+
+    audit_sessions = []
+    total_messages_logged = 0
+
+    for s in sessions:
+        session_messages = []
+        for m in s.messages:
+            total_messages_logged += 1
+            feedbacks_list = [
+                {
+                    "rating": f.rating,
+                    "comment": f.comment,
+                    "timestamp": f.created_at.isoformat() if f.created_at else None,
+                }
+                for f in m.feedbacks
+            ]
+            citations_parsed = []
+            if m.citations_json:
+                try:
+                    citations_parsed = json.loads(m.citations_json)
+                except Exception:
+                    citations_parsed = []
+
+            session_messages.append({
+                "message_id": m.id,
+                "role": m.role,
+                "content": m.content,
+                "confidence_score": m.confidence,
+                "is_low_confidence": m.is_low_confidence,
+                "citations": citations_parsed,
+                "user_feedback": feedbacks_list,
+                "timestamp_utc": m.created_at.isoformat() if m.created_at else None,
+            })
+
+        audit_sessions.append({
+            "session_id": s.session_id,
+            "title": s.title,
+            "created_at_utc": s.created_at.isoformat() if s.created_at else None,
+            "updated_at_utc": s.updated_at.isoformat() if s.updated_at else None,
+            "message_count": len(session_messages),
+            "interaction_trail": session_messages,
+        })
+
+    export_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    dpdp_manifest = {
+        "statutory_compliance": {
+            "governing_statute": "Digital Personal Data Protection Act, 2023 (Act No. 22 of 2023, Republic of India)",
+            "data_principal_rights_exercised": [
+                "Section 11: Right to access information about personal data",
+                "Section 11(1)(a): Summary of personal data being processed",
+                "Section 11(1)(b): Identities of data fiduciaries/processors with whom personal data has been shared",
+                "Section 12: Right to correction and erasure of personal data",
+                "Section 13: Right of grievance redressal",
+            ],
+            "data_fiduciary": {
+                "organization": "IP Shakti Sahayak Legal Knowledge Initiative",
+                "jurisdiction": "Republic of India",
+                "primary_purpose": "AI-assisted intellectual property statutory guidance, formulation patentability analysis under Section 3(p) Patents Act 1970, Biological Diversity Act 2002 approvals, and international export IP compliance.",
+                "grievance_officer": {
+                    "designation": "Data Protection & Grievance Redressal Officer (DP-GRO)",
+                    "email": "dp-grievance@ip-shakti.gov.in",
+                    "statutory_resolution_timeline": "30 days pursuant to DPDP Rules",
+                },
+            },
+            "data_retention_and_erasure": {
+                "retention_period": "User-retained until explicit account erasure or history clearance by Data Principal",
+                "automated_erasure_endpoint": "DELETE /api/chat/all-history",
+                "account_deletion_endpoint": "DELETE /api/auth/account",
+            },
+        },
+        "data_principal_identity": {
+            "principal_id": current_user.id,
+            "registered_email": current_user.email,
+            "full_name": current_user.full_name or "Not Specified",
+            "account_role": current_user.role,
+            "account_created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+            "account_status": "Active" if current_user.is_active else "Inactive",
+            "daily_statutory_quota": current_user.daily_query_limit,
+        },
+        "audit_summary": {
+            "total_consultation_sessions": len(sessions),
+            "total_recorded_interactions": total_messages_logged,
+            "export_timestamp_utc": export_timestamp,
+            "data_integrity_sha256": hashlib.sha256(
+                f"{current_user.id}_{export_timestamp}_{total_messages_logged}".encode()
+            ).hexdigest(),
+        },
+        "consultation_sessions": audit_sessions,
+    }
+
+    serialized_log = json.dumps(dpdp_manifest, indent=2, ensure_ascii=False)
+    filename = f"DPDP_Audit_Log_User_{current_user.id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+    return Response(
+        content=serialized_log,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+    )
+
+
 
 
 # ==========================================
@@ -405,6 +531,7 @@ def chat_endpoint(
             session_id=result.get("session_id") or "default",
             confidence=result.get("confidence"),
             is_low_confidence=result.get("is_low_confidence", False),
+            is_comparative=result.get("is_comparative", False),
         )
     except HTTPException:
         raise

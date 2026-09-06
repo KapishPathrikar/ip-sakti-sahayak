@@ -73,6 +73,31 @@ DEFAULT_OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
 
 MOCK_TKDL_KEYWORDS = ["turmeric", "neem", "triphala", "amla", "ashwagandha", "tulsi", "haldi", "brahmi", "shatavari", "haritaki", "bibhitaki"]
+
+
+def is_comparative_query(query: str) -> bool:
+	"""Check if query requests a 'this vs that' or comparative analysis."""
+	import re
+	q = query.lower().strip()
+	comp_patterns = [
+		r'\bvs\.?\b',
+		r'\bversus\b',
+		r'\bcompared\s+(?:to|with)\b',
+		r'\bcomparison\s+(?:of|between)\b',
+		r'\bdifference\s+between\b',
+		r'\bdifferences\s+between\b',
+		r'\bdiffers?\s+from\b',
+		r'\bcompare\b',
+		r'\bcomparative\b',
+		r'\bdifferentiate\b',
+		r'\bdistinguish\b',
+	]
+	for pattern in comp_patterns:
+		if re.search(pattern, q):
+			return True
+	has_india = any(k in q for k in ["india", "ayush", "ayurved", "domestic", "patents act", "tkdl", "nba", "inpass"])
+	has_foreign = any(k in q for k in ["us", "usa", "fda", "pct", "wipo", "international", "abroad", "foreign", "europe", "ema", "madrid"])
+	return has_india and has_foreign
 def answer_question(
 	query: str,
 	persist_dir: str | Path = DEFAULT_CHROMA_DB,
@@ -95,6 +120,10 @@ def answer_question(
 	if detected_lang != "en":
 		english_query = translate_text(query, target_lang="en", source_lang="auto")
 		print(f"[Translation] Detected '{detected_lang}' query. Translated to English: '{english_query}'")
+
+	# Auto-detect comparative intent (e.g. 'this vs that', 'compare X and Y', cross-regime)
+	if is_comparative_query(english_query):
+		jurisdiction = "comparative"
 
 	# 1. Prompt injection defense
 	if is_injection_query(english_query):
@@ -146,7 +175,7 @@ def answer_question(
 		return {"answer": safety_response, "citations": [], "grounded": False, "session_id": active_session_id, "confidence": "0%", "is_low_confidence": False}
 
 
-	chunks = retrieve(english_query, persist_dir, limit)
+	chunks = retrieve(english_query, persist_dir, limit, jurisdiction=jurisdiction)
 	if not chunks and not is_greeting_query(english_query):
 		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
@@ -216,7 +245,19 @@ If the reference context does not provide sufficient information, clarify what i
 - Provide a clear, well-structured, and helpful explanation strictly grounded in the official statutes and reference context.
 - Never cite unverified third-party blogs or external speculation."""
 
-	if jurisdiction == "international":
+	if jurisdiction == "comparative":
+		system_prompt += """
+- CRITICAL JURISDICTION FORMAT REQUIREMENT:
+  You MUST structure your response into three clear, distinct sections with exact headings:
+  ### 🇮🇳 Indian Domestic Regime (Patents Act & TKDL)
+  Detail Indian domestic law: Patents Act 1970 (Section 3(p) TKDL bars, Section 3(d) efficacy), Biological Diversity Act 2002 (Form III approvals), D&C Act, and Ministry of AYUSH licensing.
+  
+  ### 🌐 International Regime & Export Guidelines (PCT, WIPO & Regulators)
+  Detail international frameworks: PCT filing routes (30/31-month timeline), WIPO Madrid system, US FDA (DSHEA dietary supplement vs botanical drug guidance), and EU EMA Traditional Herbal Medicinal Products Directive (THMPD).
+  
+  ### ⚖️ Strategic Synthesis & Action Plan
+  Synthesize comparative trade-offs and provide an actionable strategic sequence for Indian inventors seeking domestic protection alongside international exports."""
+	elif jurisdiction == "international":
 		system_prompt += """
 - Focus on International treaties, WIPO, Nagoya Protocol, PCT, and Madrid systems.
 - If referencing official portals, use:
@@ -285,6 +326,8 @@ If the reference context does not provide sufficient information, clarify what i
 			user_id=user_id,
 		)
 
+	is_comp_result = jurisdiction == "comparative" or ("### 🇮🇳" in llm_answer and "### 🌐" in llm_answer)
+
 	return {
 		"answer": llm_answer,
 		"citations": citations,
@@ -292,6 +335,7 @@ If the reference context does not provide sufficient information, clarify what i
 		"session_id": active_session_id,
 		"confidence": overall_confidence,
 		"is_low_confidence": is_low_confidence,
+		"is_comparative": is_comp_result,
 	}
 
 
@@ -312,16 +356,20 @@ def answer_question_stream(
 	active_session_id = session_manager.get_or_create_session(session_id, user_id=user_id) if session_id is not None else None
 	detected_lang = detect_language(query)
 
-	# Emit initial thinking state
-	yield f"data: {json.dumps({'type': 'thinking', 'message': '🧠 Analyzing Indian IP statutes & legal corpus...'})}\n\n"
-	# Pad to blow out proxy buffers (Next.js rewrites)
-	yield f": {' ' * 2048}\n\n"
-
-
 	# Translate query to English if non-English
 	english_query = query
 	if detected_lang != "en":
 		english_query = translate_text(query, target_lang="en", source_lang="auto")
+
+	# Auto-detect comparative intent (e.g. 'this vs that', 'compare X and Y', cross-regime)
+	if is_comparative_query(english_query):
+		jurisdiction = "comparative"
+
+	# Emit initial thinking state
+	think_msg = "⚖️ Analyzing comparative statutory provisions (India vs International)..." if jurisdiction == "comparative" else "🧠 Analyzing Indian IP statutes & legal corpus..."
+	yield f"data: {json.dumps({'type': 'thinking', 'message': think_msg})}\n\n"
+	# Pad to blow out proxy buffers (Next.js rewrites)
+	yield f": {' ' * 2048}\n\n"
 
 	# 1. Prompt injection defense
 	if is_injection_query(english_query):
@@ -380,7 +428,7 @@ def answer_question_stream(
 
 
 
-	chunks = retrieve(english_query, persist_dir, limit)
+	chunks = retrieve(english_query, persist_dir, limit, jurisdiction=jurisdiction)
 	if not chunks and not is_greeting_query(english_query):
 		translated_no_answer = translate_text(NO_ANSWER, target_lang=detected_lang if detected_lang in {"hi", "mr"} else "en", source_lang="en")
 		if active_session_id:
@@ -441,8 +489,10 @@ def answer_question_stream(
 	is_low_confidence = (best_dist > HIGH_SIMILARITY_MAX_DISTANCE or top_calibrated < HIGH_SIMILARITY_MIN_CONFIDENCE) and not is_greeting_query(english_query)
 	overall_confidence = f"{top_calibrated}%" if top_calibrated > 0 else ("Official Portal" if web_section else "50%")
 
+	is_comp = jurisdiction == "comparative"
+
 	# Emit early metadata for low-confidence warning banner display
-	yield f"data: {json.dumps({'type': 'metadata', 'confidence': overall_confidence, 'is_low_confidence': is_low_confidence})}\n\n"
+	yield f"data: {json.dumps({'type': 'metadata', 'confidence': overall_confidence, 'is_low_confidence': is_low_confidence, 'is_comparative': is_comp})}\n\n"
 
 	# Adjust instructions based on Jurisdiction
 	system_prompt = f"""You are IP Shakti Sahayak, an expert Intellectual Property and Patent law assistant.
@@ -459,7 +509,19 @@ If the reference context does not provide sufficient information, clarify what i
 === INSTRUCTIONS ===
 - Provide a clear, well-structured, and helpful explanation."""
 
-	if jurisdiction == "international":
+	if jurisdiction == "comparative":
+		system_prompt += """
+- CRITICAL JURISDICTION FORMAT REQUIREMENT:
+  You MUST structure your response into three clear, distinct sections with exact headings:
+  ### 🇮🇳 Indian Domestic Regime (Patents Act & TKDL)
+  Detail Indian domestic law: Patents Act 1970 (Section 3(p) TKDL bars, Section 3(d) efficacy), Biological Diversity Act 2002 (Form III approvals), D&C Act, and Ministry of AYUSH licensing.
+  
+  ### 🌐 International Regime & Export Guidelines (PCT, WIPO & Regulators)
+  Detail international frameworks: PCT filing routes (30/31-month timeline), WIPO Madrid system, US FDA (DSHEA dietary supplement vs botanical drug guidance), and EU EMA Traditional Herbal Medicinal Products Directive (THMPD).
+  
+  ### ⚖️ Strategic Synthesis & Action Plan
+  Synthesize comparative trade-offs and provide an actionable strategic sequence for Indian inventors seeking domestic protection alongside international exports."""
+	elif jurisdiction == "international":
 		system_prompt += """
 - Focus on International treaties, WIPO, Nagoya Protocol, PCT, and Madrid systems.
 - If referencing official portals, use:
@@ -552,7 +614,8 @@ If the reference context does not provide sufficient information, clarify what i
 			user_id=user_id,
 		)
 
-	yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'confidence': overall_confidence, 'is_low_confidence': is_low_confidence})}\n\n"
+	is_comp_final = is_comp or ("### 🇮🇳" in final_text and "### 🌐" in final_text)
+	yield f"data: {json.dumps({'type': 'done', 'citations': citations, 'grounded': True, 'session_id': active_session_id, 'confidence': overall_confidence, 'is_low_confidence': is_low_confidence, 'is_comparative': is_comp_final})}\n\n"
 
 
 

@@ -28,6 +28,7 @@ interface Message {
   confidence?: string;
   isFaq?: boolean;
   isLowConfidence?: boolean;
+  isComparative?: boolean;
   noticeType?: "network_drop" | "burst_limit" | "daily_limit" | "server_busy";
   noticeTitle?: string;
   noticeDesc?: string;
@@ -184,6 +185,7 @@ export default function Home() {
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [jurisdiction, setJurisdiction] = useState<"india" | "international">("india");
+  const [comparativeViewMode, setComparativeViewMode] = useState<{ [msgId: string]: "dual" | "standard" }>({});
   const [activePdfUrl, setActivePdfUrl] = useState<{ url: string, page: number, title: string, searchQuery?: string } | null>(null);
 
   // Saved sessions state
@@ -437,14 +439,32 @@ export default function Home() {
         headers["Authorization"] = `Bearer ${authToken}`;
       }
 
-      console.log("Sending chat request to: ", `${apiBaseUrl}/api/chat/stream`);
+      let activeJurisdiction: "india" | "international" | "comparative" = jurisdiction;
+      const lowerText = text.toLowerCase();
+      const isCompQuery =
+        /\b(vs\.?|versus|compared\s+(?:to|with)|comparison\s+(?:of|between)|difference\s+between|differences\s+between|differs?\s+from|compare|comparative|differentiate|distinguish)\b/i.test(lowerText) ||
+        ((lowerText.includes("india") || lowerText.includes("ayush") || lowerText.includes("ayurved")) &&
+          (lowerText.includes("us") ||
+            lowerText.includes("usa") ||
+            lowerText.includes("pct") ||
+            lowerText.includes("fda") ||
+            lowerText.includes("wipo") ||
+            lowerText.includes("international") ||
+            lowerText.includes("abroad") ||
+            lowerText.includes("foreign")));
+
+      if (isCompQuery) {
+        activeJurisdiction = "comparative";
+      }
+
+      console.log("Sending chat request to: ", `${apiBaseUrl}/api/chat/stream`, "with jurisdiction:", activeJurisdiction);
       const response = await fetch(`${apiBaseUrl}/api/chat/stream`, {
         method: "POST",
         headers,
         body: JSON.stringify({
           query: text,
           session_id: sessionId,
-          jurisdiction: jurisdiction,
+          jurisdiction: activeJurisdiction,
           context_document: contextDocumentText,
         }),
       });
@@ -507,7 +527,7 @@ export default function Home() {
 
       setMessages((prev) => [
         ...prev,
-        { id: assistantMsgId, role: "assistant", content: "" },
+        { id: assistantMsgId, role: "assistant", content: "", isComparative: activeJurisdiction === "comparative" },
       ]);
 
       while (true) {
@@ -534,6 +554,7 @@ export default function Home() {
                         ...m,
                         confidence: event.confidence,
                         isLowConfidence: event.is_low_confidence,
+                        isComparative: event.is_comparative !== undefined ? event.is_comparative : m.isComparative,
                       }
                       : m
                   )
@@ -561,6 +582,10 @@ export default function Home() {
                           event.is_low_confidence !== undefined
                             ? event.is_low_confidence
                             : m.isLowConfidence,
+                        isComparative:
+                          event.is_comparative !== undefined
+                            ? event.is_comparative
+                            : (m.isComparative || (partialText.includes("### 🇮🇳") && partialText.includes("### 🌐"))),
                       }
                       : m
                   )
@@ -1383,6 +1408,104 @@ export default function Home() {
                                 return false;
                               })();
 
+                              // Check if message qualifies for Dual-Pane comparative rendering
+                              const isCompMsg = msg.isComparative === true || 
+                                (msg.content.includes("### 🇮🇳") && msg.content.includes("### 🌐"));
+
+                              const parsedComp = isCompMsg
+                                ? (() => {
+                                    const c = msg.content;
+                                    let indiaIdx = c.indexOf("### 🇮🇳");
+                                    let intlIdx = c.indexOf("### 🌐");
+                                    let synthesisIdx = c.indexOf("### ⚖️");
+
+                                    if (indiaIdx === -1) {
+                                      const m = c.match(/(?:^|\n)#{1,3}\s*(?:[0-9]\.?\s*)?(?:🇮🇳\s*)?(?:Indian Domestic Regime|Indian Patent|India Law|Patents Act 1970|Domestic Indian)/i);
+                                      if (m && m.index !== undefined) indiaIdx = m.index;
+                                    }
+                                    if (intlIdx === -1) {
+                                      const m = c.match(/(?:^|\n)#{1,3}\s*(?:[0-9]\.?\s*)?(?:🌐\s*)?(?:International Regime|International Export|International Treaties|PCT, WIPO|US FDA|Global Export)/i);
+                                      if (m && m.index !== undefined) intlIdx = m.index;
+                                    }
+                                    if (synthesisIdx === -1) {
+                                      const m = c.match(/(?:^|\n)#{1,3}\s*(?:[0-9]\.?\s*)?(?:⚖️\s*)?(?:Strategic Synthesis|Action Plan|Synthesis & Action Plan|Strategic Roadmap|Strategic Comparison)/i);
+                                      if (m && m.index !== undefined) synthesisIdx = m.index;
+                                    }
+
+                                    if (indiaIdx !== -1 && intlIdx !== -1) {
+                                      const firstIdx = Math.min(indiaIdx, intlIdx);
+                                      const intro = firstIdx > 0 ? c.slice(0, firstIdx).trim() : undefined;
+
+                                      let leftTitle = "Indian Domestic Regime";
+                                      let rightTitle = "International Export Regime";
+                                      let synthesisTitle = "Strategic Synthesis & Action Plan";
+
+                                      let indiaSection = "";
+                                      let intlSection = "";
+                                      let synthesisSection: string | undefined = undefined;
+
+                                      if (indiaIdx < intlIdx) {
+                                        const rawLeft = c.slice(indiaIdx, intlIdx);
+                                        const firstLine = rawLeft.trim().split("\n")[0] || "";
+                                        const cleanTitle = firstLine.replace(/^#{1,3}\s*(?:[0-9]\.?\s*)?(?:🇮🇳\s*)?/, "").trim();
+                                        if (cleanTitle) leftTitle = cleanTitle;
+                                        indiaSection = rawLeft.replace(/^#{1,3}[^\n]*\n?/, "").trim();
+
+                                        if (synthesisIdx > intlIdx) {
+                                          const rawRight = c.slice(intlIdx, synthesisIdx);
+                                          const rFirstLine = rawRight.trim().split("\n")[0] || "";
+                                          const rClean = rFirstLine.replace(/^#{1,3}\s*(?:[0-9]\.?\s*)?(?:🌐\s*)?/, "").trim();
+                                          if (rClean) rightTitle = rClean;
+                                          intlSection = rawRight.replace(/^#{1,3}[^\n]*\n?/, "").trim();
+
+                                          const rawSynth = c.slice(synthesisIdx);
+                                          const sFirstLine = rawSynth.trim().split("\n")[0] || "";
+                                          const sClean = sFirstLine.replace(/^#{1,3}\s*(?:[0-9]\.?\s*)?(?:⚖️\s*)?/, "").trim();
+                                          if (sClean) synthesisTitle = sClean;
+                                          synthesisSection = rawSynth.replace(/^#{1,3}[^\n]*\n?/, "").trim();
+                                        } else {
+                                          const rawRight = c.slice(intlIdx);
+                                          const rFirstLine = rawRight.trim().split("\n")[0] || "";
+                                          const rClean = rFirstLine.replace(/^#{1,3}\s*(?:[0-9]\.?\s*)?(?:🌐\s*)?/, "").trim();
+                                          if (rClean) rightTitle = rClean;
+                                          intlSection = rawRight.replace(/^#{1,3}[^\n]*\n?/, "").trim();
+                                        }
+                                      } else {
+                                        const rawRight = c.slice(intlIdx, indiaIdx);
+                                        const rFirstLine = rawRight.trim().split("\n")[0] || "";
+                                        const rClean = rFirstLine.replace(/^#{1,3}\s*(?:[0-9]\.?\s*)?(?:🌐\s*)?/, "").trim();
+                                        if (rClean) rightTitle = rClean;
+                                        intlSection = rawRight.replace(/^#{1,3}[^\n]*\n?/, "").trim();
+
+                                        if (synthesisIdx > indiaIdx) {
+                                          const rawLeft = c.slice(indiaIdx, synthesisIdx);
+                                          const firstLine = rawLeft.trim().split("\n")[0] || "";
+                                          const cleanTitle = firstLine.replace(/^#{1,3}\s*(?:[0-9]\.?\s*)?(?:🇮🇳\s*)?/, "").trim();
+                                          if (cleanTitle) leftTitle = cleanTitle;
+                                          indiaSection = rawLeft.replace(/^#{1,3}[^\n]*\n?/, "").trim();
+
+                                          const rawSynth = c.slice(synthesisIdx);
+                                          const sFirstLine = rawSynth.trim().split("\n")[0] || "";
+                                          const sClean = sFirstLine.replace(/^#{1,3}\s*(?:[0-9]\.?\s*)?(?:⚖️\s*)?/, "").trim();
+                                          if (sClean) synthesisTitle = sClean;
+                                          synthesisSection = rawSynth.replace(/^#{1,3}[^\n]*\n?/, "").trim();
+                                        } else {
+                                          const rawLeft = c.slice(indiaIdx);
+                                          const firstLine = rawLeft.trim().split("\n")[0] || "";
+                                          const cleanTitle = firstLine.replace(/^#{1,3}\s*(?:[0-9]\.?\s*)?(?:🇮🇳\s*)?/, "").trim();
+                                          if (cleanTitle) leftTitle = cleanTitle;
+                                          indiaSection = rawLeft.replace(/^#{1,3}[^\n]*\n?/, "").trim();
+                                        }
+                                      }
+                                      return { intro, indiaSection, intlSection, synthesisSection, leftTitle, rightTitle, synthesisTitle };
+                                    }
+
+                                    return null;
+                                  })()
+                                : null;
+
+                              const isDualActive = parsedComp && (comparativeViewMode[msg.id] ?? "dual") === "dual";
+
                               return (
                                 <div className="flex justify-start w-full">
                                   <div className="bg-[#FBF9F5] border card-border rounded-xl w-full shadow-sm overflow-hidden flex flex-col relative">
@@ -1390,18 +1513,57 @@ export default function Home() {
                                     <div className={`px-6 py-3.5 border-b card-border flex items-center justify-between transition-colors ${isLow ? "bg-amber-50/90 border-amber-200" : "bg-[#FAF7F2]"}`}>
                                       <div className="flex items-center gap-2.5 flex-wrap">
                                         <span className={`material-symbols-outlined text-lg filled ${isLow ? "text-amber-700" : "text-[#7D4F39]"}`}>
-                                          {isLow ? "warning" : "policy"}
+                                          {isLow ? "warning" : parsedComp ? "compare_arrows" : "policy"}
                                         </span>
                                         <h3 className={`text-sm font-bold m-0 tracking-wide ${isLow ? "text-amber-900" : "text-[#7D4F39]"}`}>
-                                          {msg.isFaq ? "Statutory Guidance (Verified FAQ)" : isLow ? "Corpus Boundary Advisory (Low Confidence)" : "Section 3 & Statutory Guidance"}
+                                          {msg.isFaq
+                                            ? "Statutory Guidance (Verified FAQ)"
+                                            : isLow
+                                              ? "Corpus Boundary Advisory (Low Confidence)"
+                                              : parsedComp
+                                                ? "Cross-Border Comparative Analysis (Dual-Pane)"
+                                                : "Section 3 & Statutory Guidance"}
                                         </h3>
                                         {isLow && (
                                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300/80 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 shadow-xs">
                                             <span>⚠️</span> Outside High-Similarity Boundary
                                           </span>
                                         )}
+                                        {parsedComp && (
+                                          <span className="inline-flex items-center gap-1 rounded-full bg-[#7D4F39]/10 border border-[#7D4F39]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#7D4F39]">
+                                            <span>⚖️</span> Comparative Regime
+                                          </span>
+                                        )}
                                       </div>
                                       <div className="flex items-center gap-2">
+                                        {parsedComp && (
+                                          <div className="flex items-center rounded-lg bg-[#F1EDE6] p-0.5 border card-border text-[11px] font-semibold">
+                                            <button
+                                              onClick={() => setComparativeViewMode((prev) => ({ ...prev, [msg.id]: "dual" }))}
+                                              className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                                                isDualActive
+                                                  ? "bg-white shadow-xs text-[#7D4F39] font-bold"
+                                                  : "text-[#645D56] hover:text-[#1E1B18]"
+                                              }`}
+                                              title="Side-by-side Dual-Pane layout"
+                                            >
+                                              <span className="material-symbols-outlined text-[13px]">view_column</span>
+                                              <span className="hidden sm:inline">Dual-Pane</span>
+                                            </button>
+                                            <button
+                                              onClick={() => setComparativeViewMode((prev) => ({ ...prev, [msg.id]: "standard" }))}
+                                              className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                                                !isDualActive
+                                                  ? "bg-white shadow-xs text-[#7D4F39] font-bold"
+                                                  : "text-[#645D56] hover:text-[#1E1B18]"
+                                              }`}
+                                              title="Standard single column view"
+                                            >
+                                              <span className="material-symbols-outlined text-[13px]">article</span>
+                                              <span className="hidden sm:inline">Standard</span>
+                                            </button>
+                                          </div>
+                                        )}
                                         <button
                                           onClick={() => handleExportPDF()}
                                           className="px-2 py-1 bg-amber-50 border border-slate-300 rounded text-amber-800 text-[10px] font-bold hover:bg-amber-100 transition-colors shadow-sm"
@@ -1445,7 +1607,76 @@ export default function Home() {
 
                                     {/* Card Body */}
                                     <div className="p-6 space-y-5 bg-white">
-                                      <MarkdownRenderer content={msg.content} />
+                                      {isDualActive && parsedComp ? (
+                                        <div className="space-y-6">
+                                          {parsedComp.intro && (
+                                            <div className="p-3.5 rounded-xl bg-[#FAF7F2] border card-border text-xs text-[#1E1B18] leading-relaxed">
+                                              <MarkdownRenderer content={parsedComp.intro} />
+                                            </div>
+                                          )}
+
+                                          {/* Dual-Pane Side-by-Side Grid */}
+                                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+                                            {/* Left Column: Indian Domestic Regime */}
+                                            <div className="flex flex-col rounded-2xl border-2 border-[#7D4F39]/30 bg-[#FAF7F2]/60 overflow-hidden shadow-xs transition-all">
+                                              <div className="px-4 py-3 bg-[#FAF7F2] border-b border-[#7D4F39]/20 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-base">🇮🇳</span>
+                                                  <h4 className="text-xs font-bold text-[#7D4F39] uppercase tracking-wider">
+                                                    {parsedComp.leftTitle}
+                                                  </h4>
+                                                </div>
+                                                <span className="px-2 py-0.5 rounded-full bg-[#7D4F39]/10 text-[#7D4F39] text-[9px] font-bold">
+                                                  PATENTS ACT &amp; TKDL
+                                                </span>
+                                              </div>
+                                              <div className="p-4 sm:p-5 flex-1 text-xs leading-relaxed space-y-3 bg-white/80">
+                                                <MarkdownRenderer content={parsedComp.indiaSection} />
+                                              </div>
+                                            </div>
+
+                                            {/* Right Column: International Treaties & Regulators */}
+                                            <div className="flex flex-col rounded-2xl border-2 border-blue-200/80 bg-[#F4F7FA]/60 overflow-hidden shadow-xs transition-all">
+                                              <div className="px-4 py-3 bg-[#F4F7FA] border-b border-blue-200/60 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-base">🌐</span>
+                                                  <h4 className="text-xs font-bold text-[#1E3A8A] uppercase tracking-wider">
+                                                    {parsedComp.rightTitle}
+                                                  </h4>
+                                                </div>
+                                                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-[#1E3A8A] text-[9px] font-bold">
+                                                  PCT, WIPO &amp; REGULATORS
+                                                </span>
+                                              </div>
+                                              <div className="p-4 sm:p-5 flex-1 text-xs leading-relaxed space-y-3 bg-white/80">
+                                                <MarkdownRenderer content={parsedComp.intlSection} />
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Bottom Full-Width Synthesis & Action Plan */}
+                                          {parsedComp.synthesisSection && (
+                                            <div className="rounded-2xl border-2 border-[#2D6A4F]/30 bg-[#FAF7F2]/70 overflow-hidden shadow-xs">
+                                              <div className="px-4 py-3 bg-[#EBF5EE] border-b border-[#2D6A4F]/20 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-base">⚖️</span>
+                                                  <h4 className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider">
+                                                    {parsedComp.synthesisTitle || "Strategic Synthesis & Action Plan"}
+                                                  </h4>
+                                                </div>
+                                                <span className="px-2 py-0.5 rounded-full bg-[#2D6A4F]/10 text-[#2D6A4F] text-[9px] font-bold">
+                                                  ACTIONABLE ROADMAP
+                                                </span>
+                                              </div>
+                                              <div className="p-5 text-xs leading-relaxed space-y-3 bg-white/80">
+                                                <MarkdownRenderer content={parsedComp.synthesisSection} />
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <MarkdownRenderer content={msg.content} />
+                                      )}
                                     </div>
 
                                     {/* Citations Section - Trust UI */}
@@ -1531,23 +1762,31 @@ export default function Home() {
           {/* ── Floating Prompt Bar (Design 3 & Design 1 Unified) ───────────── */}
           <div className="absolute bottom-0 left-0 right-0 p-4 pb-20 md:p-6 md:pb-6 bg-gradient-to-t from-[#FBF9F5] via-[#FBF9F5]/90 to-transparent pointer-events-none z-20">
             <div className="max-w-[800px] mx-auto pointer-events-auto">
-              {/* Jurisdiction Toggle - Static Above Input */}
+              {/* Jurisdiction Toggle - 2-way (India | International) */}
               {currentView === "chat" && (
                 <div className="flex justify-center mb-3">
-                  <div className="flex items-center gap-1 rounded-full bg-[#F1EDE6]/80 p-1 border card-border backdrop-blur-md shadow-sm">
+                  <div className="flex items-center gap-1 rounded-full bg-[#F1EDE6]/90 p-1 border card-border backdrop-blur-md shadow-xs flex-wrap justify-center">
                     <button
+                      type="button"
                       onClick={() => setJurisdiction("india")}
-                      className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${jurisdiction === "india" ? "bg-white shadow-sm text-emerald-800" : "text-[#645D56] hover:text-[#1E1B18]"
-                        }`}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        jurisdiction === "india" ? "bg-white shadow-sm text-[#2D6A4F]" : "text-[#645D56] hover:text-[#1E1B18]"
+                      }`}
+                      title="Domestic Indian Patent & Biodiversity Law"
                     >
-                      🇮🇳 India
+                      <span>🇮🇳</span>
+                      <span>India Law &amp; AYUSH</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => setJurisdiction("international")}
-                      className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${jurisdiction === "international" ? "bg-white shadow-sm text-blue-800" : "text-[#645D56] hover:text-[#1E1B18]"
-                        }`}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        jurisdiction === "international" ? "bg-white shadow-sm text-blue-800" : "text-[#645D56] hover:text-[#1E1B18]"
+                      }`}
+                      title="International Treaties (PCT, WIPO, FDA, EMA)"
                     >
-                      🌐 International
+                      <span>🌐</span>
+                      <span>International Treaties</span>
                     </button>
                   </div>
                 </div>
