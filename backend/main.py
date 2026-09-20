@@ -896,3 +896,110 @@ def trigger_ingestion(
     """Trigger the RAG ingestion pipeline in the background."""
     background_tasks.add_task(_background_ingest)
     return {"message": "Knowledge base rebuild started in the background. This may take a few minutes."}
+
+
+# =====================================================================
+# Digital India Bhashini AI Services Endpoints
+# =====================================================================
+
+try:
+    from rag.bhashini_service import (
+        is_bhashini_configured,
+        translate_bhashini,
+        synthesize_speech_bhashini,
+    )
+except ImportError:
+    from backend.rag.bhashini_service import (
+        is_bhashini_configured,
+        translate_bhashini,
+        synthesize_speech_bhashini,
+    )
+
+
+class BhashiniTranslateRequest(BaseModel):
+    text: str
+    source_language: str = "hi"
+    target_language: str = "en"
+
+
+class BhashiniTTSRequest(BaseModel):
+    text: str
+    language: str = "auto"
+    gender: str = "female"
+
+
+@app.get("/api/bhashini/status", tags=["bhashini"])
+def bhashini_status():
+    """Check Bhashini configuration status and available services."""
+    configured = is_bhashini_configured()
+    return {
+        "status": "active" if configured else "unconfigured",
+        "configured": configured,
+        "services": ["translation", "tts"] if configured else [],
+        "engine": "Digital India Bhashini (AI4Bharat / Dhruva)",
+    }
+
+
+@app.post("/api/bhashini/translate", tags=["bhashini"])
+def bhashini_translate(payload: BhashiniTranslateRequest):
+    """Translate text between Indic languages and English using Bhashini IndicTrans-v2."""
+    if not payload.text or not payload.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty.")
+    
+    translated = translate_bhashini(
+        text=payload.text,
+        source_lang=payload.source_language,
+        target_lang=payload.target_language,
+    )
+    
+    if not translated:
+        # Fallback to translation helper
+        from rag.translation import translate_text
+        translated = translate_text(payload.text, target_lang=payload.target_language, source_lang=payload.source_language)
+
+    return {
+        "source_language": payload.source_language,
+        "target_language": payload.target_language,
+        "original_text": payload.text,
+        "translated_text": translated,
+    }
+
+
+@app.post("/api/bhashini/tts", tags=["bhashini"])
+def bhashini_tts(payload: BhashiniTTSRequest):
+    """Generate audio speech (base64 WAV) from text using Bhashini Indic-TTS."""
+    if not payload.text or not payload.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty.")
+
+    target_lang = payload.language
+    if target_lang == "auto":
+        from rag.translation import detect_language
+        detected = detect_language(payload.text)
+        if detected in ("hi", "hinglish"):
+            target_lang = "hi"
+        elif detected in ("mr", "marathish"):
+            target_lang = "mr"
+        elif detected in ("ta", "te", "bn", "gu", "kn", "ml", "or", "pa", "ur"):
+            target_lang = detected
+        else:
+            target_lang = "en"
+
+    audio_base64 = synthesize_speech_bhashini(
+        text=payload.text,
+        language=target_lang,
+        gender=payload.gender,
+    )
+
+    if not audio_base64:
+        raise HTTPException(
+            status_code=503,
+            detail="Bhashini TTS speech synthesis currently unavailable or timed out.",
+        )
+
+    return {
+        "audio_base64": audio_base64,
+        "language": target_lang,
+        "format": "wav",
+        "mime_type": "audio/wav",
+    }
+

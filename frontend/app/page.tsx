@@ -188,6 +188,11 @@ export default function Home() {
   const [comparativeViewMode, setComparativeViewMode] = useState<{ [msgId: string]: "dual" | "standard" }>({});
   const [activePdfUrl, setActivePdfUrl] = useState<{ url: string, page: number, title: string, searchQuery?: string } | null>(null);
 
+  // Audio Playback / Bhashini Voice state
+  const [playingMsgId, setPlayingMsgId] = useState<string | null>(null);
+  const [audioLoadingMsgId, setAudioLoadingMsgId] = useState<string | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+
   // Saved sessions state
   const [mySessions, setMySessions] = useState<SavedSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
@@ -267,7 +272,10 @@ export default function Home() {
       })
       .catch(() => { });
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("ip_shakti_token") : null;
+    let token: string | null = null;
+    try {
+      token = typeof window !== "undefined" ? localStorage.getItem("ip_shakti_token") : null;
+    } catch { }
     if (token) {
       setAuthToken(token);
       // Fetch fresh profile data
@@ -679,7 +687,95 @@ export default function Home() {
     window.open(`${apiBaseUrl}/api/chat/export/${target}`, "_blank");
   }
 
+  function fallbackBrowserSpeech(text: string, msgId: string) {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      setPlayingMsgId(null);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    const isDevanagari = /[\u0900-\u097F]/.test(text);
+    utterance.lang = isDevanagari ? "hi-IN" : "en-IN";
+    utterance.onend = () => setPlayingMsgId(null);
+    utterance.onerror = () => setPlayingMsgId(null);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  async function handleSpeakMessage(msgId: string, text: string) {
+    if (playingMsgId === msgId) {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setPlayingMsgId(null);
+      return;
+    }
+
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    setAudioLoadingMsgId(msgId);
+    setPlayingMsgId(msgId);
+
+    const cleanText = text
+      .replace(/[#*`_~]/g, "")
+      .replace(/\[.*?\]\(.*?\)/g, "")
+      .replace(/\n+/g, " ")
+      .trim();
+    const truncatedText = cleanText.length > 400 ? cleanText.substring(0, 400) + "..." : cleanText;
+
+    try {
+      const res = await fetch(`/api/bhashini/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: truncatedText,
+          language: "auto",
+          gender: "female",
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.audio_base64) {
+          const audio = new Audio(`data:audio/wav;base64,${data.audio_base64}`);
+          currentAudioRef.current = audio;
+          audio.onended = () => {
+            setPlayingMsgId(null);
+            currentAudioRef.current = null;
+          };
+          audio.onerror = () => {
+            fallbackBrowserSpeech(truncatedText, msgId);
+          };
+          setAudioLoadingMsgId(null);
+          await audio.play();
+          return;
+        }
+      }
+      fallbackBrowserSpeech(truncatedText, msgId);
+    } catch {
+      fallbackBrowserSpeech(truncatedText, msgId);
+    } finally {
+      setAudioLoadingMsgId(null);
+    }
+  }
+
   function handleResetChat() {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setPlayingMsgId(null);
     setSessionId("sess-" + Math.random().toString(36).substring(2, 9));
     setMessages([]);
     setCurrentView("chat");
@@ -1564,6 +1660,38 @@ export default function Home() {
                                             </button>
                                           </div>
                                         )}
+                                        {/* Bhashini Indic Voice Read-Aloud */}
+                                        <button
+                                          onClick={() => handleSpeakMessage(msg.id, msg.content)}
+                                          className={`px-2 py-1 rounded text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs ${
+                                            playingMsgId === msg.id
+                                              ? "bg-[#7D4F39] text-white"
+                                              : "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                                          }`}
+                                          title={
+                                            playingMsgId === msg.id
+                                              ? "Stop voice playback"
+                                              : "Listen to advisory with Bhashini Indic Voice"
+                                          }
+                                        >
+                                          {audioLoadingMsgId === msg.id ? (
+                                            <>
+                                              <span className="material-symbols-outlined text-[12px] animate-spin">progress_activity</span>
+                                              <span>Speaking...</span>
+                                            </>
+                                          ) : playingMsgId === msg.id ? (
+                                            <>
+                                              <span className="material-symbols-outlined text-[12px]">stop</span>
+                                              <span>Stop</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <span className="material-symbols-outlined text-[12px]">volume_up</span>
+                                              <span>🔊 Listen</span>
+                                            </>
+                                          )}
+                                        </button>
+
                                         <button
                                           onClick={() => handleExportPDF()}
                                           className="px-2 py-1 bg-amber-50 border border-slate-300 rounded text-amber-800 text-[10px] font-bold hover:bg-amber-100 transition-colors shadow-sm"
