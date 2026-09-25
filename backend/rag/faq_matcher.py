@@ -42,6 +42,17 @@ def _cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
 	return dot / (norm1 * norm2)
 
 
+import os
+
+def _token_similarity(q1: str, q2: str) -> float:
+	"""Fast zero-RAM token similarity for FAQ matching without loading PyTorch in memory."""
+	w1 = set(q1.lower().replace("?", "").replace(".", "").replace(",", "").split())
+	w2 = set(q2.lower().replace("?", "").replace(".", "").replace(",", "").split())
+	if not w1 or not w2:
+		return 0.0
+	return (2.0 * len(w1 & w2)) / (len(w1) + len(w2))
+
+
 def _init_faq_embeddings() -> list[tuple[dict[str, Any], str, list[float]]]:
 	"""Compute embeddings for each primary and alternative question."""
 	global _FAQ_QUESTION_EMBEDDINGS
@@ -50,6 +61,12 @@ def _init_faq_embeddings() -> list[tuple[dict[str, Any], str, list[float]]]:
 
 	faqs = load_faqs()
 	if not faqs:
+		_FAQ_QUESTION_EMBEDDINGS = []
+		return _FAQ_QUESTION_EMBEDDINGS
+
+	token = os.getenv("HF_TOKEN", "").strip()
+	if token:
+		# In production/cloud mode: skip heavy PyTorch embedder to prevent 512MB OOM crash
 		_FAQ_QUESTION_EMBEDDINGS = []
 		return _FAQ_QUESTION_EMBEDDINGS
 
@@ -87,6 +104,29 @@ def match_faq(query: str, threshold: float = DEFAULT_FAQ_SIMILARITY_THRESHOLD) -
 	if not query:
 		return None, 0.0
 
+	faqs = load_faqs()
+	token = os.getenv("HF_TOKEN", "").strip()
+
+	# In cloud mode (HF_TOKEN set): use fast zero-memory token matching
+	if token:
+		best_faq: dict[str, Any] | None = None
+		best_score = 0.0
+
+		for faq in faqs:
+			score = _token_similarity(query, faq.get("question", ""))
+			if score > best_score:
+				best_score = score
+				best_faq = faq
+			for alt in faq.get("alternative_questions", []):
+				alt_score = _token_similarity(query, alt)
+				if alt_score > best_score:
+					best_score = alt_score
+					best_faq = faq
+
+		if best_score >= threshold:
+			return best_faq, best_score
+		return None, best_score
+
 	faq_entries = _init_faq_embeddings()
 	if not faq_entries:
 		return None, 0.0
@@ -94,7 +134,7 @@ def match_faq(query: str, threshold: float = DEFAULT_FAQ_SIMILARITY_THRESHOLD) -
 	embed_fn = _get_embedding_function()
 	query_embedding = embed_fn([query])[0]
 
-	best_faq: dict[str, Any] | None = None
+	best_faq = None
 	best_score = 0.0
 
 	for faq, _, q_embedding in faq_entries:
