@@ -699,9 +699,11 @@ export default function Home() {
       return;
     }
 
+    const backendBase = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, "");
+
     const normalized = c.source.replace(/\\/g, "/");
     if (normalized.toLowerCase().endsWith(".pdf")) {
-      const fileUrl = `${apiBaseUrl}/corpus/${normalized}`;
+      const fileUrl = backendBase ? `${backendBase}/corpus/${encodeURI(normalized)}` : `/corpus/${encodeURI(normalized)}`;
       setActivePdfUrl({ url: fileUrl, page: c.page || 1, title: c.source, searchQuery: c.snippet });
       return;
     }
@@ -735,7 +737,7 @@ export default function Home() {
     }
 
     if (targetPdf) {
-      const fileUrl = `${apiBaseUrl}/corpus/${targetPdf}`;
+      const fileUrl = backendBase ? `${backendBase}/corpus/${encodeURI(targetPdf)}` : `/corpus/${encodeURI(targetPdf)}`;
       setActivePdfUrl({ url: fileUrl, page: c.page || 1, title: c.source, searchQuery: c.snippet });
     } else if (targetUrl) {
       window.open(targetUrl, '_blank');
