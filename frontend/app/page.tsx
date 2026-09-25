@@ -18,6 +18,7 @@ interface Citation {
   page: number;
   confidence?: string;
   snippet?: string;
+  url?: string;
 }
 
 interface Message {
@@ -685,6 +686,62 @@ export default function Home() {
   function handleExportPDF(exportSessId?: string) {
     const target = exportSessId || sessionId;
     window.open(`${apiBaseUrl}/api/chat/export/${target}`, "_blank");
+  }
+
+  function handleCitationClick(c: Citation) {
+    if (c.url) {
+      window.open(c.url, '_blank');
+      return;
+    }
+    const match = c.source.match(/\((https?:\/\/[^\)]+)\)/);
+    if (match) {
+      window.open(match[1], '_blank');
+      return;
+    }
+
+    const normalized = c.source.replace(/\\/g, "/");
+    if (normalized.toLowerCase().endsWith(".pdf")) {
+      const fileUrl = `${apiBaseUrl}/corpus/${normalized}`;
+      setActivePdfUrl({ url: fileUrl, page: c.page || 1, title: c.source, searchQuery: c.snippet });
+      return;
+    }
+
+    // Map non-file statutory titles / FAQ citations to actual PDFs in corpus or official portals
+    const lower = normalized.toLowerCase();
+    let targetPdf: string | null = null;
+    let targetUrl: string | null = null;
+
+    if (lower.includes("tkdl") || lower.includes("ayush") || lower.includes("ayurved")) {
+      targetPdf = "ayurveda/Guidelines for Examinations of Ayush Related Inventions.pdf";
+      targetUrl = "https://www.tkdl.res.in";
+    } else if (lower.includes("geographical indication") || lower.includes(" gi ") || lower.includes("gi?")) {
+      targetPdf = "national/Geographical_Indications_of_Goods_Act_1999.pdf";
+      targetUrl = "https://ipindia.gov.in";
+    } else if (lower.includes("patent") || lower.includes("section 3") || lower.includes("patents act")) {
+      targetPdf = "national/Patents Act 1970 (updated 2024).pdf";
+      targetUrl = "https://ipindia.gov.in";
+    } else if (lower.includes("biodiversity") || lower.includes("biological")) {
+      targetPdf = "national/The Biological Diversity Act, 2002 and the Biological Diversity Rules, 2004.pdf";
+      targetUrl = "http://nbaindia.org";
+    } else if (lower.includes("trade mark") || lower.includes("trademark")) {
+      targetPdf = "national/The_Trade_Marks_Act_1999.pdf";
+      targetUrl = "https://ipindia.gov.in";
+    } else if (lower.includes("design")) {
+      targetPdf = "national/The_Designs_Act_2000.pdf";
+      targetUrl = "https://ipindia.gov.in";
+    } else if (lower.includes("drug") || lower.includes("cosmetic")) {
+      targetPdf = "national/Drugs and Cosmetics Act, 1940.pdf";
+      targetUrl = "https://cdsco.gov.in";
+    }
+
+    if (targetPdf) {
+      const fileUrl = `${apiBaseUrl}/corpus/${targetPdf}`;
+      setActivePdfUrl({ url: fileUrl, page: c.page || 1, title: c.source, searchQuery: c.snippet });
+    } else if (targetUrl) {
+      window.open(targetUrl, '_blank');
+    } else {
+      window.open("https://ipindia.gov.in", '_blank');
+    }
   }
 
   function fallbackBrowserSpeech(text: string, msgId: string) {
@@ -1820,21 +1877,7 @@ export default function Home() {
                                           {msg.citations.map((c, i) => (
                                             <div
                                               key={i}
-                                              onClick={() => {
-                                                let url = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}#page=${c.page}`;
-                                                if (c.snippet && !c.source.startsWith("Live Web:")) {
-                                                  url += `&search=${encodeURIComponent(c.snippet)}`;
-                                                }
-                                                if (c.source.startsWith("Live Web:")) {
-                                                  const match = c.source.match(/\((https?:\/\/[^\)]+)\)/);
-                                                  if (match) {
-                                                    window.open(match[1], '_blank');
-                                                  }
-                                                } else {
-                                                  const fileUrl = `${apiBaseUrl}/corpus/${c.source.replace(/\\/g, "/")}`;
-                                                  setActivePdfUrl({ url: fileUrl, page: c.page, title: c.source, searchQuery: c.snippet });
-                                                }
-                                              }}
+                                              onClick={() => handleCitationClick(c)}
                                               className="flex items-center gap-2 rounded-md bg-[#EBF5EE] px-2.5 py-1.5 border border-[#D2E8D8] cursor-pointer hover:bg-[#DDF0E3] transition-colors"
                                             >
                                               <span className="font-semibold text-[#2D6A4F]">{c.source}</span>

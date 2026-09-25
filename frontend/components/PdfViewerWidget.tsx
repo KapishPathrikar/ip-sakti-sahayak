@@ -121,8 +121,19 @@ export default function PdfViewerWidget({ url, initialPage, onClose, title = "Do
               </div>
             }
             error={
-              <div className="text-red-500 font-semibold text-sm">
-                Failed to load PDF.
+              <div className="flex flex-col items-center gap-3 p-6 text-center max-w-sm bg-white rounded-xl border card-border">
+                <span className="material-symbols-outlined text-3xl text-amber-600">menu_book</span>
+                <span className="text-sm font-bold text-[#1E1B18]">Statutory Repository Document</span>
+                <p className="text-xs text-[#8C827A]">This reference is part of the official legal repository. You can inspect it on the official government portal.</p>
+                <a
+                  href={url.startsWith("http") ? url : "https://ipindia.gov.in"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#7D4F39] text-white text-xs font-bold hover:bg-[#683E2C] transition-colors"
+                >
+                  <span>Open Official Portal</span>
+                  <span className="material-symbols-outlined text-sm">open_in_new</span>
+                </a>
               </div>
             }
             className="rounded-lg shadow-xl overflow-hidden border card-border bg-white"
