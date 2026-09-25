@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any
 
 
+import os
+import httpx
+
 try:
 	from .ingest import COLLECTION_NAME, EMBEDDING_MODEL_NAME
 except (ImportError, ValueError):
@@ -19,6 +22,39 @@ HIGH_SIMILARITY_MAX_DISTANCE = 0.32
 HIGH_SIMILARITY_MIN_CONFIDENCE = 80
 DEFAULT_MAX_DISTANCE = 0.65
 DEFAULT_CHROMA_DB = str(Path(__file__).resolve().parent.parent.parent / "chroma_db")
+
+HF_ROUTER_URL = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-mpnet-base-v2"
+
+
+def get_remote_query_embedding(text: str) -> list[float] | None:
+	"""Fetch 768-dim query embedding via Hugging Face Serverless API.
+	Runs in ~150ms and avoids loading 420MB PyTorch into memory, preventing Render 512MB OOM crashes.
+	"""
+	token = os.getenv("HF_TOKEN", "").strip()
+	if not token:
+		return None
+	try:
+		res = httpx.post(
+			HF_ROUTER_URL,
+			headers={
+				"Authorization": f"Bearer {token}",
+				"Content-Type": "application/json",
+			},
+			json={"inputs": text},
+			timeout=15.0,
+		)
+		if res.status_code == 200:
+			data = res.json()
+			if isinstance(data, list) and len(data) > 0:
+				if isinstance(data[0], list):
+					return [float(x) for x in data[0]]
+				return [float(x) for x in data]
+		else:
+			print(f"[Embedding Warning] HF API returned {res.status_code}: {res.text[:200]}")
+	except Exception as err:
+		print(f"[Embedding Error] Failed remote embedding call: {err}")
+	return None
+
 
 @dataclass(frozen=True)
 class RetrievedChunk:
@@ -63,10 +99,19 @@ def _get_collection(persist_dir: str | Path = DEFAULT_CHROMA_DB) -> Any:
 		import chromadb
 		client = chromadb.PersistentClient(path=key)
 		_CLIENT_CACHE[key] = client
-		_COLLECTION_CACHE[key] = client.get_or_create_collection(
-			COLLECTION_NAME,
-			embedding_function=_get_embedding_function(),
-		)
+
+		token = os.getenv("HF_TOKEN", "").strip()
+		if token:
+			# Remote embedding active: connect to collection without loading PyTorch in RAM
+			try:
+				_COLLECTION_CACHE[key] = client.get_collection(COLLECTION_NAME)
+			except Exception:
+				_COLLECTION_CACHE[key] = client.get_or_create_collection(COLLECTION_NAME)
+		else:
+			_COLLECTION_CACHE[key] = client.get_or_create_collection(
+				COLLECTION_NAME,
+				embedding_function=_get_embedding_function(),
+			)
 	return _COLLECTION_CACHE[key]
 
 
@@ -96,14 +141,21 @@ def retrieve(
 	candidate_limit = max(limit * 3, 18)
 
 	collection = _get_collection(persist_dir)
+	remote_vec = get_remote_query_embedding(query)
+
+	def _query_collection(col: Any) -> dict[str, Any]:
+		if remote_vec is not None:
+			return col.query(query_embeddings=[remote_vec], n_results=candidate_limit)
+		return col.query(query_texts=[query], n_results=candidate_limit)
+
 	try:
-		result = collection.query(query_texts=[query], n_results=candidate_limit)
+		result = _query_collection(collection)
 	except Exception as err:
 		print(f"[Retrieve Warning] Query failed with cached collection: {err}. Refreshing connection...")
 		_COLLECTION_CACHE.pop(str(persist_dir), None)
 		_CLIENT_CACHE.pop(str(persist_dir), None)
 		collection = _get_collection(persist_dir)
-		result = collection.query(query_texts=[query], n_results=candidate_limit)
+		result = _query_collection(collection)
 
 	documents = result.get("documents", [[]])[0]
 	metadatas = result.get("metadatas", [[]])[0]
